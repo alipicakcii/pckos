@@ -6,7 +6,7 @@ PCKOS, bir sistem programcısı olarak hobi amacıyla sıfırdan geliştirdiğim
 
 Daha fazla bilgi için: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
-Yapay zekâ kullanımına karşı değilim; projeye yapılacak katkılarda yapay zekâ araçlarından yararlanılabilir. Tek beklentim, katkıyı gönderen kişinin yaptığı değişiklikleri anlaması ve açıklayabilmesidir.
+
 
 PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çekirdeğin başlıca yetenekleri:
 
@@ -20,9 +20,8 @@ PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çek
 
 ## Katkı ve hata bildirimi
 
-Hata bildirmek veya özellik önermek için [GitHub Issues](https://github.com/alipicakcii/pckos/issues) bölümünde yeni bir konu aç. Hatalarda PCKOS sürümünü, çalıştırma ortamını, hatayı yeniden oluşturma adımlarını, beklenen ve gerçekleşen sonucu, mümkünse ekran görüntüsünü veya `serial` günlüğünden ilgili bölümü ekle. Gizli bilgi veya kişisel dosya paylaşma.
+Yapay zekâ kullanımına karşı değilim; projeye yapılacak katkılarda yapay zekâ araçlarından yararlanılabilir. Tek beklentim, katkıyı gönderen kişinin yaptığı değişiklikleri anlaması ve açıklayabilmesidir.
 
-Kod katkısı için önce değişikliğin kapsamını bir issue'da konuşabilir, ardından pull request açabilirsin. Pull request'te neyi ve neden değiştirdiğini, nasıl kontrol ettiğini açıkla. Yapay zekâ araçlarıyla hazırlanmış katkılar kabul edilir; katkıyı gönderen kişi değişikliklerini anlamalı ve açıklayabilmelidir.
 
 ## Lisans
 
