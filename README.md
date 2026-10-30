@@ -303,7 +303,7 @@ __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Mevcut uygulama bağlantı düzeniyle derleyin ve PCKFS kaynağına koyun:
+Projede kayıtlı masaüstü ve uygulamalar `kernel/Makefile` hedefleriyle `./build.sh` sırasında otomatik derlenir. Aşağıdaki komutlar, Makefile'a henüz eklemediğiniz yeni bir uygulamayı bir kez elle derleyip PCKFS'e eklemek içindir. İlk `./build.sh`, grafik kitaplığını ve mevcut derleme çıktılarını hazırlar; ardından örnek uygulamayı derleyin:
 
 ```sh
 ./build.sh  # Grafik kitaplığını proje ayarlarıyla çapraz derler.
@@ -322,13 +322,13 @@ i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
 ./share.sh
 ```
 
-Burada `.elf` sadece bağlantı ara çıktısı, `host-share/apps/merhaba.bin` PCKFS'te `/apps/merhaba.bin` olur. **Uygulamayı çekirdeğe linklemek gerekmez.** Masaüstünden başlatmak için bir kullanıcı tarafı başlatma noktası gerekir. Hızlı deneme yolu: `kernel/user/apps/desktop.cpp` sonundaki `_start()` içinde `DesktopSession session;` satırından sonra geçici olarak şu satırı ekleyin:
+Burada `.elf` sadece bağlantı ara çıktısıdır; `host-share/apps/merhaba.bin`, PCKFS içinde `/apps/merhaba.bin` olur. `./share.sh`, `./build.sh` komutunu kendisi çalıştırır ve `host-share` içeriğini PCKFS'e ekler. **Uygulamayı çekirdeğe linklemek gerekmez.** Masaüstünden başlatmak için bir kullanıcı tarafı başlatma noktası gerekir. Hızlı deneme yolu: `kernel/user/apps/desktop.cpp` sonundaki `_start()` içinde `DesktopSession session;` satırından sonra geçici olarak şu satırı ekleyin:
 
 ```cpp
 (void)user::process_spawn("/apps/merhaba.bin", "Merhaba");
 ```
 
-Sonra `./qemu.sh` çalıştırın. Masaüstü başlarken uygulama da açılır. ESC odak bu penceredeyken onu kapatır. Kalıcı bir masaüstü simgesi veya Başlat girdisi için `desktop.cpp` içindeki `open_window()`, `handle_click()`, görev çubuğu çizimi ve `app_process_ids_` takibini yeni uygulamaya genişletin. Mevcut üç uygulama bunun somut örneğidir. `qemu.sh` her defasında `clean.sh` çalıştırdığı için yeni uygulamanın derleme adımlarını kalıcı hale getirmek isterseniz `kernel/Makefile` içine mevcut `*_process.elf/.bin` kuralları gibi hedef ekleyin; ardından `share.sh` içine `/apps` kopyalama satırı ekleyin.
+Sonra `./qemu.sh` çalıştırın. Masaüstü başlarken uygulama da açılır. ESC odak bu penceredeyken onu kapatır. Uygulamayı kalıcı olarak projeye eklemek için kaynak dosyasına uygun derleme ve `.elf`/`.bin` hedeflerini `kernel/Makefile` içine, PCKFS'e kopyalama satırını da `share.sh` içine ekleyin. Masaüstü simgesi veya Başlat girdisi için ayrıca `desktop.cpp` içindeki `open_window()`, `handle_click()`, görev çubuğu çizimi ve `app_process_ids_` takibini genişletin.
 
 ## 9. Bugünkü teknik sınırlar ve kontrol
 

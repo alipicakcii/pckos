@@ -287,7 +287,7 @@ __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Build with the existing application link layout and place the binary in the PCKFS source tree:
+Applications already registered in the project are built automatically by the `kernel/Makefile` targets during `./build.sh`. The commands below are for manually building a new application once before adding it to the Makefile. The initial `./build.sh` prepares the graphics library and existing build outputs; then compile the example application:
 
 ```sh
 ./build.sh
@@ -306,13 +306,13 @@ i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
 ./share.sh
 ```
 
-The `.elf` is only a linker intermediate; `host-share/apps/merhaba.bin` becomes `/apps/merhaba.bin` in PCKFS. **The app does not need to be linked into the kernel.** It needs a user-space launch point. For a quick test, temporarily add this after `DesktopSession session;` in `_start()` at the end of `kernel/user/apps/desktop.cpp`:
+The `.elf` is only a linker intermediate; `host-share/apps/merhaba.bin` becomes `/apps/merhaba.bin` in PCKFS. `./share.sh` runs `./build.sh` itself and adds the contents of `host-share` to PCKFS. **The app does not need to be linked into the kernel.** It needs a user-space launch point. For a quick test, temporarily add this after `DesktopSession session;` in `_start()` at the end of `kernel/user/apps/desktop.cpp`:
 
 ```cpp
 (void)user::process_spawn("/apps/merhaba.bin", "Merhaba");
 ```
 
-Then run `./qemu.sh`. The app will open when the desktop starts; press ESC while its window is focused to close it. For a permanent desktop icon or Start-menu entry, extend `open_window()`, `handle_click()`, taskbar drawing, and `app_process_ids_` tracking in `desktop.cpp`. Existing applications are examples. To keep the build steps, add a target to `kernel/Makefile` like the existing `*_process.elf/.bin` rules, then add a copy line for `/apps` in `share.sh`.
+Then run `./qemu.sh`. The app will open when the desktop starts; press ESC while its window is focused to close it. To integrate the app permanently, add compile and `.elf`/`.bin` targets for its source to `kernel/Makefile`, and add a copy line to `share.sh`. For a desktop icon or Start-menu entry, also extend `open_window()`, `handle_click()`, taskbar drawing, and `app_process_ids_` tracking in `desktop.cpp`.
 
 ## 9. Current limits and checks
 
