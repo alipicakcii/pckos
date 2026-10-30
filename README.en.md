@@ -318,7 +318,7 @@ Then run `./qemu.sh`. The app will open when the desktop starts; press ESC while
 
 - The loader does not parse ELF: it uses flat `.bin` images, `_start`, and link address `0x40000000`. An image is limited to 64 pages (256 KiB).
 - There are at most 8 process records and 16 scheduler thread slots; the desktop uses one process slot. User space has no general heap/`new`, standard library, process arguments, or file-write API.
-- The kernel runs global C++ constructors through `_init()`. RTTI is enabled for the kernel build; `kernel/library/pck_rtti.cpp` provides the ABI support required by `type_info` and `__dynamic_cast`. Pointer-form `dynamic_cast<Derived*>(base)` conversions between polymorphic classes are supported for public, non-virtual single inheritance with zero offset. Multiple inheritance, virtual inheritance, general pointer-offset adjustment, and reference casts requiring `std::bad_cast` are not supported. Exceptions remain disabled. User applications are built with `-fno-rtti`, so RTTI and `dynamic_cast` support is currently limited to the kernel.
+- The kernel runs global C++ constructors through `_init()`. RTTI has been minimally ported for the kernel, and `dynamic_cast` works. Exceptions remain disabled; user applications are built with `-fno-rtti`.
 - The GUI supports window registration and drawing layers; only one instance of each application type is tracked.
 
 ```sh
