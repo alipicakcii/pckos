@@ -58,7 +58,7 @@ ISO çekirdeği başlatır; `pckfs.img` PCKOS kök dosya sistemidir. İkisi de g
 
 ## VirtualBox'ta çalıştırma
 
-`pckos.iso` ve `pckfs.img` dosyalarını indirin. `pckfs.img` dosyasını VirtualBox diskine dönüştürün:
+`pckos.iso` ve `pckfs.img` dosyalarını indirin. `pckfs.img` dosyasını VirtualBox diskine dönüştürün bu komut `pckfs.img` dosyasını bir VirtualBox diskine dönüştürür:
 
 ```sh
 VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI
