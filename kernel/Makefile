@@ -17,7 +17,7 @@ INCLUDEDIR?=$(PREFIX)/include
 
 # -fno-elide-constructors bu bayrak RVO ve NRVO'yu devre dışı bırakır
 #  c++ 20 icin -std=c++20
-CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra -fno-exceptions -fno-threadsafe-statics -fno-rtti -fconcepts -fno-elide-constructors 
+CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra -fno-exceptions -fno-threadsafe-statics  -fconcepts -fno-elide-constructors 
 #__is_VBOX virtualbox için derleyiciye bildirim
 #__is_DEBUG çekirdeğin geliştirme aşamasında kullanılan bazı fonsksiyonları
 CPPFLAGS:=$(CPPFLAGS)   -D__is_kernel -D__is_DEBUG   -Iinclude 
@@ -61,6 +61,7 @@ arch/i386/user_demo.o \
 arch/i386/user_desktop.o \
 library/cppabi.o \
 library/kernel_log.o \
+library/pck_rtti.o \
 user_mode.o \
 thread.o \
 syscall.o \

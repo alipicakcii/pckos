@@ -334,7 +334,7 @@ Sonra `./qemu.sh` çalıştırın. Masaüstü başlarken uygulama da açılır. 
 
 - Yükleyici ELF ayrıştırmaz: düz `.bin`, `_start` ve `0x40000000` bağlantı adresi kullanılır. İmaj en çok 64 sayfa (256 KiB) olabilir.
 - En çok 8 process kaydı ve 16 scheduler thread girdisi vardır; masaüstü bir process yerini kullanır. Kullanıcı alanında genel amaçlı heap/`new`, standart kütüphane, process argümanları ve dosya yazma API'si yoktur.
-- Çekirdek global C++ kurucularını `_init()` ile başlatır. Derleme `-fno-rtti` ve `-fno-exceptions` kullanır. Yerleşik `dynamic_cast`/`typeid` ve exception'lar mevcut yapılandırmada kullanılamaz. `kernel/include/library/pck_rtti.hh` içindeki `pckos::dynamic_cast_to<T>()` yalnızca uygun `pckos_is_a()` hiyerarşileri içindir.
+- Çekirdek global C++ kurucularını `_init()` ile başlatır. Çekirdek derlemesinde RTTI açıktır; `kernel/library/pck_rtti.cpp`, `type_info` ve `__dynamic_cast` için gerekli ABI desteğini sağlar. Polimorfik sınıflar arasında işaretçi türündeki `dynamic_cast<Derived*>(base)` dönüşümleri; public, sanal olmayan tekli kalıtım ve sıfır offset koşullarıyla desteklenir. Çoklu kalıtım, sanal kalıtım, genel işaretçi offset düzeltmesi ve referans dönüşümlerindeki `std::bad_cast` desteği yoktur. Exception'lar kapalıdır. Kullanıcı uygulamaları `-fno-rtti` ile derlendiği için RTTI ve `dynamic_cast` desteği çekirdekle sınırlıdır.
 - GUI'de pencere kaydı ve çizim katmanları vardır; uygulama türü başına tek açık kopya izlenir.
 
 ```sh
