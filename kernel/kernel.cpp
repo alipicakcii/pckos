@@ -22,58 +22,6 @@
 extern "C" void _init();
 
 
-class BaseCls
-{
-private:
-    /* data */
-public:
-    BaseCls(/* args */){}
-    virtual ~BaseCls(){}
-
-   virtual void run()
-    {
-         _kprintf("addr=0x%x BaseCls::run\n", this);
-    }
-};
-
-class SubCls : public BaseCls
-{
-private:
-    /* data */
-public:
-    SubCls(/* args */){}
-    ~SubCls(){}
-
-    void run()
-    {
-         _kprintf("addr=0x%x SubCls::run\n", this);
-    }
-};
-
-
-class Cls
-{
-private:
-    /* data */
-public:
-    Cls(/* args */)
-    {
-
-    }
-    ~Cls()
-    {
-
-    }
-
-    void run()
-    {
-         _kprintf("addr=0x%x Cls::run\n", this);
-    }
-};
-
-
-
-
 extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
                             [[maybe_unused]] uint32_t multiboot_magic)
 {
