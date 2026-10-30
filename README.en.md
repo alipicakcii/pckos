@@ -9,8 +9,6 @@ I have now decided to share PCKOS as an open-source project. My goal is to build
 
 More information: [PCKOS on my blog](https://pckblog.com/pckos.html)
 
-I am not against AI tools. Contributions made with AI assistance are welcome. My only expectation is that the contributor understands and can explain the changes they submit.
-
 PCKOS is currently a minimal system under development. The kernel currently provides:
 
 - i386 boot, paging, and separation between kernel and user mode.
@@ -24,6 +22,10 @@ PCKOS is currently a minimal system under development. The kernel currently prov
 ## Contributing and reporting issues
 
 I am not opposed to using AI. Contributions to the project may use AI tools; my only expectation is that contributors understand and can explain the changes they submit.
+
+## License
+
+Unless a file says otherwise, PCKOS code is licensed under the GNU General Public License, version 3 or (at your option) any later version. See [`LICENSE`](LICENSE). Third-party assets retain their own license notices.
 
 ## Screenshots
 
@@ -41,17 +43,7 @@ I am not opposed to using AI. Contributions to the project may use AI tools; my 
 
 ## Run in QEMU
 
-On a Linux host with QEMU installed, get the project source, install the build dependencies, and run this from the project directory:
-
-```sh
-./qemu.sh
-```
-
-The script builds the kernel and applications, creates `pckos.iso` and `pckfs.img`, and launches QEMU. It enables KVM when available and otherwise uses TCG emulation. The required build tools are listed in the “Build and run” section below.
-
-The sample files in the repository's `host-share/` directory are included in the PCKFS image. You can put your own files there to include them in the image.
-
-With prebuilt `pckos.iso` and `pckfs.img` files from a release, put both files in the same directory and run:
+After downloading `pckos.iso` and `pckfs.img`, place both files in the same directory and start PCKOS with:
 
 ```sh
 qemu-system-i386 -m 2G \
@@ -63,13 +55,13 @@ The ISO boots the kernel; `pckfs.img` provides the PCKOS root filesystem. Both a
 
 ## Run in VirtualBox
 
-Download `pckos.iso` and `pckfs.img` from a release. Convert `pckfs.img` to a VirtualBox disk:
+Download `pckos.iso` and `pckfs.img`. Convert `pckfs.img` to a VirtualBox disk with this command:
 
 ```sh
 VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI
 ```
 
-To build the images from source, run these commands in the project directory:
+When building the images from source, run these commands in the project directory:
 
 ```sh
 ./iso.sh
@@ -77,21 +69,17 @@ To build the images from source, run these commands in the project directory:
 ./vbox.sh
 ```
 
-These scripts create the ISO and PCKFS disk image; `vbox.sh` converts `pckfs.img` to VirtualBox's `pckfs-vbox.vdi` format.
+These commands create the ISO and PCKFS disk image; `vbox.sh` converts `pckfs.img` to the `pckfs-vbox.vdi` format used by VirtualBox.
 
-Create a new **Linux / Other Linux (32-bit)** virtual machine. Set memory to 2 GiB, select **VBoxVGA** as the graphics controller, and turn off 3D acceleration. Do not create a blank hard disk. In Storage, attach `pckos.iso` to the optical drive and `pckfs-vbox.vdi` as the IDE **Primary Master**. Set the boot order to start from the optical drive. The ISO boots the system; the VDI provides its root filesystem.
+Whichever method you use, create a new **Linux / Other Linux (32-bit)** virtual machine. Set memory to 2 GiB, select **VBoxVGA** as the graphics controller, and turn off 3D acceleration. Do not create a blank hard disk. In Storage, attach `pckos.iso` to the optical drive and `pckfs-vbox.vdi` as the IDE **Primary Master**. Set the boot order to start from the optical drive. The ISO boots the system; the VDI provides its root filesystem.
 
 ## Development environment
 
 I develop PCKOS on Kali Linux. I compile C++ with a GNU `i686-elf-g++` cross-compiler built from GCC 13.1.0 sources, and assembly with NASM 3.01. Kali Linux is the development host; PCKOS targets i386.
 
-## License
-
-Unless a file says otherwise, PCKOS code is licensed under the GNU General Public License, version 3 or (at your option) any later version. See [`LICENSE`](LICENSE). Third-party assets retain their own license notices.
-
 # Technical documentation
 
-This document describes the **currently working code**. Start with the map below, then see boot, PCKFS, system calls, processes/threads, and the new-application example. Run commands from the project root.
+This document describes the **currently working code**. When adding a feature, start with the “Source map” table; later sections cover boot, PCKFS, system calls, processes/threads, and a new-application example. Run commands from the project root.
 
 ## 1. Boot: from the first instruction to the desktop
 
@@ -280,13 +268,15 @@ __attribute__((section(".text._start"))) void _start()
     constexpr uint32_t x = 260, y = 180, width = 360, height = 180;
     if (user::graphics_register_window(x, y, width, height) < 0)
         user::exit(1);
-    user::thread_set_name("Hello");
+    user::thread_set_name("Merhaba");
 
     for (;;) {
         user::gui::begin_frame();
-        user::gui::window(x, y, width, height, "PCKOS - Hello", true);
-        user::gui::text(x + 22, y + 60, "Hello, PCKOS!", user::gui::COLOR_TEXT);
-        user::gui::text(x + 22, y + 92, "Press ESC to close", user::gui::COLOR_TEXT);
+        user::gui::window(x, y, width, height, "PCKOS - Merhaba", true);
+        user::gui::text(x + 22, y + 60, "Merhaba PCKOS!",
+                        user::gui::COLOR_TEXT);
+        user::gui::text(x + 22, y + 92, "ESC ile kapat",
+                        user::gui::COLOR_TEXT);
         user::gui::end_frame();
 
         user::InputEvent event{};
@@ -311,15 +301,15 @@ i686-elf-g++ -m32 -no-pie -nostdlib \
   -o kernel/user/apps/merhaba_process.elf \
   kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
 mkdir -p host-share/apps
-i686-elf-objcopy -O binary kernel/user/apps/hello_process.elf \
-  host-share/apps/hello.bin
+i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
+  host-share/apps/merhaba.bin
 ./share.sh
 ```
 
-The `.elf` is only a linker intermediate; `host-share/apps/hello.bin` becomes `/apps/hello.bin` in PCKFS. **The app does not need to be linked into the kernel.** It needs a user-space launch point. For a quick test, temporarily add this after `DesktopSession session;` in `_start()` at the end of `kernel/user/apps/desktop.cpp`:
+The `.elf` is only a linker intermediate; `host-share/apps/merhaba.bin` becomes `/apps/merhaba.bin` in PCKFS. **The app does not need to be linked into the kernel.** It needs a user-space launch point. For a quick test, temporarily add this after `DesktopSession session;` in `_start()` at the end of `kernel/user/apps/desktop.cpp`:
 
 ```cpp
-(void)user::process_spawn("/apps/hello.bin", "Hello");
+(void)user::process_spawn("/apps/merhaba.bin", "Merhaba");
 ```
 
 Then run `./qemu.sh`. The app will open when the desktop starts; press ESC while its window is focused to close it. For a permanent desktop icon or Start-menu entry, extend `open_window()`, `handle_click()`, taskbar drawing, and `app_process_ids_` tracking in `desktop.cpp`. Existing applications are examples. To keep the build steps, add a target to `kernel/Makefile` like the existing `*_process.elf/.bin` rules, then add a copy line for `/apps` in `share.sh`.
