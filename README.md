@@ -28,7 +28,7 @@ Yapay zekâ kullanımına karşı değilim; projeye yapılacak katkılarda yapay
 
 ## Lisans
 
-Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3. sürümü veya (tercihinize bağlı olarak) daha sonraki sürümleri altında lisanslanır. Tam metin için [`LICENSE`](LICENSE) dosyasına bak. Üçüncü taraf varlıkların kendi lisans bildirimleri geçerlidir.
+Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3. sürümü veya (tercihinize bağlı olarak) daha sonraki sürümleri altında lisanslanır. Tam metin için [`LICENSE`](LICENSE) dosyasına bakın. Üçüncü taraf varlıkların kendi lisans bildirimleri geçerlidir.
 
 ## Ekran görüntüleri
 
@@ -46,7 +46,7 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ## QEMU'da çalıştırma
 
-`pckos.iso` ve `pckfs.img` dosyalarını indirdikten sonra bu iki dosyayı aynı dizine koyup şu komutla başlatabilirsin:
+`pckos.iso` ve `pckfs.img` dosyalarını indirdikten sonra bu iki dosyayı aynı dizine koyup şu komutla başlatın:
 
 ```sh
 qemu-system-i386 -m 2G \
@@ -76,7 +76,7 @@ Bu komutlarda ISO'yu ve PCKFS disk imajını üretir; `vbox.sh`, `pckfs.img` dos
 
 İki yöntemden hangisiyle hazırlanırsa hazırlansın aşağıdakı adımları izleyelerek VirtualBox'ta PCKOS'u çalıştırabilirsiniz:
 
-VirtualBox'ta yeni bir **Linux / Other Linux (32-bit)** sanal makinesi oluştur. Belleği 2 GiB ayarla, grafik denetleyicisini **VBoxVGA** seç ve 3D hızlandırmayı kapalı tutun. Boş bir sabit disk oluşturmayın. Depolama ayarlarında `pckos.iso` dosyasını optik sürücüye, `pckfs-vbox.vdi` dosyasını IDE **Primary Master** olarak ekleyin. Açılış sırasını optik sürücüden başlatacak şekilde ayarlayın. ISO sistemi başlatır; VDI kök dosya sistemini sağlar.
+VirtualBox'ta yeni bir **Linux / Other Linux (32-bit)** sanal makinesi oluşturun. Belleği 2 GiB ayarlayın, grafik denetleyicisini **VBoxVGA** seçin ve 3D hızlandırmayı kapalı tutun. Boş bir sabit disk oluşturmayın. Depolama ayarlarında `pckos.iso` dosyasını optik sürücüye, `pckfs-vbox.vdi` dosyasını IDE **Primary Master** olarak ekleyin. Açılış sırasını optik sürücüden başlatacak şekilde ayarlayın. ISO sistemi başlatır; VDI kök dosya sistemini sağlar.
 
 ## Geliştirme ortamı
 
@@ -84,7 +84,7 @@ PCKOS'u Kali Linux üzerinde geliştiriyorum. C++ kodunu, GCC 13.1.0 kaynak kodu
 
 # Teknik dokümantasyon
 
-Bu belge PCKOS'un **mevcut çalışan kodunu** anlatır. Yeni bir özellik eklerken önce “Nerede ne var?” tablosuna bak; sonraki bölümlerde açılış, PCKFS, sistem çağrıları, process/thread ve yeni uygulama örneği bulunur. Komutlar proje kök dizininde çalıştırılır.
+Bu belge PCKOS'un **mevcut çalışan kodunu** anlatır. Yeni bir özellik eklerken önce “Nerede ne var?” tablosuna bakın; sonraki bölümlerde açılış, PCKFS, sistem çağrıları, process/thread ve yeni uygulama örneği bulunur. Komutlar proje kök dizininde çalıştırılır.
 
 ## 1. Açılış: ilk komuttan masaüstüne
 
@@ -137,7 +137,7 @@ Gereken araçlar: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkre
 | `./iso.sh` | `build.sh` çalıştırır, `pckos.iso` üretir. |
 | `./share.sh` | `build.sh` çalıştırır; `host-share/`, sistem uygulamaları ve logodan `pckfs.img` üretir. |
 | `./qemu.sh` | Temizler, ISO ve diski yeniden üretir, QEMU'yu açar. |
-| `./vbox.sh` | Mevcut `pckfs.img` dosyasını `pckfs-vbox.vdi` biçimine çevirir. Önce güncel imajı `./qemu.sh` veya `./share.sh` ile üret. |
+| `./vbox.sh` | Mevcut `pckfs.img` dosyasını `pckfs-vbox.vdi` biçimine çevirir. Önce güncel imajı `./qemu.sh` veya `./share.sh` ile üretin. |
 | `./clean.sh` | Derleme ve imaj çıktılarını temizler; `host-share/` korunur. |
 
 `sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `qemu.sh` erişim varsa KVM, yoksa TCG kullanır. Seri çıktı proje kökündeki `serial` dosyasındadır.
@@ -187,13 +187,13 @@ if (fd >= 0) {
 }
 ```
 
-`stdout` ve `stderr` masaüstü penceresine değil çekirdek günlüğüne/seri porta gider. Dizin için `root_inode()` ve `read_directory(inode, index, &entry)` kullan: dönüş `1` öğe, `0` liste sonu, negatif değer hatadır. `DirectoryEntry::type == user::directory_type` dizini gösterir.
+`stdout` ve `stderr` masaüstü penceresine değil çekirdek günlüğüne/seri porta gider. Dizin için `root_inode()` ve `read_directory(inode, index, &entry)` kullanın: dönüş `1` öğe, `0` liste sonu, negatif değer hatadır. `DirectoryEntry::type == user::directory_type` dizini gösterir.
 
 ## 5. SDK ve sistem çağrıları
 
 Kullanıcı tarafında kullanılabilen API'nin kaynağı `kernel/include/user/syscall.hh`; grafik yardımcısı `kernel/include/user/gui.hh` ve `kernel/user/gui/graphics.cpp` dosyalarıdır. Henüz bağımsız paketlenmiş SDK veya standart C/C++ çalışma kütüphanesi yoktur.
 
-`user::call()`, `int 0x80` çalıştırır. `EAX` çağrı numarası, `EBX/ECX/EDX/ESI/EDI` en çok beş argüman, sonuç yine `EAX` içindedir. `kernel/syscall.cpp` çağrıyı dağıtır; kullanıcı işaretçilerini ve uzunlukları doğrular. Hatalar negatif sayı olarak döner. Kodda sayıları elle kullanmak yerine sarmalayıcı fonksiyonları çağır.
+`user::call()`, `int 0x80` çalıştırır. `EAX` çağrı numarası, `EBX/ECX/EDX/ESI/EDI` en çok beş argüman, sonuç yine `EAX` içindedir. `kernel/syscall.cpp` çağrıyı dağıtır; kullanıcı işaretçilerini ve uzunlukları doğrular. Hatalar negatif sayı olarak döner. Kodda sayıları elle kullanmak yerine sarmalayıcı fonksiyonları çağırın.
 
 | Alan | Önemli API'ler |
 | --- | --- |
@@ -215,7 +215,7 @@ if (user::wait_event(&event, 10) > 0 &&
     user::exit(0); // ESC
 ```
 
-Yeni syscall eklerken: numarayı ve kullanıcı sarmalayıcısını `kernel/include/user/syscall.hh` içine; işleyiciyi `kernel/syscall.cpp` içindeki dağıtıcıya ekle. Kullanıcıdan gelen adresleri `is_user_range` ile denetle. Gerekiyorsa asıl çekirdek işlevini `kernel/` altında ilgili modülde uygula. Dönüş kodu ve sınırları burada belgele.
+Yeni syscall eklerken: numarayı ve kullanıcı sarmalayıcısını `kernel/include/user/syscall.hh` içine; işleyiciyi `kernel/syscall.cpp` içindeki dağıtıcıya ekleyin. Kullanıcıdan gelen adresleri `is_user_range` ile denetleyin. Gerekiyorsa asıl çekirdek işlevini `kernel/` altında ilgili modülde uygulayın. Dönüş kodu ve sınırları burada belgeleyin.
 
 ## 6. Process nasıl oluşturulur?
 
@@ -268,7 +268,7 @@ if (tid < 0) {
 }
 ```
 
-`thread_create` başarılıysa TID döndürür. Kernel uygun bir thread yeri ve yeni kullanıcı yığını ayırır, giriş fonksiyonu ile argümanı yığına koyar; `thread_start_trampoline` fonksiyon bitince `thread_exit` çağırır. Çalışan örnek: `kernel/user/apps/task_manager_process.cpp` içindeki `TaskManager::thread_entry`; ana thread pencereyi çizerken worker thread bilgileri toplar. Paylaşılan veriler için mevcut `kernel/include/user/apps/app_thread.hh` içindeki `SpinLock`/`LockGuard` örneğini incele. Genel amaçlı `join`, mutex ve semaphore API'si henüz yoktur. Ana thread/process bitince diğer thread'ler de temizlenir.
+`thread_create` başarılıysa TID döndürür. Kernel uygun bir thread yeri ve yeni kullanıcı yığını ayırır, giriş fonksiyonu ile argümanı yığına koyar; `thread_start_trampoline` fonksiyon bitince `thread_exit` çağırır. Çalışan örnek: `kernel/user/apps/task_manager_process.cpp` içindeki `TaskManager::thread_entry`; ana thread pencereyi çizerken worker thread bilgileri toplar. Paylaşılan veriler için mevcut `kernel/include/user/apps/app_thread.hh` içindeki `SpinLock`/`LockGuard` örneğini inceleyin. Genel amaçlı `join`, mutex ve semaphore API'si henüz yoktur. Ana thread/process bitince diğer thread'ler de temizlenir.
 
 ## 8. Yeni uygulama yazma, derleme ve başlatma
 
@@ -303,7 +303,7 @@ __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Mevcut uygulama bağlantı düzeniyle derleyip ve PCKFS kaynağına koyun:
+Mevcut uygulama bağlantı düzeniyle derleyin ve PCKFS kaynağına koyun:
 
 ```sh
 ./build.sh  # Grafik kitaplığını proje ayarlarıyla çapraz derler.
@@ -322,13 +322,13 @@ i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
 ./share.sh
 ```
 
-Burada `.elf` sadece bağlantı ara çıktısı, `host-share/apps/merhaba.bin` PCKFS'te `/apps/merhaba.bin` olur. **Uygulamayı çekirdeğe linklemek gerekmez.** Masaüstünden başlatmak için bir kullanıcı tarafı başlatma noktası gerekir. Hızlı deneme yolu: `kernel/user/apps/desktop.cpp` sonundaki `_start()` içinde `DesktopSession session;` satırından sonra geçici olarak şu satırı ekle:
+Burada `.elf` sadece bağlantı ara çıktısı, `host-share/apps/merhaba.bin` PCKFS'te `/apps/merhaba.bin` olur. **Uygulamayı çekirdeğe linklemek gerekmez.** Masaüstünden başlatmak için bir kullanıcı tarafı başlatma noktası gerekir. Hızlı deneme yolu: `kernel/user/apps/desktop.cpp` sonundaki `_start()` içinde `DesktopSession session;` satırından sonra geçici olarak şu satırı ekleyin:
 
 ```cpp
 (void)user::process_spawn("/apps/merhaba.bin", "Merhaba");
 ```
 
-Sonra `./qemu.sh` çalıştır. Masaüstü başlarken uygulama da açılır. ESC odak bu penceredeyken onu kapatır. Kalıcı bir masaüstü simgesi veya Başlat girdisi için `desktop.cpp` içindeki `open_window()`, `handle_click()`, görev çubuğu çizimi ve `app_process_ids_` takibini yeni uygulamaya genişlet. Mevcut üç uygulama bunun somut örneğidir. `qemu.sh` her defasında `clean.sh` çalıştırdığı için yeni uygulamanın derleme adımlarını kalıcı hale getirmek istersen `kernel/Makefile` içine mevcut `*_process.elf/.bin` kuralları gibi hedef ekle; ardından `share.sh` içine `/apps` kopyalama satırı ekle.
+Sonra `./qemu.sh` çalıştırın. Masaüstü başlarken uygulama da açılır. ESC odak bu penceredeyken onu kapatır. Kalıcı bir masaüstü simgesi veya Başlat girdisi için `desktop.cpp` içindeki `open_window()`, `handle_click()`, görev çubuğu çizimi ve `app_process_ids_` takibini yeni uygulamaya genişletin. Mevcut üç uygulama bunun somut örneğidir. `qemu.sh` her defasında `clean.sh` çalıştırdığı için yeni uygulamanın derleme adımlarını kalıcı hale getirmek isterseniz `kernel/Makefile` içine mevcut `*_process.elf/.bin` kuralları gibi hedef ekleyin; ardından `share.sh` içine `/apps` kopyalama satırı ekleyin.
 
 ## 9. Bugünkü teknik sınırlar ve kontrol
 
@@ -340,11 +340,11 @@ Sonra `./qemu.sh` çalıştır. Masaüstü başlarken uygulama da açılır. ESC
 ```sh
 sh tools/tests/run_framebuffer_tests.sh
 python3 tools/test_app_layout.py
-# Önce ISO ve PCKFS imajlarını üret:
+# Önce ISO ve PCKFS imajlarını üretin:
 python3 tools/tests/qemu_gui_smoke.py
 ```
 
-QEMU ekran kontrolünün görüntü/günlük çıktıları `tools/tests/gui-output/` içine yazılır. Normal kullanım için `./qemu.sh` çalıştırıp masaüstünü ve `serial` günlüğünü incele.
+QEMU ekran kontrolünün görüntü/günlük çıktıları `tools/tests/gui-output/` içine yazılır. Normal kullanım için `./qemu.sh` çalıştırıp masaüstünü ve `serial` günlüğünü inceleyin.
 
 ## Sıradaki işler
 
@@ -352,23 +352,23 @@ Bu liste planlanan işleri gösterir; tamamlanmış özellikleri değil.
 
 ### 1. Temeli sağlamlaştır
 
-- Süreç başına dosya tanıtıcıları, okuma konumları ve kapanış temizliği ekle.
-- Uygulama kapanması/çökmesi, pencere odağı, küçültme ve sürükleme davranışlarını tutarlı hale getir.
-- Çoklu pencere, klavye, süreç/thread sınırları, sayfa hataları ve kaynak temizliği için tekrarlanabilir QEMU kontrollerini genişlet.
+- Süreç başına dosya tanıtıcıları, okuma konumları ve kapanış temizliği ekleyin.
+- Uygulama kapanması/çökmesi, pencere odağı, küçültme ve sürükleme davranışlarını tutarlı hale getirin.
+- Çoklu pencere, klavye, süreç/thread sınırları, sayfa hataları ve kaynak temizliği için tekrarlanabilir QEMU kontrollerini genişletin.
 
 ### 2. Dosya yazma ve kalıcılık
 
-- Kullanıcı verisini her açılışta yeniden üretilen imajdan ayır; `clean.sh` kullanıcı verisini silmemeli.
-- PCKFS'e genel dosya oluşturma, yazma, kısaltma ve silme; boş blok yönetimi ve dolu disk/yarım yazma durumlarını ekle.
-- Dosya sistemi çağrılarına `write`, `seek`, `truncate`, `mkdir` ve `unlink` ekle; Dosyalar'da oluşturma/yeniden adlandırma ve Not Defteri'nde genel kaydetmeyi destekle.
+- Kullanıcı verisini her açılışta yeniden üretilen imajdan ayırın; `clean.sh` kullanıcı verisini silmemelidir.
+- PCKFS'e genel dosya oluşturma, yazma, kısaltma ve silme; boş blok yönetimi ve dolu disk/yarım yazma durumlarını ekleyin.
+- Dosya sistemi çağrılarına `write`, `seek`, `truncate`, `mkdir` ve `unlink` ekleyin; Dosyalar'da oluşturma/yeniden adlandırma ve Not Defteri'nde genel kaydetmeyi destekleyin.
 
 ### 3. Uygulama geliştirmeyi kolaylaştır
 
-- Düz `.bin` yüklemesinden statik i386 ELF32 yükleyicisine geç; `PT_LOAD`, BSS, sayfa izinleri ve giriş adresini doğrula. [ELF yükleme belirtimini](https://gabi.xinuos.com/elf/07-loading-intro.html) temel al.
-- Bellek ayırma, metin/sayı dönüşümü, süreç argümanları ve ortak pencere/olay yardımcıları içeren küçük bir kullanıcı alanı SDK'sı hazırla.
-- Sabit 8 süreç/16 thread sınırını ve uygulama başına tek pencere varsayımını kaldır.
+- Düz `.bin` yüklemesinden statik i386 ELF32 yükleyicisine geçin; `PT_LOAD`, BSS, sayfa izinleri ve giriş adresini doğrulayın. [ELF yükleme belirtimini](https://gabi.xinuos.com/elf/07-loading-intro.html) temel alın.
+- Bellek ayırma, metin/sayı dönüşümü, süreç argümanları ve ortak pencere/olay yardımcıları içeren küçük bir kullanıcı alanı SDK'sı hazırlayın.
+- Sabit 8 süreç/16 thread sınırını ve uygulama başına tek pencere varsayımını kaldırın.
 
 ### 4. Masaüstünü olgunlaştır
 
-- Türkçe karakter/Unicode, klavye düzeni, metin seçimi, imleç hareketi ve fare tekerleği desteğini geliştir.
-- Pencere boyutlandırma, odak sırası, kısayollar ve uygulama olay kuyruklarını tamamla; hızlı etkileşimlerde titreşim ve olay kaybını önle.
+- Türkçe karakter/Unicode, klavye düzeni, metin seçimi, imleç hareketi ve fare tekerleği desteğini geliştirin.
+- Pencere boyutlandırma, odak sırası, kısayollar ve uygulama olay kuyruklarını tamamlayın; hızlı etkileşimlerde titreşim ve olay kaybını önleyin.
