@@ -2,7 +2,7 @@
 
 [Türkçe](README.md) | [English](README.en.md)
 
-PCKOS is a hobby operating-system kernel that I am building from scratch as a systems programmer. I started about seven years ago, before today's AI tools became widespread, and continued working on it from time to time. I took a break two years ago. I have decided to publish what I have completed so far.
+As a systems programmer, I started building my own operating system from scratch as a hobby about seven years ago, before generative AI tools existed. I could never devote myself to the kernel full time, and I paused development about two years ago. I am now publishing the work completed so far, and hope a community will help me keep the project going.
 
 More information: [PCKOS on my blog](https://pckblog.com/pckos.html)
 
@@ -20,9 +20,7 @@ PCKOS is currently a minimal system under development. The kernel currently prov
 
 ## Contributing and reporting issues
 
-Open an issue in [GitHub Issues](https://github.com/alipicakcii/pckos/issues) to report a bug or suggest a feature. For bugs, include the PCKOS version, run environment, reproduction steps, expected and actual results, and, if possible, a screenshot or relevant lines from the `serial` log. Do not share secrets or personal files.
-
-For code contributions, you can discuss the scope in an issue first and then open a pull request. Explain what changed, why, and how you checked it. AI-assisted contributions are welcome; contributors are expected to understand and explain their changes.
+I am not opposed to using AI. Contributions to the project may use AI tools; my only expectation is that contributors understand and can explain the changes they submit.
 
 ## What's next
 
