@@ -2,7 +2,7 @@
 
 [Türkçe](README.md) | [English](README.en.md)
 
-PCKOS, bir sistem programcısı olarak hobi amacıyla sıfırdan geliştirdiğim bir işletim sistemi çekirdeği projesidir. Yaklaşık yedi yıl önce, yapay zekâ araçlarının bugünkü kadar yaygın olmadığı dönemde başladım ve zaman zaman geliştirmeye devam ettim. İki yıl önce geliştirmeye ara verdim. Şimdiye kadar tamamladığım kısmı yayımlamaya karar verdim.
+PCKOS, bir sistem programcısı olarak hobi amacıyla sıfırdan geliştirdiğim bir işletim sistemi çekirdeği projesidir. Yedi yıl önce, üretken yapay zekâ araçları henüz ortada yokken sistem programcısı olarak hobi amaçlı kendi işletim sistemimi yazmaya başladım.Çekirdeğe hiç bir zaman tam mesai ayıramadım ve iki sene öncede ara verdim projeye sayılır. Çekirdeği yayınlamaya karar verdim bir topluluk olursa devam etmek için projeye
 
 Daha fazla bilgi için: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
