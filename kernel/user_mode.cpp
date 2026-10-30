@@ -46,6 +46,15 @@ namespace kernel
         constexpr uint32_t USER_THREAD_STACK_BASE = USER_STACK_ADDRESS +
             USER_STACK_PAGES * PAGESIZE_4K + PAGESIZE_4K;
         constexpr uint32_t USER_PROCESS_COUNT = 8;
+        constexpr uint32_t USER_HEAP_ADDRESS = USER_CODE_ADDRESS + 0x100000;
+        constexpr uint32_t USER_HEAP_BYTES = 3 * 1024 * 1024;
+        constexpr uint32_t USER_HEAP_PAGES = USER_HEAP_BYTES / PAGESIZE_4K;
+        constexpr uint32_t USER_HEAP_ALLOCATION_COUNT = 1024;
+        static_assert(USER_THREAD_STACK_BASE +
+            USER_THREAD_STACK_COUNT * USER_THREAD_STACK_BYTES <= USER_HEAP_ADDRESS,
+            "User heap overlaps thread stacks");
+        static_assert((USER_HEAP_ADDRESS + USER_HEAP_BYTES - 1) >> 22 ==
+            USER_CODE_ADDRESS >> 22, "User heap must share the user page table");
         constexpr uint32_t RING0_INTERRUPT_STACK_SIZE = 16 * 1024;
         constexpr uint32_t USER_PAGE_DIRECTORY_INDEX = USER_CODE_ADDRESS >> 22;
         constexpr int32_t ERROR_NO_ENTRY = -2;
@@ -56,11 +65,19 @@ namespace kernel
 
         struct UserProcessSpace
         {
+            struct HeapAllocation
+            {
+                uint32_t offset;
+                uint32_t size;
+            };
             bool reserved;
             uint32_t process_id;
             uint32_t page_directory_address;
             uint32_t code_pages;
             bool thread_stacks[USER_THREAD_STACK_COUNT];
+            uint32_t heap_count;
+            HeapAllocation heap_allocations[USER_HEAP_ALLOCATION_COUNT];
+            uint16_t heap_page_users[USER_HEAP_PAGES];
         };
 
         uint8_t ring0_interrupt_stack[RING0_INTERRUPT_STACK_SIZE]
@@ -174,6 +191,9 @@ namespace kernel
                 mem::change_pd(space.page_directory_address);
 
             release_process_thread_stacks(space);
+            for (uint32_t page = 0; page < USER_HEAP_PAGES; ++page)
+                if (space.heap_page_users[page] != 0)
+                    unmap_user_page(space, USER_HEAP_ADDRESS + page * PAGESIZE_4K);
             for (uint32_t page = 0; page < USER_STACK_PAGES; ++page)
                 unmap_user_page(space, USER_STACK_ADDRESS + page * PAGESIZE_4K);
             for (uint32_t page = 0; page < space.code_pages; ++page)
@@ -343,6 +363,85 @@ namespace kernel
         process_set_main_thread(process_id, static_cast<uint32_t>(thread_id));
         process_set_input_focus(process_id);
         return static_cast<int32_t>(process_id);
+    }
+
+    int32_t user_mode_heap_alloc(uint32_t size, uint32_t alignment)
+    {
+        // int 0x80 kesmeleri kapatır; tek çekirdekte tahsis kayıtlarına eşzamanlı erişilmez.
+        UserProcessSpace *space = find_process_space(thread_current_process_id());
+        if (!user_task_active || !thread_current_is_user() || space == nullptr)
+            return ERROR_INVALID_ARGUMENT;
+        if (alignment == 0 || (alignment & (alignment - 1)) != 0 ||
+            alignment > 0x100000)
+            return ERROR_INVALID_ARGUMENT;
+        if (size > USER_HEAP_BYTES || space->heap_count == USER_HEAP_ALLOCATION_COUNT)
+            return ERROR_NO_MEMORY;
+        if (alignment < 16) alignment = 16;
+        size = size == 0 ? 16 : (size + 15) & ~15U;
+
+        // Kayıtlar adres sırasındadır; ilk uygun boşluğu yeniden kullanırız.
+        uint32_t offset = 0;
+        uint32_t index = 0;
+        for (; index < space->heap_count; ++index)
+        {
+            const auto &allocation = space->heap_allocations[index];
+            offset = (offset + alignment - 1) & ~(alignment - 1);
+            if (offset <= allocation.offset && size <= allocation.offset - offset)
+                break;
+            offset = allocation.offset + allocation.size;
+        }
+        offset = (offset + alignment - 1) & ~(alignment - 1);
+        if (offset > USER_HEAP_BYTES || size > USER_HEAP_BYTES - offset)
+            return ERROR_NO_MEMORY;
+        const uint32_t first_page = offset / PAGESIZE_4K;
+        const uint32_t last_page = (offset + size - 1) / PAGESIZE_4K;
+        // Küçük tahsisler aynı sayfayı paylaşır. Fiziksel bellek ihtiyaçla alınır.
+        for (uint32_t page = first_page; page <= last_page; ++page)
+        {
+            if (space->heap_page_users[page] == 0 &&
+                !map_user_page(*space, USER_HEAP_ADDRESS + page * PAGESIZE_4K,
+                               PG_USER | PG_WRITE, nullptr))
+            {
+                for (uint32_t rollback = first_page; rollback < page; ++rollback)
+                    if (space->heap_page_users[rollback] == 0)
+                        unmap_user_page(*space, USER_HEAP_ADDRESS + rollback * PAGESIZE_4K);
+                return ERROR_NO_MEMORY;
+            }
+        }
+        for (uint32_t page = first_page; page <= last_page; ++page)
+            ++space->heap_page_users[page];
+        for (uint32_t move = space->heap_count; move > index; --move)
+            space->heap_allocations[move] = space->heap_allocations[move - 1];
+        space->heap_allocations[index] = {offset, size};
+        ++space->heap_count;
+        const uint32_t address = USER_HEAP_ADDRESS + offset;
+        memset(reinterpret_cast<void *>(address), 0, size);
+        return static_cast<int32_t>(address);
+    }
+
+    int32_t user_mode_heap_free(uint32_t address)
+    {
+        UserProcessSpace *space = find_process_space(thread_current_process_id());
+        if (!user_task_active || !thread_current_is_user() || space == nullptr)
+            return ERROR_INVALID_ARGUMENT;
+        if (address == 0) return 0;
+        if (address < USER_HEAP_ADDRESS || address >= USER_HEAP_ADDRESS + USER_HEAP_BYTES)
+            return ERROR_BAD_ADDRESS;
+        const uint32_t offset = address - USER_HEAP_ADDRESS;
+        for (uint32_t index = 0; index < space->heap_count; ++index)
+        {
+            const auto allocation = space->heap_allocations[index];
+            if (allocation.offset != offset) continue;
+            const uint32_t last_page = (offset + allocation.size - 1) / PAGESIZE_4K;
+            for (uint32_t page = offset / PAGESIZE_4K; page <= last_page; ++page)
+                if (--space->heap_page_users[page] == 0)
+                    unmap_user_page(*space, USER_HEAP_ADDRESS + page * PAGESIZE_4K);
+            --space->heap_count;
+            for (uint32_t move = index; move < space->heap_count; ++move)
+                space->heap_allocations[move] = space->heap_allocations[move + 1];
+            return 0;
+        }
+        return ERROR_INVALID_ARGUMENT;
     }
 
     int32_t user_mode_run_demo()

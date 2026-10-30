@@ -201,6 +201,7 @@ Kullanıcı tarafında kullanılabilen API'nin kaynağı `kernel/include/user/sy
 | Günlük/giriş | `write`, `get_kernel_log`, `wait_event` |
 | Process | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Thread | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
+| Bellek | `heap_alloc`, `heap_free`; `<user/new.hh>` ile `new`/`delete` |
 | Sistem | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
 | Grafik | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
@@ -216,6 +217,35 @@ if (user::wait_event(&event, 10) > 0 &&
 ```
 
 Yeni syscall eklerken: numarayı ve kullanıcı sarmalayıcısını `kernel/include/user/syscall.hh` içine; işleyiciyi `kernel/syscall.cpp` içindeki dağıtıcıya ekleyin. Kullanıcıdan gelen adresleri `is_user_range` ile denetleyin. Gerekiyorsa asıl çekirdek işlevini `kernel/` altında ilgili modülde uygulayın. Dönüş kodu ve sınırları burada belgeleyin.
+
+**Kullanıcı uygulamalarında dinamik bellek**
+
+`kernel/include/user/new.hh` başlığı ve `kernel/user/new.cpp` kullanıcı alanına `new`, `new[]`, `delete`, `delete[]`, placement new ve C++17 hizalı tahsis desteği sağlar. Uygulamanın bağlantı komutuna `kernel/user/new.user.o` ekleyin; mevcut Makefile bunu yerleşik uygulamalar için otomatik yapar. Çekirdeğin `kernel/mem/new.cpp` uygulaması kendi heap'ini kullanmaya devam eder.
+
+```cpp
+#include <user/new.hh>
+
+int *value = new int(42);
+delete value;
+
+int *numbers = new (std::nothrow) int[100];
+if (numbers != nullptr) {
+    numbers[0] = 7;
+    delete[] numbers;
+}
+```
+
+Her süreçte `0x40100000–0x40400000` adres aralığında 3 MiB'lık heap vardır; fiziksel sayfalar ihtiyaç oldukça ayrılır. Aynı süreçteki thread'ler bu alanı paylaşır, farklı süreçlerin sayfa eşlemeleri ayrıdır. Aynı anda en çok 1024 tahsis tutulur. Varsayılan hizalama 16 bayttır; ikinin kuvveti olan hizalamalar en çok 1 MiB'a kadar kabul edilir. Küçük tahsisler sayfaları paylaşır; bir sayfadaki son tahsis silinince fiziksel sayfa geri verilir. Süreç kapanınca `delete` edilmemiş tahsisler de temizlenir.
+
+`heap_alloc(size, alignment)` (syscall 42) ham bellek verir, başarısızlıkta `nullptr` döndürür; `heap_free(address)` (syscall 43) belleği geri verir. Tahsis kayıtları çekirdekte saklanır; yalnızca çağıran sürecin geçerli tahsis başlangıcı serbest bırakılabilir. İşlemler mevcut tek çekirdekli sistemde kesmeler kapalı sistem çağrısı içinde tamamlanır. Normal `new` bellek bulamazsa istisnalar kapalı olduğu için günlüğe hata yazıp çağıran süreci `-12` durumuyla sonlandırır. Hatayı uygulamada ele almak için `new (std::nothrow)` kullanın. `get_heap_usage()` hâlâ çekirdek heap kullanımını bildirir.
+
+Basit örnek `kernel/user/apps/new_demo_process.cpp` içindedir: `int *ptr = new int;` ile bellek alır, adresi seri günlüğe yazar ve `delete ptr;` ile bırakır. `./qemu.sh` ile açtıktan sonra **PCKOS terminalinde** çalıştırın:
+
+```text
+run /apps/new_demo.bin
+```
+
+Host üzerindeki `serial` dosyasında veya PCKOS terminalindeki `dmesg` çıktısında adresi ve `delete tamamlandi` mesajını görebilirsiniz. Uygulama pencere açmadan kapanır.
 
 ## 6. Process nasıl oluşturulur?
 
@@ -307,13 +337,13 @@ Yukarıdaki örneği `kernel/user/apps/merhaba_process.cpp` olarak kaydedin. Aş
 
 Bu örnekte uygulamayı elle derliyoruz. Mevcut Makefile yalnızca içinde tanımlı uygulamaları derler; yeni bir `.cpp` dosyası oluşturduğunuzda onu kendiliğinden derlemeye eklemez. Bu nedenle aşağıdaki adımları sırayla uygulayın.
 
-**1. Grafik kitaplığını hazırlayın.**
+**1. Grafik ve bellek yardımcılarını hazırlayın.**
 
 ```sh
 ./build.sh
 ```
 
-Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o` dosyasını üretir. Henüz yeni `merhaba_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
+Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o` ve `kernel/user/new.user.o` dosyalarını üretir. Henüz yeni `merhaba_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
 
 **2. Uygulamanın C++ kodunu derleyin.**
 
@@ -333,10 +363,10 @@ Girdi, yazdığınız `merhaba_process.cpp` dosyasıdır. `-c` seçeneği yalnı
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/merhaba_process.elf \
-  kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
+  kernel/user/new.user.o kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
 ```
 
-Bu adım, uygulamanızın nesne dosyasını ilk adımda üretilen `graphics.user.o` ile birleştirir. `linker.ld`, uygulamanın bellek yerleşimini ve `_start` girişini tanımlar. Sonuç `merhaba_process.elf` dosyasıdır. Bu ELF, bağlantı ara çıktısıdır; mevcut PCKOS yükleyicisi düz ikili dosya bekler.
+Bu adım, uygulamanızın nesne dosyasını ilk adımda üretilen `graphics.user.o` ve kullanıcı alanının `new`/`delete` desteğini sağlayan `new.user.o` ile birleştirir. `linker.ld`, uygulamanın bellek yerleşimini ve `_start` girişini tanımlar. Sonuç `merhaba_process.elf` dosyasıdır. Bu ELF, bağlantı ara çıktısıdır; mevcut PCKOS yükleyicisi düz ikili dosya bekler.
 
 **4. ELF dosyasını PCKOS'un yükleyebileceği biçime çevirin.**
 
@@ -360,30 +390,27 @@ Bu noktada uygulama derlenmiş ve disk imajına eklenmiştir. **Uygulamayı çek
 
 **6. İlk deneme için uygulamayı başlatın.**
 
-Dosyanın diskte bulunması onu kendiliğinden çalıştırmaz. İlk denemede masaüstü açılırken uygulamayı başlatmak için `kernel/user/apps/desktop.cpp` sonundaki `_start()` fonksiyonunda, `DesktopSession session;` satırının hemen altına geçici olarak şu çağrıyı ekleyin:
+Proje kökünde `./qemu.sh` çalıştırın. Betik temiz derleme yapar, ISO ve PCKFS imajlarını yeniden üretir ve QEMU'yu açar. `host-share/apps/merhaba.bin` temizleme sırasında korunup yeni disk imajına eklenir.
 
-```cpp
-(void)user::process_spawn("/apps/merhaba.bin", "Merhaba");
+Masaüstündeki Terminal'i açıp **PCKOS terminaline** şu komutu yazın:
+
+```text
+run /apps/merhaba.bin
 ```
 
-Bu çağrı `/apps/merhaba.bin` dosyasından yeni bir process başlatır. Ardından proje kökünde çalıştırın:
-
-```sh
-./qemu.sh
-```
-
-`qemu.sh`, temiz derleme yapar, ISO ve PCKFS imajlarını yeniden üretir ve QEMU'yu açar. `host-share/apps/merhaba.bin` temizleme sırasında silinmediği için yeni disk imajına tekrar eklenir. Merhaba penceresi masaüstüyle birlikte açılır; odak bu penceredeyken ESC ile kapatabilirsiniz.
+Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `desktop.cpp` dosyasını değiştirmeniz gerekmez. Merhaba penceresine odaklanıp ESC ile kapatabilirsiniz. Başka bir uygulamanın kodundan başlatmak için `user::process_spawn("/apps/merhaba.bin", "Merhaba")` kullanın.
 
 **Uygulamanın kodunu değiştirdiğinizde:** 2, 3 ve 4. adımları tekrar çalıştırarak `host-share/apps/merhaba.bin` dosyasını güncelleyin. Ardından `./qemu.sh` ile deneyin; bu betik 5. adımdaki paketlemeyi de kendisi yapar. Yalnızca disk imajını yenilemek isterseniz `./share.sh` çalıştırın. Temizleme sonrasında `graphics.user.o` bulunmuyorsa veya grafik kitaplığını değiştirdiyseniz önce 1. adımı da uygulayın.
 
 ## 9. Bugünkü teknik sınırlar ve kontrol
 
 - Yükleyici ELF ayrıştırmaz: düz `.bin`, `_start` ve `0x40000000` bağlantı adresi kullanılır. İmaj en çok 64 sayfa (256 KiB) olabilir.
-- En çok 8 process kaydı ve 16 scheduler thread girdisi vardır; masaüstü bir process yerini kullanır. Kullanıcı alanında genel amaçlı heap/`new`, standart kütüphane, process argümanları ve dosya yazma API'si yoktur.
+- En çok 8 process kaydı ve 16 scheduler thread girdisi vardır; masaüstü bir process yerini kullanır. Kullanıcı alanında süreç başına 3 MiB heap ve en çok 1024 eşzamanlı tahsisle `new`/`delete` desteği vardır. Tam standart kütüphane, process argümanları ve dosya yazma API'si henüz yoktur.
 - Çekirdek global C++ kurucularını `_init()` ile başlatır. Çekirdek için RTTI minimal olarak port edilmiştir ve `dynamic_cast` çalışmaktadır. Exception'lar kapalıdır; kullanıcı uygulamaları `-fno-rtti` ile derlenir.
 - GUI'de pencere kaydı ve çizim katmanları vardır; uygulama türü başına tek açık kopya izlenir.
 
 ```sh
+python3 tools/tests/run_user_heap_test.py
 sh tools/tests/run_framebuffer_tests.sh
 python3 tools/test_app_layout.py
 # Önce ISO ve PCKFS imajlarını üretin:

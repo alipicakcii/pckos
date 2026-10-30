@@ -16,4 +16,5 @@ rm -f serial
 rm -rf pckfs-vbox.vdi
 # Generated regression captures and Python bytecode.
 rm -rf tools/tests/gui-output
+rm -rf tools/tests/heap-output
 find tools -type d -name __pycache__ -prune -exec rm -rf {} +

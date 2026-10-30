@@ -196,6 +196,7 @@ The user API is declared in `kernel/include/user/syscall.hh`; graphics helpers a
 | Logging/input | `write`, `get_kernel_log`, `wait_event` |
 | Processes | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Threads | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
+| Memory | `heap_alloc`, `heap_free`; `new`/`delete` via `<user/new.hh>` |
 | System | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
 | Graphics | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
@@ -211,6 +212,35 @@ if (user::wait_event(&event, 10) > 0 &&
 ```
 
 To add a syscall, add its number and user wrapper to `kernel/include/user/syscall.hh`, then add its handler to the dispatcher in `kernel/syscall.cpp`. Validate user-provided addresses with `is_user_range`. Implement kernel functionality in the relevant module under `kernel/`. Document return values and limits here.
+
+**Dynamic memory in user applications**
+
+The `kernel/include/user/new.hh` header and `kernel/user/new.cpp` provide user-space `new`, `new[]`, `delete`, `delete[]`, placement new, and C++17 aligned allocation. Add `kernel/user/new.user.o` to the application's link command; the existing Makefile does this automatically for built-in apps. The kernel's `kernel/mem/new.cpp` continues to use its own heap.
+
+```cpp
+#include <user/new.hh>
+
+int *value = new int(42);
+delete value;
+
+int *numbers = new (std::nothrow) int[100];
+if (numbers != nullptr) {
+    numbers[0] = 7;
+    delete[] numbers;
+}
+```
+
+Each process has a 3 MiB heap at `0x40100000–0x40400000`; physical pages are allocated on demand. Threads in the same process share this heap, while different processes have separate page mappings. Up to 1024 allocations can be live at once. Default alignment is 16 bytes; power-of-two alignments up to 1 MiB are accepted. Small allocations share pages; freeing the last allocation on a page releases that physical page. Process exit also reclaims allocations that were not deleted.
+
+`heap_alloc(size, alignment)` (syscall 42) returns raw memory or `nullptr` on failure; `heap_free(address)` (syscall 43) releases it. Allocation records are stored in the kernel; only a valid allocation start in the calling process can be freed. Operations complete inside the syscall with interrupts disabled on the current single-core system. If normal `new` cannot allocate memory, it logs an error and terminates the calling process with status `-12`, since exceptions are disabled. Use `new (std::nothrow)` to handle failure in the application. `get_heap_usage()` still reports kernel heap usage.
+
+The simple example in `kernel/user/apps/new_demo_process.cpp` allocates with `int *ptr = new int;`, logs the address to serial, and releases it with `delete ptr;`. After booting with `./qemu.sh`, run this in the **PCKOS terminal**:
+
+```text
+run /apps/new_demo.bin
+```
+
+The host `serial` file or the PCKOS terminal's `dmesg` output shows the address and `delete tamamlandi` message. The app exits without opening a window.
 
 ## 6. Creating a process
 
@@ -291,13 +321,13 @@ Save the example above as `kernel/user/apps/merhaba_process.cpp`. The following 
 
 This example builds the app manually. The existing Makefile builds only the applications registered in it; creating a new `.cpp` file does not automatically add it to the build. Follow the steps below in order.
 
-**1. Prepare the graphics library.**
+**1. Prepare the graphics and memory helpers.**
 
 ```sh
 ./build.sh
 ```
 
-This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, which our example needs. It does not yet compile our new `merhaba_process.cpp`; we will do that in the next step.
+This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o` and `kernel/user/new.user.o`, which our example links. It does not yet compile our new `merhaba_process.cpp`; we will do that in the next step.
 
 **2. Compile the application's C++ source.**
 
@@ -317,10 +347,10 @@ The input is your `merhaba_process.cpp` file. The `-c` option compiles it into t
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/merhaba_process.elf \
-  kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
+  kernel/user/new.user.o kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
 ```
 
-This combines your application's object file with the `graphics.user.o` produced in step 1. `linker.ld` defines the application's memory layout and `_start` entry point. The result is `merhaba_process.elf`. This ELF file is a linker intermediate; the current PCKOS loader expects a flat binary.
+This combines your application's object file with `graphics.user.o` and the user-space `new`/`delete` support in `new.user.o`, both produced in step 1. `linker.ld` defines the application's memory layout and `_start` entry point. The result is `merhaba_process.elf`. This ELF file is a linker intermediate; the current PCKOS loader expects a flat binary.
 
 **4. Convert the ELF file into the format PCKOS loads.**
 
@@ -344,30 +374,27 @@ The application is now compiled and included in the disk image. **It does not ne
 
 **6. Launch the app for an initial trial.**
 
-Having the file on disk does not run it automatically. To launch it when the desktop starts, temporarily add this call immediately after `DesktopSession session;` in `_start()` at the end of `kernel/user/apps/desktop.cpp`:
+Run `./qemu.sh` from the project root. It performs a clean build, regenerates the ISO and PCKFS images, and starts QEMU. Cleanup preserves `host-share/apps/merhaba.bin`, which is included in the new disk image.
 
-```cpp
-(void)user::process_spawn("/apps/merhaba.bin", "Merhaba");
+Open Terminal on the desktop and enter this in the **PCKOS terminal**:
+
+```text
+run /apps/merhaba.bin
 ```
 
-This starts a new process from `/apps/merhaba.bin`. Then run the following from the project root:
-
-```sh
-./qemu.sh
-```
-
-`qemu.sh` performs a clean build, regenerates the ISO and PCKFS images, and starts QEMU. Cleanup preserves `host-share/apps/merhaba.bin`, so it is included in the new disk image again. The Merhaba window opens with the desktop; press ESC while it is focused to close it.
+The terminal starts a new process from this file. You do not need to edit `desktop.cpp` to launch the app. Focus the Merhaba window and press ESC to close it. To launch it from another application, use `user::process_spawn("/apps/merhaba.bin", "Merhaba")`.
 
 **After changing the application's source:** Repeat steps 2, 3, and 4 to update `host-share/apps/merhaba.bin`. Then try it with `./qemu.sh`, which also performs the packaging in step 5. To refresh only the disk image, run `./share.sh`. If cleanup has removed `graphics.user.o`, or if you changed the graphics library, repeat step 1 first.
 
 ## 9. Current limits and checks
 
 - The loader does not parse ELF: it uses flat `.bin` images, `_start`, and link address `0x40000000`. An image is limited to 64 pages (256 KiB).
-- There are at most 8 process records and 16 scheduler thread slots; the desktop uses one process slot. User space has no general heap/`new`, standard library, process arguments, or file-write API.
+- There are at most 8 process records and 16 scheduler thread slots; the desktop uses one process slot. User space supports `new`/`delete` with a 3 MiB heap per process and up to 1024 live allocations. A full standard library, process arguments, and a file-write API are not available yet.
 - The kernel runs global C++ constructors through `_init()`. RTTI has been minimally ported for the kernel, and `dynamic_cast` works. Exceptions remain disabled; user applications are built with `-fno-rtti`.
 - The GUI supports window registration and drawing layers; only one instance of each application type is tracked.
 
 ```sh
+python3 tools/tests/run_user_heap_test.py
 sh tools/tests/run_framebuffer_tests.sh
 python3 tools/test_app_layout.py
 # Build the ISO and PCKFS images first:

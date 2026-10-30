@@ -19,4 +19,5 @@ cp kernel/user/apps/file_manager_process.bin "$STAGING/apps/file_manager.bin"
 cp kernel/user/apps/task_manager_process.bin "$STAGING/apps/task_manager.bin"
 cp kernel/user/apps/calculator_process.bin "$STAGING/apps/calculator.bin"
 cp kernel/user/apps/notepad_process.bin "$STAGING/apps/notepad.bin"
+cp kernel/user/apps/new_demo_process.bin "$STAGING/apps/new_demo.bin"
 python3 tools/mkpckfs.py --source "$STAGING" --output pckfs.img

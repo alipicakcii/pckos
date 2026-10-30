@@ -30,7 +30,9 @@ USER_APP_CFLAGS=-m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
 	-fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
 	-msoft-float -Iinclude
+USER_RUNTIME_OBJECTS=user/new.user.o
 USER_APP_OBJECTS=\
+$(USER_RUNTIME_OBJECTS) \
 user/gui/graphics.user.o \
 user/apps/file_manager.user.o \
 user/apps/terminal.user.o \
@@ -41,11 +43,13 @@ user/apps/terminal_process.user.o \
 user/apps/file_manager_process.user.o \
 user/apps/task_manager_process.user.o
 USER_PROCESS_OBJECTS+=user/apps/calculator_process.user.o user/apps/notepad_process.user.o
+USER_PROCESS_OBJECTS+=user/apps/new_demo_process.user.o
 USER_PROCESS_IMAGES=\
 user/apps/terminal_process.bin \
 user/apps/file_manager_process.bin \
 user/apps/task_manager_process.bin
 USER_PROCESS_IMAGES+=user/apps/calculator_process.bin user/apps/notepad_process.bin
+USER_PROCESS_IMAGES+=user/apps/new_demo_process.bin
 
 include $(ARCHDIR)/make.config
 
@@ -126,6 +130,9 @@ syscall.o: syscall.cpp
 .asm.o:
 	nasm -felf32 $< -o $@
 
+user/new.user.o: user/new.cpp include/user/new.hh include/user/syscall.hh
+	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+
 user/gui/graphics.user.o: user/gui/graphics.cpp include/user/gui.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
@@ -162,20 +169,20 @@ user/apps/calculator_process.user.o: user/apps/calculator_process.cpp include/us
 user/apps/notepad_process.user.o: user/apps/notepad_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/terminal_process.elf: user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_process.user.o
+user/apps/terminal_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_process.user.o
 
-user/apps/file_manager_process.elf: user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o
+user/apps/file_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o
 
-user/apps/task_manager_process.elf: user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o
+user/apps/task_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o
 
-user/apps/calculator_process.elf: user/gui/graphics.user.o user/apps/calculator_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ user/gui/graphics.user.o user/apps/calculator_process.user.o
+user/apps/calculator_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/calculator_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/calculator_process.user.o
 
-user/apps/notepad_process.elf: user/gui/graphics.user.o user/apps/notepad_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ user/gui/graphics.user.o user/apps/notepad_process.user.o
+user/apps/notepad_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/notepad_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/notepad_process.user.o
 
 user/apps/terminal_process.bin: user/apps/terminal_process.elf
 	$(OBJCOPY) -O binary $< $@
@@ -195,7 +202,17 @@ user/apps/notepad_process.bin: user/apps/notepad_process.elf
 arch/i386/user_desktop.o: arch/i386/user_desktop.asm user/apps/desktop.bin
 	nasm -felf32 $< -o $@
 
+user/apps/new_demo_process.user.o: user/apps/new_demo_process.cpp include/user/new.hh include/user/syscall.hh
+	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+
+user/apps/new_demo_process.elf: $(USER_RUNTIME_OBJECTS) user/apps/new_demo_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/apps/new_demo_process.user.o
+
+user/apps/new_demo_process.bin: user/apps/new_demo_process.elf
+	$(OBJCOPY) -O binary $< $@
+
 clean:
+	rm -f user/apps/new_demo_process.elf
 	rm -f pckos.bin
 	rm -f $(USER_APP_OBJECTS) $(USER_PROCESS_OBJECTS) user/apps/desktop.elf user/apps/desktop.bin \
 		user/apps/terminal_process.elf user/apps/file_manager_process.elf \

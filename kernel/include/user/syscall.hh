@@ -47,6 +47,8 @@ namespace user
         syscall_gfx_move_window = 39,
         syscall_process_focused_id = 40,
         syscall_get_datetime = 41,
+        syscall_heap_alloc = 42,
+        syscall_heap_free = 43,
         syscall_gfx_begin_frame = 17,
         syscall_gfx_end_frame = 18,
         syscall_gfx_push_clip = 19,
@@ -169,6 +171,17 @@ namespace user
     inline int32_t get_heap_usage()
     {
         return call(syscall_get_heap_usage);
+    }
+
+    inline void *heap_alloc(uint32_t size, uint32_t alignment = 16)
+    {
+        const int32_t result = call(syscall_heap_alloc, size, alignment);
+        return result < 0 ? nullptr : reinterpret_cast<void *>(result);
+    }
+
+    inline int32_t heap_free(void *address)
+    {
+        return call(syscall_heap_free, reinterpret_cast<uint32_t>(address));
     }
 
     inline int32_t open(const char *path, uint32_t flags = 0)

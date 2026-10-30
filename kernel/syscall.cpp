@@ -844,6 +844,15 @@ namespace kernel
                     registers->eax = mem::MemAlloc::get_kernel_heap_used();
                     return;
 
+                case user::syscall_heap_alloc:
+                    registers->eax = static_cast<uint32_t>(user_mode_heap_alloc(
+                        registers->ebx, registers->ecx));
+                    return;
+
+                case user::syscall_heap_free:
+                    registers->eax = static_cast<uint32_t>(user_mode_heap_free(registers->ebx));
+                    return;
+
                 case user::syscall_open:
                     registers->eax = static_cast<uint32_t>(open_file(registers));
                     return;

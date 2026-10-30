@@ -23,6 +23,13 @@ struct DirectoryEntry { uint32_t inode, type, size; char name[48]; };
 inline int32_t root_inode() { return 0; }
 inline int32_t get_ticks() { return 12345; }
 inline int32_t get_heap_usage() { return 54321; }
+inline int32_t process_spawn(const char*, const char*) { return 2; }
+inline void thread_yield() {}
+inline void thread_sleep(uint32_t) {}
+inline uint32_t thread_id() { return 1; }
+inline uint32_t thread_count() { return 1; }
+inline uint32_t thread_switch_count() { return 0; }
+[[noreturn]] inline void thread_exit() { __builtin_trap(); }
 inline int32_t open(const char*) { return 3; }
 inline int32_t close(int32_t) { return 0; }
 inline int32_t read(int32_t, void*, uint32_t) { return 0; }

@@ -13,6 +13,7 @@
 /isodir/
 /serial
 /tools/tests/gui-output/
+/tools/tests/heap-output/
 __pycache__/
 /host-code-test/
 

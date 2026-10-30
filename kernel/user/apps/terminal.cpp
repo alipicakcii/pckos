@@ -150,8 +150,9 @@ namespace user::apps
 
         if (equal(command_, "help"))
         {
-            print_line("Komutlar: help, clear, about, ticks, mem, threads, dmesg, ls, pwd, cat, echo");
+            print_line("Komutlar: help, clear, about, ticks, mem, threads, dmesg, ls, pwd, cat, echo, run");
             print_line("cat, PCKFS icindeki metin dosyalarini okur.");
+            print_line("run /apps/new_demo.bin: uygulamayi ayri surecte baslatir.");
         }
         else if (equal(command_, "clear"))
         {
@@ -242,6 +243,29 @@ namespace user::apps
             }
             if (!any)
                 print_line("PCKFS bagli degil veya dizin bos.");
+        }
+        else if (starts_with(command_, "run "))
+        {
+            const char *path = command_ + 4;
+            while (*path == ' ') ++path;
+            if (*path != '/')
+                print_line("Kullanim: run /apps/uygulama.bin");
+            else
+            {
+                const int32_t pid = user::process_spawn(path, "Uygulama");
+                char number[12];
+                if (pid < 0)
+                {
+                    print_line("Uygulama baslatilamadi. Hata kodu (mutlak):");
+                    to_number(static_cast<uint32_t>(-pid), number);
+                }
+                else
+                {
+                    print_line("Uygulama baslatildi. PID:");
+                    to_number(static_cast<uint32_t>(pid), number);
+                }
+                print_line(number);
+            }
         }
         else if (starts_with(command_, "echo "))
             print_line(command_ + 5);
