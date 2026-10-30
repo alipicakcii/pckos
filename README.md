@@ -303,35 +303,78 @@ __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Projede kayıtlı masaüstü ve uygulamalar `kernel/Makefile` hedefleriyle `./build.sh` sırasında otomatik derlenir. Yeni uygulama için iki yol vardır:
+Yukarıdaki örneği `kernel/user/apps/merhaba_process.cpp` olarak kaydedin. Aşağıda yeni uygulamayı adım adım derleyip PCKOS'ta çalıştırıyoruz. Bütün terminal komutlarını projenin kök dizininde, `build.sh` dosyasının bulunduğu yerde çalıştırın.
 
-- **Makefile'a ekleyin:** Uygulamanın `.user.o`, `.elf` ve `.bin` hedeflerini `kernel/Makefile` içine; `.user.o` ve `.bin` dosyalarını ilgili nesne/imaj listelerine ekleyin. `share.sh` içine de uygulamanın `.bin` dosyasını PCKFS'e kopyalayan satırı ekleyin. Sonrasında derleme ve PCKFS'e ekleme betiklerle yapılır; aşağıdaki elle derleme komutlarını çalıştırmanız gerekmez.
-- **Hızlı deneme için elle derleyin:** Uygulamayı Makefile'a eklemeden denemek istiyorsanız aşağıdaki komutları sırayla çalıştırın. İlk `./build.sh`, grafik kitaplığı nesnesini ve mevcut derleme çıktılarını hazırlar; sonraki komutlar yeni uygulamayı elle derleyip `host-share/apps` altına koyar. Son `./share.sh` PCKFS'i üretir.
+Bu örnekte uygulamayı elle derliyoruz. Mevcut Makefile yalnızca içinde tanımlı uygulamaları derler; yeni bir `.cpp` dosyası oluşturduğunuzda onu kendiliğinden derlemeye eklemez. Bu nedenle aşağıdaki adımları sırayla uygulayın.
+
+**1. Grafik kitaplığını hazırlayın.**
 
 ```sh
-./build.sh  # Grafik kitaplığını proje ayarlarıyla çapraz derler.
+./build.sh
+```
+
+Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o` dosyasını üretir. Henüz yeni `merhaba_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
+
+**2. Uygulamanın C++ kodunu derleyin.**
+
+```sh
 i686-elf-g++ -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
   -fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
   -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
   -msoft-float -Ikernel/include \
   -c kernel/user/apps/merhaba_process.cpp -o kernel/user/apps/merhaba_process.user.o
+```
+
+Girdi, yazdığınız `merhaba_process.cpp` dosyasıdır. `-c` seçeneği yalnızca derleme yapar ve sonuç olarak `merhaba_process.user.o` nesne dosyasını oluşturur. Bu dosya henüz tek başına çalıştırılabilir değildir; kullandığı grafik fonksiyonlarıyla bağlanması gerekir. `-Ikernel/include` SDK başlık dosyalarının yerini belirtir. Diğer bayraklar PCKOS kullanıcı uygulamalarının mevcut derleme ayarlarıdır.
+
+**3. Nesne dosyasını grafik kitaplığıyla bağlayın.**
+
+```sh
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/merhaba_process.elf \
   kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
+```
+
+Bu adım, uygulamanızın nesne dosyasını ilk adımda üretilen `graphics.user.o` ile birleştirir. `linker.ld`, uygulamanın bellek yerleşimini ve `_start` girişini tanımlar. Sonuç `merhaba_process.elf` dosyasıdır. Bu ELF, bağlantı ara çıktısıdır; mevcut PCKOS yükleyicisi düz ikili dosya bekler.
+
+**4. ELF dosyasını PCKOS'un yükleyebileceği biçime çevirin.**
+
+```sh
 mkdir -p host-share/apps
 i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
   host-share/apps/merhaba.bin
+```
+
+`objcopy -O binary`, ELF içindeki yüklenebilir içeriği düz ikili dosyaya dönüştürür. Sonuç `host-share/apps/merhaba.bin` olur. `host-share`, host makinenizdeki dosyaların PCKFS'e aktarılması için kullanılan dizindir; `apps` klasörünü `mkdir -p` ile oluşturuyoruz.
+
+**5. Uygulamayı PCKFS disk imajına aktarın.**
+
+```sh
 ./share.sh
 ```
 
-Burada `.elf` sadece bağlantı ara çıktısıdır; `host-share/apps/merhaba.bin`, PCKFS içinde `/apps/merhaba.bin` olur. `./share.sh`, `./build.sh` komutunu kendisi çalıştırır ve `host-share` içeriğini PCKFS'e ekler. **Uygulamayı çekirdeğe linklemek gerekmez.** Masaüstünden başlatmak için bir kullanıcı tarafı başlatma noktası gerekir. Hızlı deneme yolu: `kernel/user/apps/desktop.cpp` sonundaki `_start()` içinde `DesktopSession session;` satırından sonra geçici olarak şu satırı ekleyin:
+`share.sh`, önce `build.sh` komutunu çağırır, ardından `host-share` içeriğini ve yerleşik uygulamaları paketleyerek `pckfs.img` dosyasını yeniden üretir. Elle derlediğiniz `merhaba.bin` dosyasını olduğu gibi alır; uygulamanın kaynak kodunu yeniden derlemez. Host üzerindeki `host-share/apps/merhaba.bin`, PCKOS içinde `/apps/merhaba.bin` olarak görünür.
+
+Bu noktada uygulama derlenmiş ve disk imajına eklenmiştir. **Uygulamayı çekirdeğe linklemek gerekmez.**
+
+**6. İlk deneme için uygulamayı başlatın.**
+
+Dosyanın diskte bulunması onu kendiliğinden çalıştırmaz. İlk denemede masaüstü açılırken uygulamayı başlatmak için `kernel/user/apps/desktop.cpp` sonundaki `_start()` fonksiyonunda, `DesktopSession session;` satırının hemen altına geçici olarak şu çağrıyı ekleyin:
 
 ```cpp
 (void)user::process_spawn("/apps/merhaba.bin", "Merhaba");
 ```
 
-Sonra `./qemu.sh` çalıştırın. Masaüstü başlarken uygulama da açılır. ESC odak bu penceredeyken onu kapatır. Uygulamayı kalıcı olarak projeye eklemek için kaynak dosyasına uygun derleme ve `.elf`/`.bin` hedeflerini `kernel/Makefile` içine, PCKFS'e kopyalama satırını da `share.sh` içine ekleyin. Masaüstü simgesi veya Başlat girdisi için ayrıca `desktop.cpp` içindeki `open_window()`, `handle_click()`, görev çubuğu çizimi ve `app_process_ids_` takibini genişletin.
+Bu çağrı `/apps/merhaba.bin` dosyasından yeni bir process başlatır. Ardından proje kökünde çalıştırın:
+
+```sh
+./qemu.sh
+```
+
+`qemu.sh`, temiz derleme yapar, ISO ve PCKFS imajlarını yeniden üretir ve QEMU'yu açar. `host-share/apps/merhaba.bin` temizleme sırasında silinmediği için yeni disk imajına tekrar eklenir. Merhaba penceresi masaüstüyle birlikte açılır; odak bu penceredeyken ESC ile kapatabilirsiniz.
+
+**Uygulamanın kodunu değiştirdiğinizde:** 2, 3 ve 4. adımları tekrar çalıştırarak `host-share/apps/merhaba.bin` dosyasını güncelleyin. Ardından `./qemu.sh` ile deneyin; bu betik 5. adımdaki paketlemeyi de kendisi yapar. Yalnızca disk imajını yenilemek isterseniz `./share.sh` çalıştırın. Temizleme sonrasında `graphics.user.o` bulunmuyorsa veya grafik kitaplığını değiştirdiyseniz önce 1. adımı da uygulayın.
 
 ## 9. Bugünkü teknik sınırlar ve kontrol
 

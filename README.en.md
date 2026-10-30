@@ -287,35 +287,78 @@ __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Applications already registered in the project are built automatically by the `kernel/Makefile` targets during `./build.sh`. There are two ways to add a new application:
+Save the example above as `kernel/user/apps/merhaba_process.cpp`. The following steps compile the new app and run it in PCKOS. Run all terminal commands from the project root, where `build.sh` is located.
 
-- **Add it to the Makefile:** Add `.user.o`, `.elf`, and `.bin` targets to `kernel/Makefile`, include the `.user.o` and `.bin` files in the relevant object/image lists, and add a line to `share.sh` to copy the binary into PCKFS. The scripts then build and package the app; you do not run the manual commands below.
-- **Build it manually for a quick try:** To try the app without adding it to the Makefile, run the commands below in order. The initial `./build.sh` prepares the graphics library object and existing build outputs; the remaining commands compile the new app manually and place it under `host-share/apps`. The final `./share.sh` creates the PCKFS image.
+This example builds the app manually. The existing Makefile builds only the applications registered in it; creating a new `.cpp` file does not automatically add it to the build. Follow the steps below in order.
+
+**1. Prepare the graphics library.**
 
 ```sh
 ./build.sh
+```
+
+This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, which our example needs. It does not yet compile our new `merhaba_process.cpp`; we will do that in the next step.
+
+**2. Compile the application's C++ source.**
+
+```sh
 i686-elf-g++ -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
   -fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
   -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
   -msoft-float -Ikernel/include \
   -c kernel/user/apps/merhaba_process.cpp -o kernel/user/apps/merhaba_process.user.o
+```
+
+The input is your `merhaba_process.cpp` file. The `-c` option compiles it into the `merhaba_process.user.o` object file without linking. This file cannot run on its own yet; it needs to be linked with the graphics functions it uses. `-Ikernel/include` specifies the location of the SDK headers. The other flags are the current build settings for PCKOS user applications.
+
+**3. Link the object file with the graphics library.**
+
+```sh
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/merhaba_process.elf \
   kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
+```
+
+This combines your application's object file with the `graphics.user.o` produced in step 1. `linker.ld` defines the application's memory layout and `_start` entry point. The result is `merhaba_process.elf`. This ELF file is a linker intermediate; the current PCKOS loader expects a flat binary.
+
+**4. Convert the ELF file into the format PCKOS loads.**
+
+```sh
 mkdir -p host-share/apps
 i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
   host-share/apps/merhaba.bin
+```
+
+`objcopy -O binary` converts the loadable contents of the ELF into a flat binary. The result is `host-share/apps/merhaba.bin`. `host-share` is the host directory used to transfer files into PCKFS; `mkdir -p` creates its `apps` subdirectory.
+
+**5. Package the app in the PCKFS disk image.**
+
+```sh
 ./share.sh
 ```
 
-The `.elf` is only a linker intermediate; `host-share/apps/merhaba.bin` becomes `/apps/merhaba.bin` in PCKFS. `./share.sh` runs `./build.sh` itself and adds the contents of `host-share` to PCKFS. **The app does not need to be linked into the kernel.** It needs a user-space launch point. For a quick test, temporarily add this after `DesktopSession session;` in `_start()` at the end of `kernel/user/apps/desktop.cpp`:
+`share.sh` first calls `build.sh`, then rebuilds `pckfs.img` using the contents of `host-share` and the built-in applications. It takes your manually compiled `merhaba.bin` as it is; it does not recompile its source. The host file `host-share/apps/merhaba.bin` appears inside PCKOS at `/apps/merhaba.bin`.
+
+The application is now compiled and included in the disk image. **It does not need to be linked into the kernel.**
+
+**6. Launch the app for an initial trial.**
+
+Having the file on disk does not run it automatically. To launch it when the desktop starts, temporarily add this call immediately after `DesktopSession session;` in `_start()` at the end of `kernel/user/apps/desktop.cpp`:
 
 ```cpp
 (void)user::process_spawn("/apps/merhaba.bin", "Merhaba");
 ```
 
-Then run `./qemu.sh`. The app will open when the desktop starts; press ESC while its window is focused to close it. To integrate the app permanently, add compile and `.elf`/`.bin` targets for its source to `kernel/Makefile`, and add a copy line to `share.sh`. For a desktop icon or Start-menu entry, also extend `open_window()`, `handle_click()`, taskbar drawing, and `app_process_ids_` tracking in `desktop.cpp`.
+This starts a new process from `/apps/merhaba.bin`. Then run the following from the project root:
+
+```sh
+./qemu.sh
+```
+
+`qemu.sh` performs a clean build, regenerates the ISO and PCKFS images, and starts QEMU. Cleanup preserves `host-share/apps/merhaba.bin`, so it is included in the new disk image again. The Merhaba window opens with the desktop; press ESC while it is focused to close it.
+
+**After changing the application's source:** Repeat steps 2, 3, and 4 to update `host-share/apps/merhaba.bin`. Then try it with `./qemu.sh`, which also performs the packaging in step 5. To refresh only the disk image, run `./share.sh`. If cleanup has removed `graphics.user.o`, or if you changed the graphics library, repeat step 1 first.
 
 ## 9. Current limits and checks
 
