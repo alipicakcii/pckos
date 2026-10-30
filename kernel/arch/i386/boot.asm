@@ -46,9 +46,9 @@ _start:
 	; multiboot yapı adresi
 	push ebx
 
-	; run kernel main
+	; kernel_main işlevini çalıştır
 	call kernel_main
 
-	; never reach here
+	; buraya asla ulaşılmaz
 	cli
 	hlt

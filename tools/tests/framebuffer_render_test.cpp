@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
-// Host regression checks for the same framebuffer implementation used by PCKOS.
-// Build through run_framebuffer_tests.sh; no QEMU or physical mapping is used.
+// PCKOS’un kullandığı framebuffer kodu için ana makinede gerileme kontrolleri.
+// run_framebuffer_tests.sh ile derlenir; QEMU veya fiziksel bellek eşlemesi kullanılmaz.
 #define private public
 #include <device/video/frame_buffer.hh>
 #undef private
@@ -30,7 +30,7 @@ int main()
     assert(fb.begin_frame());
     assert(!fb.begin_frame());
     fb.clear(0xFF000000);
-    assert(video[0] == background); // No intermediate clear reaches hardware.
+    assert(video[0] == background); // Ara temizleme işlemleri donanıma aktarılmaz.
     fb.draw_pixel(5, 5, white);
     assert(fb.get_pixel(5, 5) == white);
     assert(fb.get_presented_pixel(5, 5) == background);
@@ -40,9 +40,9 @@ int main()
     assert(presented[5 * width + 5] == white);
     for (uint32_t y = 0; y < height; ++y)
         for (uint32_t x = width; x < stride; ++x)
-            assert(video[y * stride + x] == background); // Honor VRAM pitch.
+            assert(video[y * stride + x] == background); // VRAM satır aralığını dikkate al.
 
-    // Cursor overlay never contaminates the retained scene or alpha source.
+    // İmleç katmanı, saklanan sahneyi veya alfa kaynağını değiştirmez.
     fb.draw_hardware_pixel(5, 5, 0xFF00FF00);
     assert(fb.get_pixel(5, 5) == white);
     assert(fb.get_presented_pixel(5, 5) == white);
@@ -50,10 +50,10 @@ int main()
     fb.draw_pixel(5, 5, 0xFF000000);
     fb.draw_pixel(5, 5, white);
     fb.end_frame();
-    assert(video[5 * stride + 5] == 0xFF00FF00); // Unchanged final pixels untouched.
+    assert(video[5 * stride + 5] == 0xFF00FF00); // Son görüntüde değişmeyen piksellere dokunulmaz.
     fb.draw_hardware_pixel(5, 5, fb.get_presented_pixel(5, 5));
 
-    // Clip affects clear, pixels and glyphs, including overflow coordinates.
+    // Kırpma; temizleme, pikseller ve glifler üzerinde, taşan koordinatlar dahil etkili olur.
     const auto original = video;
     fb.set_clip(7, 6, 9, 7);
     assert(fb.begin_frame());
@@ -75,7 +75,7 @@ int main()
     assert(video[(height - 1) * stride + width - 1] == white);
     fb.reset_clip();
 
-    // Unknown signed bytes fall back safely, scale=1 matches the normal font.
+    // Tanınmayan işaretli baytlar güvenli biçimde varsayılana döner; scale=1 normal yazı tipiyle eşleşir.
     fb.clear(0);
     fb.draw_char(1, 1, '?', white);
     const auto question = back;

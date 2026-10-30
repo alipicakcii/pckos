@@ -4,11 +4,11 @@
 #define LIB_ARC_CONVERT_H
 namespace lib
 {
-  // signed int to ascii
+  // işaretli int değerini ASCII metnine çevirir
   void signed_itoa(int val, char *buffer, int radix);
-  // unsigned int to ascii
+  // işaretsiz int değerini ASCII metnine çevirir
   void unsigned_itoa(unsigned int val, char *buffer, int radix);
-  // unsingned long long to ascii
+  // işaretsiz long long değerini ASCII metnine çevirir
   void itoa_long_long(unsigned long long val, char *buffer, int radix);
 
 } // namespace lib

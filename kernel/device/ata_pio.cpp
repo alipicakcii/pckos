@@ -66,7 +66,7 @@ namespace device
         cpu::outb(io_base_ + 3, 0);
         cpu::outb(io_base_ + 4, 0);
         cpu::outb(io_base_ + 5, 0);
-        cpu::outb(io_base_ + 7, 0xEC); // IDENTIFY DEVICE
+        cpu::outb(io_base_ + 7, 0xEC); // ATA aygıtını tanımla (IDENTIFY DEVICE)
 
         uint8_t status = cpu::inb(io_base_ + 7);
         if (status == 0 || status == 0xFF)
@@ -80,7 +80,7 @@ namespace device
             return false;
 
         if ((cpu::inb(io_base_ + 4) != 0) || (cpu::inb(io_base_ + 5) != 0))
-            return false; // ATAPI device, not an ATA hard disk
+            return false; // Bu bir ATAPI aygıtı; ATA sabit diski değil.
         if ((status & STATUS_DRQ) == 0)
             return false;
 
@@ -107,7 +107,7 @@ namespace device
         cpu::outb(io_base_ + 3, static_cast<uint8_t>(lba));
         cpu::outb(io_base_ + 4, static_cast<uint8_t>(lba >> 8));
         cpu::outb(io_base_ + 5, static_cast<uint8_t>(lba >> 16));
-        cpu::outb(io_base_ + 7, 0x20); // READ SECTORS
+        cpu::outb(io_base_ + 7, 0x20); // Sektörleri oku (READ SECTORS)
         if (!wait_ready(true))
             return false;
 
@@ -134,7 +134,7 @@ namespace device
         cpu::outb(io_base_ + 3, static_cast<uint8_t>(lba));
         cpu::outb(io_base_ + 4, static_cast<uint8_t>(lba >> 8));
         cpu::outb(io_base_ + 5, static_cast<uint8_t>(lba >> 16));
-        cpu::outb(io_base_ + 7, 0x30); // WRITE SECTORS
+        cpu::outb(io_base_ + 7, 0x30); // Sektörleri yaz (WRITE SECTORS)
         if (!wait_ready(true))
             return false;
 
@@ -148,7 +148,7 @@ namespace device
         if (!wait_ready(false))
             return false;
 
-        cpu::outb(io_base_ + 7, 0xE7); // FLUSH CACHE
+        cpu::outb(io_base_ + 7, 0xE7); // Önbelleği diske aktar (FLUSH CACHE)
         return wait_ready(false);
     }
 }

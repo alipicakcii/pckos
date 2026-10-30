@@ -9,10 +9,10 @@ namespace lib
 {
     constexpr size_t KERNEL_LOG_CAPACITY = 4096;
 
-    // Writes to the serial port and keeps the same bytes in the kernel log.
+    // Seri porta yazar ve aynı baytları çekirdek günlüğünde saklar.
     void kernel_log_write_char(char character);
 
-    // Copies the newest log bytes in chronological order and null-terminates them.
+    // Günlüğün en yeni baytlarını kronolojik sırayla kopyalar ve sonuna null karakteri ekler.
     size_t kernel_log_snapshot(char *destination, size_t capacity);
 }
 

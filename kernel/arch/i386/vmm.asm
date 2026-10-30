@@ -19,7 +19,7 @@ _enable_paging:
        	or     eax,0x10
       	mov    cr4,eax
         mov    eax,cr0
-        or     eax,0x80010000 ; paging + supervisor write protection
+        or     eax,0x80010000 ; sayfalama + denetleyici yazma koruması
        	mov    cr0,eax
         nop
         pop    ebp

@@ -44,7 +44,7 @@ int __kprintf(const char *format, ...)
                 amount++;
             if (maxrem < amount)
             {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: Taşma durumunda errno değerini EOVERFLOW olarak ayarla.
                 return -1;
             }
             if (!__kprint(format, amount))
@@ -59,10 +59,10 @@ int __kprintf(const char *format, ...)
         if (*format == 'c')
         {
             format++;
-            char c = (char)va_arg(parameters, int /* char promotes to int */);
+            char c = (char)va_arg(parameters, int /* char türü int'e yükseltilir */);
             if (!maxrem)
             {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: Taşma durumunda errno değerini EOVERFLOW olarak ayarla.
                 return -1;
             }
             if (!__kprint(&c, sizeof(c)))
@@ -77,7 +77,7 @@ int __kprintf(const char *format, ...)
             size_t len = strlen(str);
             if (maxrem < len)
             {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: Taşma durumunda errno değerini EOVERFLOW olarak ayarla.
                 return -1;
             }
             if (!__kprint(str, len))
@@ -87,13 +87,13 @@ int __kprintf(const char *format, ...)
         else if (*format == 'd')
         {
             format++;
-            int c = (int)va_arg(parameters, int /* char promotes to int */);
+            int c = (int)va_arg(parameters, int /* char türü int'e yükseltilir */);
             char buffer[32];
             signed_itoa(c, buffer, 10);
             size_t len = strlen(buffer);
             if (!maxrem)
             {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: Taşma durumunda errno değerini EOVERFLOW olarak ayarla.
                 return -1;
             }
             if (!__kprint(buffer, len))
@@ -103,13 +103,13 @@ int __kprintf(const char *format, ...)
         else if (*format == 'x')
         {
             format++;
-            unsigned int c = (unsigned int)va_arg(parameters, int /* char promotes to int */);
+            unsigned int c = (unsigned int)va_arg(parameters, int /* char türü int'e yükseltilir */);
             char buffer[32];
             unsigned_itoa(c, buffer, 16);
             size_t len = strlen(buffer);
             if (!maxrem)
             {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: Taşma durumunda errno değerini EOVERFLOW olarak ayarla.
                 return -1;
             }
             if (!__kprint(buffer, len))
@@ -119,13 +119,13 @@ int __kprintf(const char *format, ...)
         else if (*format == 'u')
         {
             format++;
-            unsigned int c = (unsigned int)va_arg(parameters, int /* char promotes to int */);
+            unsigned int c = (unsigned int)va_arg(parameters, int /* char türü int'e yükseltilir */);
             char buffer[32];
             unsigned_itoa(c, buffer, 10);
             size_t len = strlen(buffer);
             if (!maxrem)
             {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: Taşma durumunda errno değerini EOVERFLOW olarak ayarla.
                 return -1;
             }
             if (!__kprint(buffer, len))
@@ -135,13 +135,13 @@ int __kprintf(const char *format, ...)
         else if (*format == 'b')
         {
             format++;
-            unsigned int c = (unsigned int)va_arg(parameters, int /* char promotes to int */);
+            unsigned int c = (unsigned int)va_arg(parameters, int /* char türü int'e yükseltilir */);
             char buffer[32];
             unsigned_itoa(c, buffer, 2);
             size_t len = strlen(buffer);
             if (!maxrem)
             {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: Taşma durumunda errno değerini EOVERFLOW olarak ayarla.
                 return -1;
             }
             if (!__kprint(buffer, len))
@@ -151,13 +151,13 @@ int __kprintf(const char *format, ...)
         else if (*format == 'e')
         {
             format++;
-            unsigned long long c = (unsigned long long)va_arg(parameters, unsigned long long /* char promotes to int */);
+            unsigned long long c = (unsigned long long)va_arg(parameters, unsigned long long /* char türü int'e yükseltilir */);
             char buffer[64];
             itoa_long_long(c, buffer, 16);
             size_t len = strlen(buffer);
             if (!maxrem)
             {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: Taşma durumunda errno değerini EOVERFLOW olarak ayarla.
                 return -1;
             }
             if (!__kprint(buffer, len))
@@ -170,7 +170,7 @@ int __kprintf(const char *format, ...)
             size_t len = strlen(format);
             if (maxrem < len)
             {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: Taşma durumunda errno değerini EOVERFLOW olarak ayarla.
                 return -1;
             }
             if (!__kprint(format, len))

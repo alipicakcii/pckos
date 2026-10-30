@@ -13,18 +13,18 @@
 // 16M aşağıdaki gibi kimlik eşlemesidir.
 // Çekirdek ve GRUB tarafindan yuklenen acilis verileri bu alanda bulunur.
 // 4M, 4K sayfa dizinleri için ayrılmıştır.
-#define RESERVED_AREA      0x01000000	  // 16 mb
-#define KERN_PD_AREA_BEGIN 0x00C00000     // 12 mb
-#define KERN_PD_AREA_END   0x01000000	  // 16 mb
+#define RESERVED_AREA      0x01000000	  // 16 MB
+#define KERN_PD_AREA_BEGIN 0x00C00000     // 12 MB
+#define KERN_PD_AREA_END   0x01000000	  // 16 MB
 
-#define GFX_MEMORY 0x01000000 // 16 mb
+#define GFX_MEMORY 0x01000000 // 16 MB
 
 #define KERN_HEAP_BEGIN 0x02000000 // 32 mb
-#define KERN_HEAP_END 0x40000000   // 1 gb
+#define KERN_HEAP_END 0x40000000   // 1 GB
 
 #define PAGING_FLAG 0x80000000 // CR0 - bit 31
 #define PSE_FLAG 0x00000010	   // CR4 - bit 4 //4M sayfa desteği için.
-#define PG_PRESENT 0x00000001  // page directory / table
+#define PG_PRESENT 0x00000001  // sayfa dizini / tablosu
 #define PG_WRITE 0x00000002
 #define PG_USER 0x00000004
 #define PG_4MB 0x00000080
@@ -40,12 +40,12 @@
 #define KERNELMEMORY_PAGE_COUNT 256 // İlk 1GB çekirdek alanı (sayfa dizinindeki ilk 256 giriş)
 #define KERN_STACK_SIZE PAGESIZE_4K
 
-// KERN_HEAP_END ends and this one starts
+// KERN_HEAP_END burada biter, kullanıcı alanı burada başlar.
 #define USER_OFFSET 0x40000000
 #define USER_MMAP_START 0x80000000 // Bu sadece haritalama içindir, sbrk ile çakışmamak için vmem'i buradan aramaya başlar. Sbrk kullanılmazsa USER_OFFSET'ten başlayabilir!
-#define MEMORY_END 0xFFC00000	   // After this address is not usable. Because Page Tables sit there!
+#define MEMORY_END 0xFFC00000	   // Bu adresten sonrası kullanılamaz; sayfa tabloları bu bölgede bulunur.
 
-#define SIZE_2MB 0x200000 // 2MB
+#define SIZE_2MB 0x200000 // 2 MB
 
 #define USER_STACK 0xF0000000
 

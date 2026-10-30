@@ -7,7 +7,7 @@
 
 namespace cpu
 {
-    // Current page directory; used when switching user address spaces.
+    // Geçerli sayfa dizini; kullanıcı adres alanları arasında geçişte kullanılır.
     extern "C" uint32_t read_cr3();
 }
 

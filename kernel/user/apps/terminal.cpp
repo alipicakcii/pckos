@@ -92,7 +92,7 @@ namespace user::apps
 
     void Terminal::print_line(const char *value)
     {
-        // Keep complete output even when a command exceeds one history row.
+        // Bir komut geçmiş satırından uzun olsa bile çıktının tamamını koru.
         do
         {
             if (line_count_ >= MAX_LINES)
@@ -293,8 +293,8 @@ namespace user::apps
         user::gui::push_clip(text_x, text_y, columns * user::gui::FONT_WIDTH,
                              rows * row_height);
 
-        // History stores logical lines. Reflow them for the current window or
-        // full-screen console, retaining the most recent complete screenful.
+        // Geçmiş, mantıksal satırları saklar. En yeni tam ekran dolusu satırı koruyarak
+        // bunları geçerli pencereye veya tam ekran konsola göre yeniden kaydır.
         uint32_t total_rows = 0;
         for (uint32_t line = 0; line < line_count_; ++line)
         {
@@ -333,7 +333,7 @@ namespace user::apps
 
         const uint32_t prompt_y = text_y + drawn_rows * row_height;
         user::gui::text(text_x, prompt_y, "pckos> ", 0xFFC0FFC0);
-        // Leave one full cell for the solid cursor, including at the input limit.
+        // Girdi sınırında bile dolu imleç için bir karakter hücresini boş bırak.
         const uint32_t input_columns = columns - 7 - 1;
         const uint32_t start = command_length_ > input_columns
             ? command_length_ - input_columns : 0;

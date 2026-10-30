@@ -3,7 +3,7 @@
 #include <library/cppabi.hh>
 #include <library/kernel_panic.hh>
 
-// Kernel objects live until shutdown; there is no process teardown here.
+// Çekirdek nesneleri sistem kapanana kadar yaşar; burada process sonlandırma işlemi yapılmaz.
 extern "C" int __cxa_atexit(void (*)(void *), void *, void *)
 {
     return 0;

@@ -102,7 +102,7 @@ namespace kernel
                     !threads[candidate].idle)
                     return candidate;
             }
-            // Schedule the idle context only when every regular thread blocks/exits.
+            // Boşta iş parçacığını yalnızca tüm normal iş parçacıkları beklediğinde veya sonlandığında zamanla.
             for (uint32_t step = 1; step <= MAX_THREADS; ++step)
             {
                 const uint32_t candidate = (after + step) % MAX_THREADS;
@@ -185,14 +185,14 @@ namespace kernel
         thread.user_stack_pages = 0;
         set_name(thread, "Kernel thread");
 
-        // Build the same saved frame the IRQ assembly restores. The final iret
-        // enters thread_first_run on this thread's own stack at Ring 0.
+        // IRQ assembly kodunun geri yüklediğiyle aynı kayıt çerçevesini oluştur. Son iret,
+        // bu thread’in kendi yığını üzerinde Ring 0’da thread_first_run’a girer.
         uint32_t top = thread.ring0_stack_top;
         top -= sizeof(Registers);
         thread.saved_context = reinterpret_cast<Registers *>(top);
         memset(thread.saved_context, 0, sizeof(Registers));
-        // RESTORE_REGS reloads these selectors before iret. Null data selectors
-        // are legal to load but fault on the first kernel data access.
+        // RESTORE_REGS bu seçicileri iret öncesinde yeniden yükler. Boş veri seçicileri
+        // yüklenebilir; ancak çekirdek verisine ilk erişimde hataya yol açar.
         thread.saved_context->gs = 0x10;
         thread.saved_context->fs = 0x10;
         thread.saved_context->es = 0x10;
@@ -277,7 +277,7 @@ namespace kernel
                 tick_reached(pit_ticks, threads[i].wake_tick))
                 threads[i].state = State::ready;
 
-        // A GUI frame has a shared clip stack and is presented atomically.
+        // GUI karesi ortak bir kırpma yığını kullanır ve tek işlemde ekrana sunulur.
         if (syscall_graphics_frame_active())
             return interrupted;
 

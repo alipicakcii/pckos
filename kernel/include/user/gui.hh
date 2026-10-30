@@ -20,10 +20,10 @@ namespace user::gui
     constexpr uint32_t COLOR_WHITE = 0xFFFFFFFF;
     constexpr uint32_t COLOR_SELECTION = 0xFF000080;
 
-    // A frame is composed off-screen and presented only when it is complete.
+    // Kare ekran dışında birleştirilir ve yalnızca tamamlandığında gösterilir.
     void begin_frame();
     void end_frame();
-    // Clips are nested intersections. Every push must have a matching pop.
+    // Kırpma alanları iç içe kesişimlerdir. Her push için eşleşen bir pop gerekir.
     void push_clip(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
     void pop_clip();
     uint32_t text_width(const char *text);

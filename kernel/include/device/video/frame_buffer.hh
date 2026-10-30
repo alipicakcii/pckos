@@ -17,7 +17,7 @@ private:
         uint32_t  width;
         uint32_t  height;
         uint32_t  pitch;
-        uint32_t  bpp; // Bits per pixel
+        uint32_t  bpp; // Piksel başına bit sayısı
         uint32_t* back_buffer;
         uint32_t* presented_buffer;
         uint32_t* background_buffer;
@@ -56,7 +56,7 @@ public:
         uint32_t get_pixel(uint32_t x, uint32_t y) const;
         void clear(uint32_t color);
 
-        // A frame is composed in RAM. Only changed final pixels reach VRAM.
+        // Kare RAM üzerinde birleştirilir. VRAM’e yalnızca son görüntüde değişen pikseller aktarılır.
         bool begin_frame();
         void end_frame();
         bool frame_active() const { return drawing_frame || composing; }
@@ -72,7 +72,7 @@ public:
         uint32_t window_at(uint32_t x, uint32_t y) const;
         void abort_frame();
 
-        // The software cursor is an overlay, never part of either RAM image.
+        // Yazılımsal imleç bir katmandır; RAM görüntülerinin hiçbirine dahil değildir.
         void draw_hardware_pixel(uint32_t x, uint32_t y, uint32_t color);
         uint32_t get_presented_pixel(uint32_t x, uint32_t y) const;
 

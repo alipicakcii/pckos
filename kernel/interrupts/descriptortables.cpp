@@ -55,13 +55,13 @@ namespace kernel
           Data Segmentleri bitleri = 0-1 bitleri RPL bitleri, 2. bit 0 ise GDT 1 ise LDT, 2-15 index : 0000000000000   0  00
                                                                                                          INDEX         TI  RPL
         */
-        set_gdt_entry(0, 0, 0, 0, 0);                // 0x00 Null segment
-        set_gdt_entry(1, 0, 0xFFFFFFFF, 0x9A, 0xCF); // 0x08 Code segment
-        set_gdt_entry(2, 0, 0xFFFFFFFF, 0x92, 0xCF); // 0x10 Data segment
-        set_gdt_entry(3, 0, 0xFFFFFFFF, 0xFA, 0xCF); // 0x18 User mode code segment
-        set_gdt_entry(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); // 0x20 User mode data segment
+        set_gdt_entry(0, 0, 0, 0, 0);                // 0x00 Boş segment
+        set_gdt_entry(1, 0, 0xFFFFFFFF, 0x9A, 0xCF); // 0x08 Kod segmenti
+        set_gdt_entry(2, 0, 0xFFFFFFFF, 0x92, 0xCF); // 0x10 Veri segmenti
+        set_gdt_entry(3, 0, 0xFFFFFFFF, 0xFA, 0xCF); // 0x18 Kullanıcı modu kod segmenti
+        set_gdt_entry(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); // 0x20 Kullanıcı modu veri segmenti
 
-        // tss
+        // TSS
         memset((uint8_t *)&tss, 0, sizeof(tss));
         tss.debug_flag = 0x00;
         tss.io_map     = sizeof(Tss);
@@ -77,7 +77,7 @@ namespace kernel
     
 
         set_gdt_entry(5, tss_base, tss_limit, 0x89, 0x00);
-        set_gdt_entry(6, 0, 0xFFFFFFFF, 0x80, 0xCF); // Thread Local Storage pointer segment
+        set_gdt_entry(6, 0, 0xFFFFFFFF, 0x80, 0xCF); // Thread Yerel Depolama işaretçisi segmenti
 
         flush_gdt((uint32_t)&g_gdt_pointer);
 
@@ -110,7 +110,7 @@ namespace kernel
 
         memset((uint8_t *)&g_idt_entries, 0, sizeof(IdtEntry) * 256);
 
-        // Remap the irq table.
+        // IRQ tablosunu yeniden eşle.
         outb(0x20, 0x11);
         outb(0xa0, 0x11);
         outb(0x21, 0x20);
@@ -119,7 +119,7 @@ namespace kernel
         outb(0xa1, 0x02);
         outb(0x21, 0x01);
         outb(0xa1, 0x01);
-        // IRQ0 (PIT) and IRQ1 (keyboard) are enabled explicitly by their drivers.
+        // IRQ0 (PIT) ve IRQ1 (klavye), kendi sürücüleri tarafından açıkça etkinleştirilir.
         outb(0x21, 0xFC);
         outb(0xa1, 0xFF);
 

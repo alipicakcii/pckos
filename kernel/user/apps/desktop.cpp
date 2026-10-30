@@ -668,8 +668,8 @@ namespace
 
         void redraw_window(uint32_t id)
         {
-            // Recompose in stacking order inside the damaged rectangle, including
-            // menus and dialogs that may overlap the application's content.
+            // Hasarlı dikdörtgenin içeriğini katman sırasına göre yeniden birleştir;
+            // buna uygulama içeriğinin üzerine gelebilen menü ve pencereler de dahildir.
             render(&bounds(id));
         }
 

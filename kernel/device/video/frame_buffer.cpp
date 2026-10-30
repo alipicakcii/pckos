@@ -9,8 +9,8 @@ namespace device
 {
     namespace
     {
-        // Two 16 MiB RAM images at most; enough for 2560x1440 without allowing
-        // malformed boot metadata to request an unbounded kernel allocation.
+        // En fazla iki adet 16 MiB'lık RAM görüntüsü; 2560x1440 çözünürlük için yeterli olup,
+    // hatalı biçimlendirilmiş önyükleme meta verilerinin sınırsız bir çekirdek bellek tahsisi talep etmesini engeller.
         constexpr uint32_t MAX_BUFFER_PIXELS = 4 * 1024 * 1024;
         constexpr uint32_t FONT_WIDTH = 8;
         constexpr uint32_t FONT_HEIGHT = 16;
@@ -32,7 +32,7 @@ namespace device
                                 mbi->framebuffer_height;
         const uint64_t size = static_cast<uint64_t>(mbi->framebuffer_pitch) *
                               mbi->framebuffer_height;
-        // Drawing and cursor colors use packed 0xAARRGGBB throughout the ABI.
+        // Çizim ve imleç renkleri, ABI genelinde paketlenmiş 0xAARRGGBB formatında kullanılır.
         if (mbi->framebuffer_type != 1 || mbi->framebuffer_bpp != 32 ||
             mbi->framebuffer_red_field_position != 16 ||
             mbi->framebuffer_green_field_position != 8 ||
@@ -101,7 +101,7 @@ namespace device
         if (background_buffer == nullptr)
             _kprintf("[FrameBuffer] Window background buffer unavailable.\n");
 
-        // Initialize without reading undefined allocation contents.
+        // Tanımlanmamış bellek tahsisatlarının içeriğini okumadan başlatın.
         const uint32_t background = 0xFF1E1E1E;
         for (uint32_t y = 0; y < height; ++y)
         {
@@ -139,7 +139,6 @@ namespace device
     {
         clip_left = x < width ? x : width;
         clip_top = y < height ? y : height;
-        // Subtraction before addition avoids wraparound for user coordinates.
         clip_right = clip_left + (clip_width < width - clip_left
             ? clip_width : width - clip_left);
         clip_bottom = clip_top + (clip_height < height - clip_top

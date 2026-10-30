@@ -71,9 +71,9 @@ namespace user
 
     struct InputEvent
     {
-        uint32_t type; // 1 = key, 2 = mouse, 3 = timeout
-        int32_t value0; // key character or mouse delta X
-        int32_t value1; // mouse delta Y
+        uint32_t type; // 1 = klavye, 2 = fare, 3 = zaman aşımı
+        int32_t value0; // tuş karakteri veya farenin X eksenindeki hareketi
+        int32_t value1; // farenin Y eksenindeki hareketi
         uint32_t buttons;
     };
 
@@ -125,7 +125,7 @@ namespace user
 
     using ThreadEntry = void (*)(void *argument);
 
-    // i386 int 0x80 ABI: EAX is the number; EBX/ECX/EDX/ESI/EDI are arguments.
+    // i386 int 0x80 ABI: çağrı numarası EAX’te, bağımsız değişkenler EBX/ECX/EDX/ESI/EDI yazmaçlarındadır.
     inline int32_t call(uint32_t number, uint32_t arg0 = 0,
                         uint32_t arg1 = 0, uint32_t arg2 = 0,
                         uint32_t arg3 = 0, uint32_t arg4 = 0)
@@ -280,7 +280,7 @@ namespace user
         return call(syscall_process_minimize);
     }
 
-    // Pass 0 to query the calling process.
+    // Çağıran process’i sorgulamak için 0 gönderin.
     inline bool process_is_minimized(uint32_t process_id = 0)
     {
         return call(syscall_process_is_minimized, process_id) != 0;
@@ -363,7 +363,7 @@ namespace user
                     reinterpret_cast<uint32_t>(argb_pixels), width, height);
     }
 
-    // A frame becomes visible only after end_frame; clipping is nested per process.
+    // Kare yalnızca end_frame sonrasında görünür olur; kırpma durumu process başına iç içe tutulur.
     inline int32_t graphics_begin_frame()
     {
         return call(syscall_gfx_begin_frame);

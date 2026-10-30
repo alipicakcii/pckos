@@ -6,7 +6,7 @@
 namespace device
 {
     void keyboard_initialize();
-    // Returns one translated character, or -1 when the queue is empty.
+    // Kuyruktan çevrilmiş bir karakter döndürür; kuyruk boşsa -1 döndürür.
     int keyboard_read_char();
 }
 

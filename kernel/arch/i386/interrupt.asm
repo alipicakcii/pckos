@@ -18,7 +18,7 @@ cpu_halt:
     hlt
     ret
 
-; NASM macro
+; NASM makrosu
 %macro ISR_ERROR_CODE 1
   global isr%1
   isr%1:
@@ -26,7 +26,7 @@ cpu_halt:
     jmp handle_isr_common
 %endmacro
 
-; NASM macro
+; NASM makrosu
 %macro ISR_NO_ERROR_CODE 1
   global isr%1
   isr%1:
@@ -36,7 +36,7 @@ cpu_halt:
 %endmacro
 
 
-; NASM macro
+; NASM makrosu
 %macro IRQ 2
   global irq%1
   irq%1:

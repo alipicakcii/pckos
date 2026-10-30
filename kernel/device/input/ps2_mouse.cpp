@@ -98,8 +98,8 @@ namespace device
         event->delta_y = event_queue[queue_read].delta_y;
         event->buttons = event_queue[queue_read].buttons;
         queue_read = static_cast<uint8_t>((queue_read + 1) & (QUEUE_SIZE - 1));
-        // Coalesce only motion with identical button state. Keep press/release
-        // edges queued so a fast drag cannot turn into a missed click.
+        // Yalnızca aynı düğme durumuna sahip hareketleri birleştirin. Basma/bırakma
+        // sınırlarını kuyrukta tutun; böylece hızlı bir sürükleme işlemi, gözden kaçan bir tıklamaya dönüşmesin.
         const bool button_edge = event->buttons != delivered_buttons;
         delivered_buttons = event->buttons;
         while (!button_edge && queue_read != queue_write &&
@@ -119,7 +119,7 @@ namespace device
 
     bool mouse_initialize()
     {
-        // Drain stale controller bytes before enabling the auxiliary port.
+        // Yardımcı bağlantı noktasını etkinleştirmeden önce, denetleyicideki eski baytları boşaltın.
         for (uint32_t count = 0; count < 32; ++count)
         {
             if ((cpu::inb(STATUS_PORT) & STATUS_OUTPUT_FULL) == 0)

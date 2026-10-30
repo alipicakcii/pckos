@@ -5,7 +5,7 @@
 
 extern "C" int __kprintf(const char *format, ...);
 
-// Kernel messages go to the serial port and the in-memory system log.
+// Çekirdek iletileri seri porta ve bellekteki sistem günlüğüne yazılır.
 template <typename... Args>
 void _kprintf(const char *format, Args&&... args)
 {

@@ -46,7 +46,7 @@ namespace kernel
         char name[24];
     };
 
-    // A tick is one PIT period (10 ms at the current 100 Hz setting).
+    // Bir tik, bir PIT periyodudur (100 Hz ayarında 10 ms).
     bool thread_system_initialize(uint32_t ring0_stack_top);
     int32_t thread_create(ThreadEntry entry, void *argument);
     int32_t thread_create_user(uint32_t entry, uint32_t user_stack_pointer,
@@ -84,7 +84,7 @@ namespace kernel
     void thread_set_current_kernel(const char *name);
     void thread_terminate_users();
 
-    // Called only from interrupt dispatch with IF clear.
+    // Yalnızca IF bayrağı kapalıyken kesme dağıtıcısından çağrılır.
     Registers *thread_schedule(Registers *interrupted, bool from_pit);
     void thread_set_current_ring0_stack(uint32_t stack_top);
     [[noreturn]] void thread_exit();

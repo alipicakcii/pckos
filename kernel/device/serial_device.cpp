@@ -15,12 +15,12 @@ namespace device
 
     void serial_initialize()
     {
-        cpu::outb(COM1 + 1, 0x00); // Disable UART interrupts.
-        cpu::outb(COM1 + 3, 0x80); // Enable divisor latch.
-        cpu::outb(COM1 + 0, 0x03); // 38400 baud.
+        cpu::outb(COM1 + 1, 0x00); // UART kesmelerini devre dışı bırak.
+        cpu::outb(COM1 + 3, 0x80); // Bölücü yazmacını etkinleştir.
+        cpu::outb(COM1 + 0, 0x03); // 38400 baud hızını ayarla.
         cpu::outb(COM1 + 1, 0x00);
-        cpu::outb(COM1 + 3, 0x03); // 8 data bits, no parity, one stop bit.
-        cpu::outb(COM1 + 2, 0xC7); // Enable and clear FIFO.
+        cpu::outb(COM1 + 3, 0x03); // 8 veri biti, eşlik yok, 1 dur biti.
+        cpu::outb(COM1 + 2, 0xC7); // FIFO kuyruğunu etkinleştir ve temizle.
         cpu::outb(COM1 + 4, 0x0B);
     }
 

@@ -103,7 +103,7 @@ namespace kernel
                                   uint32_t width, uint32_t height)
         {
             if (active_framebuffer == nullptr) return ERROR_NO_DEVICE;
-            // Overflow fails closed, and matching pops restore the previous clip.
+            // Taşma durumunda işlem güvenli biçimde reddedilir; eşleşen pop çağrıları önceki kırpma alanını geri yükler.
             if (clip_depth == MAX_CLIP_DEPTH || clip_overflow != 0)
             {
                 ++clip_overflow;
@@ -196,7 +196,7 @@ namespace kernel
         void set_graphics_cursor(uint32_t x, uint32_t y, bool visible)
         {
             if (active_framebuffer != nullptr && active_framebuffer->frame_active())
-                return; // Move the hardware cursor between complete frames only.
+                return; // Donanım imlecini yalnızca tamamlanmış kareler arasında hareket ettir.
             if (x == cursor_x && y == cursor_y && visible == cursor_visible)
                 return;
             hide_graphics_cursor();
@@ -969,7 +969,7 @@ namespace kernel
                     {
                         active_framebuffer->end_frame();
                         reset_graphics_clip();
-                        // Reapply the overlay without erasing it between draw calls.
+                        // Katmanı çizim çağrıları arasında silmeden yeniden uygula.
                         paint_graphics_cursor();
                         registers->eax = 0;
                     }

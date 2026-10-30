@@ -124,8 +124,8 @@ namespace user::gui
         const uint32_t close_x = x + width - 25;
         frame(close_x, button_y, 17, 17, COLOR_FACE);
         frame(close_x - 20, button_y, 17, 17, COLOR_FACE);
-        // Draw title-bar symbols within their buttons instead of clipping a
-        // full-height font glyph into a 17-pixel control.
+        // Başlık çubuğu simgelerini, tam boy yazı glifini 17 piksellik denetime
+        // kırpmak yerine düğmelerin içine çiz.
         for (uint32_t i = 0; i < 7; ++i)
         {
             fill(close_x + 5 + i, button_y + 5 + i, 2, 1, COLOR_BLACK);
@@ -141,7 +141,7 @@ namespace user::gui
             return;
         const uint32_t ink = 0xFF123050;
         fill(x, y, size, size, 0xFF45D6B0);
-        // Closed upper bowl and long stem make this a P, including at 24px.
+        // Üst kısmı kapalı kavis ve uzun gövde, 24 pikselde bile P harfini belirgin kılar.
         fill(x + size * 5 / 24, y + size * 4 / 24,
              size * 3 / 24, size * 17 / 24, ink);
         fill(x + size * 5 / 24, y + size * 4 / 24,

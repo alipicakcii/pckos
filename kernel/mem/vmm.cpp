@@ -180,8 +180,8 @@ namespace mem
 		// pd[1023][8][pt_index] e bir fiziksel 4KB sayfa yerleştirebiliriz
 		uint32_t *pt = ((uint32_t *)0xFFC00000) + (0x400 * pd_index);
 
-		// Kernel heap page tables must be created in the kernel directory.
-		// User processes share those tables after sync_all_from_kernel().
+		// Çekirdek heap’i için sayfa tabloları çekirdek dizininde oluşturulmalıdır.
+		// sync_all_from_kernel() sonrasında bu tablolar kullanıcı process’leriyle paylaşılır.
 		const bool kernel_mapping = virtual_adress.get() < KERN_HEAP_END;
 		const uint32_t previous_cr3 = cpu::read_cr3();
 		const bool switched = kernel_mapping && previous_cr3 != KERN_PAGE_DIRECTORY;
@@ -241,7 +241,7 @@ namespace mem
 
 		if (kernel_mapping)
 		{
-			// Copy any new kernel PDE into every process before returning to its CR3.
+			// Yeni çekirdek PDE’sini, CR3 değerine dönmeden önce her process’e kopyala.
 			sync_all_from_kernel();
 		}
 		if (switched)
@@ -354,7 +354,7 @@ namespace mem
 
 			if (*pd != 0)
 			{
-				// Found an in-use page directory
+				// Kullanımda olan bir sayfa dizini bulundu.
 
 				for (int i = 0; i < KERNELMEMORY_PAGE_COUNT; ++i)
 				{
@@ -380,12 +380,12 @@ namespace mem
 		size_t i;
 		kernel::interrupt_register(14, (kernel::IsrFunction)hander_no_page);
 
-		// Multiboot mem_upper excludes the first MiB and is reported in KiB.
+		// Multiboot mem_upper ilk MiB’ı içermez ve değeri KiB cinsinden verilir.
 		g_total_page_count = high_mem / 4 + 256;
 		if (g_total_page_count > RAM_AS_4K_PAGES)
 			g_total_page_count = RAM_AS_4K_PAGES;
 
-		// Begin with all frames unavailable, then free only pages that exist.
+		// Önce tüm çerçeveleri kullanılamaz işaretle, sonra yalnızca mevcut sayfaları serbest bırak.
 		for (pg = 0; pg < (RAM_AS_4K_PAGES / 8); ++pg)
 			p_frame.set_frame(pg, 0xFF);
 		for (pg = 0; pg < g_total_page_count; ++pg)

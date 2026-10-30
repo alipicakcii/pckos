@@ -5,7 +5,7 @@
 
 namespace pckos
 {
-    // Lightweight project-local type tags for builds that keep compiler RTTI off.
+    // Derleyici RTTI’si kapalıyken kullanılan, projeye özgü hafif tür etiketleri.
     using TypeToken = void (*)();
 
     template <typename T>

@@ -29,7 +29,7 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
     mem::Vmm virtual_memory;
     virtual_memory.initialize_paging(multiboot_info->mem_upper);
 
-    // Global C++ constructors rely on the heap initialized by paging setup.
+    // Dosya kapsamındaki C++ kurucuları, sayfalama kurulurken hazırlanan heap’e ihtiyaç duyar.
     _init();
 
 

@@ -115,8 +115,8 @@ def main():
             if boot.size == (1024, 768) and boot.getpixel((500, 100)) == DESKTOP_COLOR:
                 break
         else: raise AssertionError('Desktop failed to boot')
-        # HMP relative input can drop the first event while the PS/2 device
-        # switches to the active QEMU console. Establish a known hotspot first.
+        # HMP göreli girdisi, PS/2 aygıtı etkin QEMU konsoluna geçerken ilk olayı düşürebilir.
+        # Önce işaretçiyi bilinen bir noktaya getir.
         time.sleep(0.5)
         for _ in range(14):
             guest.hmp('mouse_move -100 -100')
@@ -132,8 +132,8 @@ def main():
         guest.type('echo ' + 'abcdefghij' * 11 + '\n')
         guest.type('dmesg\n')
         long_output = guest.shot('terminal-long-output')
-        # Terminal bounds at1024x768 are x287 y214 width560 height340.
-        # Ignore pointer and clock by checking right/left desktop strips.
+        # 1024x768 çözünürlükte Terminal sınırları: x=287, y=214, genişlik=560, yükseklik=340.
+        # İşaretçi ve saati hesaba katmamak için masaüstünün sağ ve sol şeritlerini denetle.
         assert long_output.crop((848, 215, 1024, 550)).tobytes() == boot.crop((848, 215, 1024, 550)).tobytes(), 'Terminal text escaped right edge'
         assert long_output.crop((85, 215, 287, 550)).tobytes() == boot.crop((85, 215, 287, 550)).tobytes(), 'Terminal text escaped left edge'
         if '--keyboard-only' in sys.argv:
@@ -147,15 +147,15 @@ def main():
         guest.key('down')
         guest.key('ret')
         guest.shot('files-directory')
-        # Desktop and every window stay intact while the pointer moves.
+        # İşaretçi hareket ederken masaüstü ve tüm pencereler bozulmadan kalır.
         guest.move(820, 650)
         stable_a = guest.shot('stable-a')
         guest.move(950, 650)
         guest.move(820, 650)
         stable_b = guest.shot('stable-b')
         assert stable_a.crop((0, 0, 1024, 720)).tobytes() == stable_b.crop((0, 0, 1024, 720)).tobytes(), 'Cursor trails or unintended repaint'
-        # Drag file window, sample intermediate frames: stationary terminal must
-        # never be replaced by the desktop background during composition.
+        # Dosya penceresini sürüklerken ara kareleri örnekle: birleştirme sırasında sabit Terminal
+        # penceresinin yerini masaüstü arka planı almamalıdır.
         guest.move(420, 180)
         guest.hmp('mouse_button 1')
         time.sleep(0.06)
