@@ -1,0 +1,24 @@
+# Compiler and linker outputs
+*.o
+*.d
+*.elf
+*.bin
+*.iso
+*.img
+*.vdi
+*.pyc
+
+# Generated build trees and logs
+/sysroot/
+/isodir/
+/serial
+/tools/tests/gui-output/
+__pycache__/
+
+# Local planning, host files, and editor/environment state
+/TODO.md
+/.agents/
+/.aws/
+/.codex/
+/.vscode/
+/compile_flags.txt
