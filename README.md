@@ -72,7 +72,7 @@ Kaynak koddan imajları hazırlıyorsaınız proje dizininde aşağıdaki komutl
 ./vbox.sh
 ```
 
-Bu komutlar ISO'yu ve PCKFS disk imajını üretir; `vbox.sh`, `pckfs.img` dosyasını VirtualBox'ın kullanacağı `pckfs-vbox.vdi` biçimine dönüştürür.
+Bu komutlarda ISO'yu ve PCKFS disk imajını üretir; `vbox.sh`, `pckfs.img` dosyasını VirtualBox'ın kullanacağı `pckfs-vbox.vdi` biçimine dönüştürür.
 
 İki yöntemden hangisiyle hazırlanırsa hazırlansın aşağıdakı adımları izleyelerek VirtualBox'ta PCKOS'u çalıştırabilirsiniz:
 
@@ -159,7 +159,7 @@ sonra: veri bölgesi (blok başına 4096 bayt = 8 sektör)
 
 Süperblok toplam sektör, inode/FAT/veri başlangıçlarını ve kök inode numarasını taşır. Her inode 48 bayt ad, dosya boyutu, ilk veri bloğu, üst dizin inode'u, tür ve kullanım bayrağı içerir. Tür `1` dosya, `2` dizindir; kök inode `0`'dır. FAT benzeri zincirde `0xFFFFFFFF` son blok işaretidir. Veri bloğu numarası **1'den** başlar; blok 1'in ilk sektörü `data_start_sector` konumudur. Dizinler, kendi içerikleri için ayrı blok taşımaz: çocuklar inode tablosunda `parent` alanı karşılaştırılarak bulunur. Dosya/dizin adı en çok 47 UTF-8 bayttır. Sembolik bağlantı yoktur.
 
-Açılışta `AtaPioDisk::initialize()` IDE diski bulur. `pckfs_mount()` süperblok, boyutlar, inode'lar ve FAT'i doğrular. `pckfs_find()` `/a/b` yolunu bileşenlere böler; `pckfs_get_child()` dizini listeler; `pckfs_read_file_range()` blok zincirini izleyip sektörleri okur. Üretici `tools/mkpckfs.py`, okuyucu `kernel/fs/pckfs.cpp` ve kullanıcıya sunulan çağrılar `kernel/syscall.cpp` içindedir. **Disk biçimini değiştirirken bu üçünü birlikte güncelle.** Sürüm veya inode yerleşimi değişirse eski imajın bağlanmasını engellemek için doğrulamayı da değiştir.
+Açılışta `AtaPioDisk::initialize()` IDE diski bulur. `pckfs_mount()` süperblok, boyutlar, inode'lar ve FAT'i doğrular. `pckfs_find()` `/a/b` yolunu bileşenlere böler; `pckfs_get_child()` dizini listeler; `pckfs_read_file_range()` blok zincirini izleyip sektörleri okur. Üretici `tools/mkpckfs.py`, okuyucu `kernel/fs/pckfs.cpp` ve kullanıcıya sunulan çağrılar `kernel/syscall.cpp` içindedir. **Disk biçimini değiştirirken bu üçünü birlikte güncelleyin.** Sürüm veya inode yerleşimi değişirse eski imajın bağlanmasını engellemek için doğrulamayı da değiştirin.
 
 PCKFS v1 şu anda kullanıcı programları için **salt okunur**. ATA sürücüsünde sektör yazma işlevi bulunsa da PCKFS'te genel dosya oluşturma/yazma/silme ve bunlar için syscall henüz yoktur. Host'tan dosya aktarmak için:
 
@@ -169,7 +169,7 @@ cp ornek.txt host-share/home/pck/ornek.txt
 ./qemu.sh
 ```
 
-Dosya PCKOS'ta `/home/pck/ornek.txt` olur. Dosyalar uygulamasında görünür; Terminal'de `cat /home/pck/ornek.txt` ile okunabilir. `qemu.sh` diski her seferinde yeniden ürettiği için kaynak dosyayı `host-share/` içinde tut.
+Dosya PCKOS'ta `/home/pck/ornek.txt` olur. Dosyalar uygulamasında görünür; Terminal'de `cat /home/pck/ornek.txt` ile okunabilir. `qemu.sh` diski her seferinde yeniden ürettiği için kaynak dosyayı `host-share/` içinde tutun.
 
 Kullanıcı programında okuma örneği:
 
@@ -303,7 +303,7 @@ __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Mevcut uygulama bağlantı düzeniyle derle ve PCKFS kaynağına koy:
+Mevcut uygulama bağlantı düzeniyle derleyip ve PCKFS kaynağına koyun:
 
 ```sh
 ./build.sh  # Grafik kitaplığını proje ayarlarıyla çapraz derler.
