@@ -13,6 +13,7 @@ namespace kernel
     }
 }
 
+// çekirdek hata çıktıları
 extern "C" void kernel_panic_screen(const char *message)
 {
     if (kernel::panic_framebuffer == nullptr)
