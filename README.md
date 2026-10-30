@@ -56,7 +56,7 @@ Betik çekirdeği ve uygulamaları derler, `pckos.iso` ile `pckfs.img` dosyalar�
 
 Depodaki `host-share/` örnek dosyalarını PCKFS imajına ekler. Kendi dosyalarını da aynı klasöre koyarak imajda kullanabilirsin.
 
-Bir sürümden önceden derlenmiş `pckos.iso` ve `pckfs.img` dosyalarını indirdiğinde, bu iki dosyayı aynı dizine koyup şu komutla başlatabilirsin:
+Önceden derlenmiş `pckos.iso` ve `pckfs.img` dosyalarını indirdiğinde, bu iki dosyayı aynı dizine koyup şu komutla başlatabilirsin:
 
 ```sh
 qemu-system-i386 -m 2G \
@@ -68,7 +68,7 @@ ISO çekirdeği başlatır; `pckfs.img` PCKOS kök dosya sistemidir. İkisi de g
 
 ## VirtualBox'ta çalıştırma
 
-Bir sürümden `pckos.iso` ve `pckfs.img` dosyalarını indir. `pckfs.img` dosyasını VirtualBox diskine dönüştür:
+`pckos.iso` ve `pckfs.img` dosyalarını indirin. `pckfs.img` dosyasını VirtualBox diskine dönüştürün:
 
 ```sh
 VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI

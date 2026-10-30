@@ -17,7 +17,10 @@
 #include <mem/multiboot.hh>
 #include <mem/vmm.hh>
 #include <mem/new.hh>
+
+
 extern "C" void _init();
+
 
 extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
                             [[maybe_unused]] uint32_t multiboot_magic)
