@@ -287,7 +287,10 @@ __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Applications already registered in the project are built automatically by the `kernel/Makefile` targets during `./build.sh`. The commands below are for manually building a new application once before adding it to the Makefile. The initial `./build.sh` prepares the graphics library and existing build outputs; then compile the example application:
+Applications already registered in the project are built automatically by the `kernel/Makefile` targets during `./build.sh`. There are two ways to add a new application:
+
+- **Add it to the Makefile:** Add `.user.o`, `.elf`, and `.bin` targets to `kernel/Makefile`, include the `.user.o` and `.bin` files in the relevant object/image lists, and add a line to `share.sh` to copy the binary into PCKFS. The scripts then build and package the app; you do not run the manual commands below.
+- **Build it manually for a quick try:** To try the app without adding it to the Makefile, run the commands below in order. The initial `./build.sh` prepares the graphics library object and existing build outputs; the remaining commands compile the new app manually and place it under `host-share/apps`. The final `./share.sh` creates the PCKFS image.
 
 ```sh
 ./build.sh

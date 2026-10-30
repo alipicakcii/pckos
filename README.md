@@ -303,7 +303,10 @@ __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Projede kayıtlı masaüstü ve uygulamalar `kernel/Makefile` hedefleriyle `./build.sh` sırasında otomatik derlenir. Aşağıdaki komutlar, Makefile'a henüz eklemediğiniz yeni bir uygulamayı bir kez elle derleyip PCKFS'e eklemek içindir. İlk `./build.sh`, grafik kitaplığını ve mevcut derleme çıktılarını hazırlar; ardından örnek uygulamayı derleyin:
+Projede kayıtlı masaüstü ve uygulamalar `kernel/Makefile` hedefleriyle `./build.sh` sırasında otomatik derlenir. Yeni uygulama için iki yol vardır:
+
+- **Makefile'a ekleyin:** Uygulamanın `.user.o`, `.elf` ve `.bin` hedeflerini `kernel/Makefile` içine; `.user.o` ve `.bin` dosyalarını ilgili nesne/imaj listelerine ekleyin. `share.sh` içine de uygulamanın `.bin` dosyasını PCKFS'e kopyalayan satırı ekleyin. Sonrasında derleme ve PCKFS'e ekleme betiklerle yapılır; aşağıdaki elle derleme komutlarını çalıştırmanız gerekmez.
+- **Hızlı deneme için elle derleyin:** Uygulamayı Makefile'a eklemeden denemek istiyorsanız aşağıdaki komutları sırayla çalıştırın. İlk `./build.sh`, grafik kitaplığı nesnesini ve mevcut derleme çıktılarını hazırlar; sonraki komutlar yeni uygulamayı elle derleyip `host-share/apps` altına koyar. Son `./share.sh` PCKFS'i üretir.
 
 ```sh
 ./build.sh  # Grafik kitaplığını proje ayarlarıyla çapraz derler.
