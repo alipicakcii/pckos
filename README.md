@@ -4,8 +4,8 @@
 
 **PCKOS**, bir sistem programcısı olarak hobi amacıyla sıfırdan geliştirmeye başladığım bir işletim sistemi çekirdeği projesidir.
 Yaklaşık yedi yıl önce, üretken yapay zekâ araçlarının henüz hayatımızda olmadığı bir dönemde, kendi işletim sistemi çekirdeğimi yazmaya başladım.
-Projeye hiçbir zaman tam zamanlı olarak odaklanma fırsatım olmadı. Son iki yıldır da geliştirme sürecine büyük ölçüde ara vermiş durumdayım.
-Artık PCKOS'u açık kaynak olarak paylaşmaya karar verdim. Amacım, projeye ilgi duyan insanlarla bir topluluk oluşturmak ve yeterli ilgi olursa geliştirmeye kaldığım yerden devam etmek. :)
+Projeye hiçbir zaman tam zamanlı olarak odaklanma fırsatım olmadı. Son iki yıldır da geliştirme sürecinede eskiye nazaran  ara vermiş durumdayım.
+Artık PCKOS'u açık kaynak olarak paylaşmaya karar verdim. Amacım, projeye ilgi duyan insanlarla bir topluluk oluşturmak ve kaldığımız yerden devam etmek. :)
 
 Daha fazla bilgi için: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
