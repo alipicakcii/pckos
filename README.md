@@ -84,7 +84,7 @@ Kaynak koddan imajları hazırlıyorsan proje dizininde:
 
 Bu komutlar ISO'yu ve PCKFS disk imajını üretir; `vbox.sh`, `pckfs.img` dosyasını VirtualBox'ın kullanacağı `pckfs-vbox.vdi` biçimine dönüştürür.
 
-VirtualBox'ta yeni bir **Linux / Other Linux (32-bit)** sanal makinesi oluştur. Belleği 2 GiB ayarla, grafik denetleyicisini **VBoxVGA** seç ve 3D hızlandırmayı kapalı tut. Boş bir sabit disk oluşturma. Depolama ayarlarında `pckos.iso` dosyasını optik sürücüye, `pckfs-vbox.vdi` dosyasını IDE **Primary Master** olarak ekle. Açılış sırasını optik sürücüden başlatacak şekilde ayarla. ISO sistemi başlatır; VDI kök dosya sistemini sağlar.
+VirtualBox'ta yeni bir **Linux / Other Linux (32-bit)** sanal makinesi oluştur. Belleği 2 GiB ayarla, grafik denetleyicisini **VBoxVGA** seç ve 3D hızlandırmayı kapalı tutun. Boş bir sabit disk oluşturmayın. Depolama ayarlarında `pckos.iso` dosyasını optik sürücüye, `pckfs-vbox.vdi` dosyasını IDE **Primary Master** olarak ekleyin. Açılış sırasını optik sürücüden başlatacak şekilde ayarlayın. ISO sistemi başlatır; VDI kök dosya sistemini sağlar.
 
 ## Geliştirme ortamı
 
