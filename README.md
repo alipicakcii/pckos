@@ -46,17 +46,7 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ## QEMU'da çalıştırma
 
-QEMU kurulu Linux ana makinede, proje kaynak kodunu aldıktan ve derleme gereksinimlerini kurduktan sonra proje dizininde  çalıştırın:
-
-```sh
-./qemu.sh
-```
-
-Betik çekirdeği ve uygulamaları derler, `pckos.iso` ile `pckfs.img` dosyalarını üretir ve QEMU'yu başlatır. KVM kullanılabiliyorsa etkinleştirir; değilse TCG emülasyonuna döner. Gerekli derleme araçları aşağıdaki teknik dokümantasyonun “Derleme ve çalışma” bölümünde listelenmiştir.
-
-Depodaki `host-share/` örnek dosyalarını PCKFS imajına ekler. Kendi dosyalarını da aynı klasöre koyarak imajda kullanabilirsin.
-
-Önceden derlenmiş `pckos.iso` ve `pckfs.img` dosyalarını indirip direk çalıştırmak için, bu iki dosyayı aynı dizine koyup şu komutla başlatabilirsin:
+`pckos.iso` ve `pckfs.img` dosyalarını indirdikten sonra bu iki dosyayı aynı dizine koyup şu komutla başlatabilirsin:
 
 ```sh
 qemu-system-i386 -m 2G \
