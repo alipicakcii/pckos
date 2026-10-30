@@ -27,33 +27,6 @@ Yapay zekâ kullanımına karşı değilim; projeye yapılacak katkılarda yapay
 
 Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3. sürümü veya (tercihinize bağlı olarak) daha sonraki sürümleri altında lisanslanır. Tam metin için [`LICENSE`](LICENSE) dosyasına bak. Üçüncü taraf varlıkların kendi lisans bildirimleri geçerlidir.
 
-## Sıradaki işler
-
-Bu liste planlanan işleri gösterir; tamamlanmış özellikleri değil.
-
-### 1. Temeli sağlamlaştır
-
-- Süreç başına dosya tanıtıcıları, okuma konumları ve kapanış temizliği ekle.
-- Uygulama kapanması/çökmesi, pencere odağı, küçültme ve sürükleme davranışlarını tutarlı hale getir.
-- Çoklu pencere, klavye, süreç/thread sınırları, sayfa hataları ve kaynak temizliği için tekrarlanabilir QEMU kontrollerini genişlet.
-
-### 2. Dosya yazma ve kalıcılık
-
-- Kullanıcı verisini her açılışta yeniden üretilen imajdan ayır; `clean.sh` kullanıcı verisini silmemeli.
-- PCKFS'e genel dosya oluşturma, yazma, kısaltma ve silme; boş blok yönetimi ve dolu disk/yarım yazma durumlarını ekle.
-- Dosya sistemi çağrılarına `write`, `seek`, `truncate`, `mkdir` ve `unlink` ekle; Dosyalar'da oluşturma/yeniden adlandırma ve Not Defteri'nde genel kaydetmeyi destekle.
-
-### 3. Uygulama geliştirmeyi kolaylaştır
-
-- Düz `.bin` yüklemesinden statik i386 ELF32 yükleyicisine geç; `PT_LOAD`, BSS, sayfa izinleri ve giriş adresini doğrula. [ELF yükleme belirtimini](https://gabi.xinuos.com/elf/07-loading-intro.html) temel al.
-- Bellek ayırma, metin/sayı dönüşümü, süreç argümanları ve ortak pencere/olay yardımcıları içeren küçük bir kullanıcı alanı SDK'sı hazırla.
-- Sabit 8 süreç/16 thread sınırını ve uygulama başına tek pencere varsayımını kaldır.
-
-### 4. Masaüstünü olgunlaştır
-
-- Türkçe karakter/Unicode, klavye düzeni, metin seçimi, imleç hareketi ve fare tekerleği desteğini geliştir.
-- Pencere boyutlandırma, odak sırası, kısayollar ve uygulama olay kuyruklarını tamamla; hızlı etkileşimlerde titreşim ve olay kaybını önle.
-
 ## Ekran görüntüleri
 
 ### Masaüstü, Dosyalar ve Görev Yöneticisi
@@ -377,3 +350,30 @@ python3 tools/tests/qemu_gui_smoke.py
 ```
 
 QEMU ekran kontrolünün görüntü/günlük çıktıları `tools/tests/gui-output/` içine yazılır. Normal kullanım için `./qemu.sh` çalıştırıp masaüstünü ve `serial` günlüğünü incele.
+
+## Sıradaki işler
+
+Bu liste planlanan işleri gösterir; tamamlanmış özellikleri değil.
+
+### 1. Temeli sağlamlaştır
+
+- Süreç başına dosya tanıtıcıları, okuma konumları ve kapanış temizliği ekle.
+- Uygulama kapanması/çökmesi, pencere odağı, küçültme ve sürükleme davranışlarını tutarlı hale getir.
+- Çoklu pencere, klavye, süreç/thread sınırları, sayfa hataları ve kaynak temizliği için tekrarlanabilir QEMU kontrollerini genişlet.
+
+### 2. Dosya yazma ve kalıcılık
+
+- Kullanıcı verisini her açılışta yeniden üretilen imajdan ayır; `clean.sh` kullanıcı verisini silmemeli.
+- PCKFS'e genel dosya oluşturma, yazma, kısaltma ve silme; boş blok yönetimi ve dolu disk/yarım yazma durumlarını ekle.
+- Dosya sistemi çağrılarına `write`, `seek`, `truncate`, `mkdir` ve `unlink` ekle; Dosyalar'da oluşturma/yeniden adlandırma ve Not Defteri'nde genel kaydetmeyi destekle.
+
+### 3. Uygulama geliştirmeyi kolaylaştır
+
+- Düz `.bin` yüklemesinden statik i386 ELF32 yükleyicisine geç; `PT_LOAD`, BSS, sayfa izinleri ve giriş adresini doğrula. [ELF yükleme belirtimini](https://gabi.xinuos.com/elf/07-loading-intro.html) temel al.
+- Bellek ayırma, metin/sayı dönüşümü, süreç argümanları ve ortak pencere/olay yardımcıları içeren küçük bir kullanıcı alanı SDK'sı hazırla.
+- Sabit 8 süreç/16 thread sınırını ve uygulama başına tek pencere varsayımını kaldır.
+
+### 4. Masaüstünü olgunlaştır
+
+- Türkçe karakter/Unicode, klavye düzeni, metin seçimi, imleç hareketi ve fare tekerleği desteğini geliştir.
+- Pencere boyutlandırma, odak sırası, kısayollar ve uygulama olay kuyruklarını tamamla; hızlı etkileşimlerde titreşim ve olay kaybını önle.
