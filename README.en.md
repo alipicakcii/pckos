@@ -2,7 +2,10 @@
 
 [Türkçe](README.md) | [English](README.en.md)
 
-As a systems programmer, I started building my own operating system from scratch as a hobby about seven years ago, before generative AI tools existed. I could never devote myself to the kernel full time, and I paused development about two years ago. I am now publishing the work completed so far, and hope a community will help me keep the project going.
+**PCKOS** is an operating system kernel project that I started developing from scratch as a hobby, drawing on my experience as a systems programmer.
+I began writing my own operating system kernel about seven years ago, before generative AI tools had become part of our lives.
+I have never had the opportunity to work on the project full time, and development has been largely on hold for the past two years.
+I have now decided to share PCKOS as an open-source project. My goal is to build a community of people interested in it and, if there is enough interest, continue development from where I left off. :)
 
 More information: [PCKOS on my blog](https://pckblog.com/pckos.html)
 
