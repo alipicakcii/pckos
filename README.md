@@ -48,8 +48,8 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 Güncel derlemeyi denemek için iki dosyayı da indirin:
 
-- [PCKOS  ISO — pckos.iso](downloads/pckos.iso?raw=1)
-- [PCKFS kök disk imajı — pckfs.img](downloads/pckfs.img?raw=1)
+- [PCKOS ISO — pckos.iso](https://raw.githubusercontent.com/KULLANICI/REPO/main/downloads/pckos.iso)
+- [PCKFS kök disk imajı — pckfs.img](https://raw.githubusercontent.com/KULLANICI/REPO/main/downloads/pckfs.img)
 - [SHA-256 doğrulama değerleri](downloads/SHA256SUMS)
 
 ISO ve disk imajını aynı derlemeden kullanın. Bağlantılar bu repodaki imajlara gider. Bu kopyaları kaynak koddan yenilemek için `./downloads.sh` çalıştırın; betik iki imajı derleyip `downloads/` dizinine kopyalar ve doğrulama değerlerini günceller. `clean.sh` bu indirme kopyalarını korur.
