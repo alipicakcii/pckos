@@ -13,6 +13,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     user::thread_set_name("Terminal");
 
     user::apps::Terminal terminal;
+    if (user::terminal_attach() < 0) user::exit(-1);
     const uint32_t width = screen.width > 28
         ? (screen.width - 28 < 560 ? screen.width - 28 : 560) : screen.width;
     const uint32_t usable_height = screen.height > 60 ? screen.height - 60 : screen.height;
@@ -35,6 +36,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 
     for (;;)
     {
+        terminal.poll_output();
         if (user::process_is_minimized())
         {
             last_buttons = 0;

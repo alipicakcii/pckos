@@ -23,6 +23,12 @@ struct DirectoryEntry { uint32_t inode, type, size; char name[48]; };
 inline int32_t root_inode() { return 0; }
 inline int32_t get_ticks() { return 12345; }
 inline int32_t get_heap_usage() { return 54321; }
+struct ProcessInfo { uint32_t id; };
+inline uint32_t process_count() { return 0; }
+inline int32_t process_get_info(uint32_t, ProcessInfo*) { return -2; }
+inline int32_t terminal_attach() { return 0; }
+inline int32_t terminal_read(void*, uint32_t) { return 0; }
+inline int32_t terminal_send(uint32_t, const void*, uint32_t n) { return n; }
 inline int32_t process_spawn(const char*, const char*) { return 2; }
 inline void thread_yield() {}
 inline void thread_sleep(uint32_t) {}
@@ -34,6 +40,7 @@ inline int32_t open(const char*) { return 3; }
 inline int32_t close(int32_t) { return 0; }
 inline int32_t read(int32_t, void*, uint32_t) { return 0; }
 inline int32_t get_kernel_log(char*, uint32_t) { return 0; }
+inline int32_t read_kernel_log(char*, uint32_t, uint32_t*) { return 0; }
 inline int32_t read_directory(uint32_t, uint32_t index, DirectoryEntry* entry) {
     if (index >= 32) return 0;
     *entry = {};
@@ -107,6 +114,12 @@ int main() {
             terminal.draw(17,29,width,height);
             assert(user::gui::clips.empty());
         }
+    terminal.reset();
+    terminal.append_output("par", 3);
+    terminal.append_output("cali", 4);
+    assert(std::string(terminal.lines_[terminal.line_count_-1]) == "parcali");
+    terminal.append_output("\nson\n", 5);
+    assert(std::string(terminal.lines_[terminal.line_count_-1]) == "son");
     terminal.reset();
     for (char c : std::string("ticks")) terminal.key(c);
     terminal.key('\n');

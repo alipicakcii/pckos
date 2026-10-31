@@ -49,6 +49,10 @@ namespace user
         syscall_get_datetime = 41,
         syscall_heap_alloc = 42,
         syscall_heap_free = 43,
+        syscall_terminal_attach = 44,
+        syscall_terminal_read = 45,
+        syscall_terminal_send = 46,
+        syscall_read_kernel_log = 47,
         syscall_gfx_begin_frame = 17,
         syscall_gfx_end_frame = 18,
         syscall_gfx_push_clip = 19,
@@ -288,6 +292,22 @@ namespace user
                     reinterpret_cast<uint32_t>(name));
     }
 
+    inline int32_t terminal_attach()
+    {
+        return call(syscall_terminal_attach);
+    }
+
+    inline int32_t terminal_read(void *buffer, uint32_t length)
+    {
+        return call(syscall_terminal_read, reinterpret_cast<uint32_t>(buffer), length);
+    }
+
+    inline int32_t terminal_send(uint32_t process_id, const void *buffer, uint32_t length)
+    {
+        return call(syscall_terminal_send, process_id,
+                    reinterpret_cast<uint32_t>(buffer), length);
+    }
+
     inline int32_t process_minimize()
     {
         return call(syscall_process_minimize);
@@ -402,6 +422,12 @@ namespace user
     {
         return call(syscall_get_kernel_log,
                     reinterpret_cast<uint32_t>(buffer), capacity);
+    }
+
+    inline int32_t read_kernel_log(char *buffer, uint32_t capacity, uint32_t *cursor)
+    {
+        return call(syscall_read_kernel_log, reinterpret_cast<uint32_t>(buffer),
+                    capacity, reinterpret_cast<uint32_t>(cursor));
     }
 
     [[noreturn]] inline void exit(int32_t status)

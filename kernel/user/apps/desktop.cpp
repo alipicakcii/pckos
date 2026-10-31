@@ -57,9 +57,12 @@ namespace
             user::thread_set_name("PCKOS masaustu");
             user::graphics_cursor(static_cast<uint32_t>(mouse_x_),
                                   static_cast<uint32_t>(mouse_y_), true);
+            terminal_.poll_kernel_log();
             render();
             for (;;)
             {
+                terminal_.poll_kernel_log();
+                terminal_.poll_output();
                 user::InputEvent event{};
                 if (user::wait_event(&event, 10) <= 0)
                     continue;
@@ -711,7 +714,7 @@ namespace
             if (menu_open_ || about_open_) return;
             if (console_mode_)
             {
-                terminal_.post_key(key);
+                terminal_.key(key);
             }
             else if (!about_open_ && active_ == WINDOW_FILE && file_visible_)
             {
@@ -719,7 +722,7 @@ namespace
             }
             else if (!about_open_ && active_ == WINDOW_TERMINAL && terminal_visible_)
             {
-                terminal_.post_key(key);
+                terminal_.key(key);
             }
         }
 

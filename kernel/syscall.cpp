@@ -285,6 +285,10 @@ namespace kernel
                 return ERROR_BAD_ADDRESS;
 
             char *buffer = reinterpret_cast<char *>(user_buffer);
+            if (user_mode_has_terminal())
+                return user_mode_stream_read(buffer, length);
+            if (process_input_focus() != thread_current_process_id())
+                return length == 0 ? 0 : -11;
             uint32_t read_count = 0;
             while (read_count < length)
             {
@@ -607,11 +611,34 @@ namespace kernel
                         return;
                     }
                     const char *buffer = reinterpret_cast<const char *>(registers->ecx);
-                    for (uint32_t i = 0; i < length; ++i)
-                        lib::kernel_log_write_char(buffer[i]);
-                    registers->eax = length;
+                    registers->eax = static_cast<uint32_t>(
+                        user_mode_stream_write(buffer, length));
                     return;
                 }
+
+                case user::syscall_terminal_attach:
+                    registers->eax = user_mode_terminal_attach();
+                    return;
+                case user::syscall_terminal_read:
+                    if (registers->ecx > MAX_SYSCALL_TRANSFER)
+                        registers->eax = ERROR_INVALID_ARGUMENT;
+                    else if (registers->ecx != 0 && !active_virtual_memory->is_user_range(
+                            registers->ebx, registers->ecx, true))
+                        registers->eax = ERROR_BAD_ADDRESS;
+                    else
+                        registers->eax = user_mode_terminal_read(
+                            reinterpret_cast<char *>(registers->ebx), registers->ecx);
+                    return;
+                case user::syscall_terminal_send:
+                    if (registers->edx > MAX_SYSCALL_TRANSFER)
+                        registers->eax = ERROR_INVALID_ARGUMENT;
+                    else if (registers->edx != 0 && !active_virtual_memory->is_user_range(
+                            registers->ecx, registers->edx, false))
+                        registers->eax = ERROR_BAD_ADDRESS;
+                    else
+                        registers->eax = user_mode_terminal_send(registers->ebx,
+                            reinterpret_cast<const char *>(registers->ecx), registers->edx);
+                    return;
 
                 case user::syscall_read:
                     if (registers->ebx == user::stdin_descriptor)
@@ -942,6 +969,8 @@ namespace kernel
                             registers->ebx, registers->ecx,
                             registers->edx, registers->esi)
                         ? 0 : static_cast<uint32_t>(ERROR_NO_MEMORY);
+                    if (registers->eax == 0)
+                        process_set_input_focus(thread_current_process_id());
                     return;
 
                 case user::syscall_gfx_move_window:
@@ -993,6 +1022,23 @@ namespace kernel
                     registers->eax = static_cast<uint32_t>(pop_graphics_clip());
                     return;
 
+                case user::syscall_read_kernel_log:
+                {
+                    const uint32_t capacity = registers->ecx;
+                    if (capacity == 0 || capacity > MAX_SYSCALL_TRANSFER)
+                        registers->eax = ERROR_INVALID_ARGUMENT;
+                    else if (!active_virtual_memory->is_user_range(registers->ebx, capacity, true) ||
+                             !active_virtual_memory->is_user_range(registers->edx, sizeof(uint32_t), true))
+                        registers->eax = ERROR_BAD_ADDRESS;
+                    else
+                    {
+                        uint32_t cursor = *reinterpret_cast<uint32_t *>(registers->edx);
+                        registers->eax = lib::kernel_log_read(
+                            reinterpret_cast<char *>(registers->ebx), capacity, &cursor);
+                        *reinterpret_cast<uint32_t *>(registers->edx) = cursor;
+                    }
+                    return;
+                }
                 case user::syscall_get_kernel_log:
                 {
                     const uint32_t capacity = registers->ecx;

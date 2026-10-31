@@ -30,7 +30,7 @@ USER_APP_CFLAGS=-m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
 	-fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
 	-msoft-float -Iinclude
-USER_RUNTIME_OBJECTS=user/lib/new.user.o user/lib/memory.user.o
+USER_RUNTIME_OBJECTS=user/lib/new.user.o user/lib/memory.user.o user/lib/io.user.o
 USER_APP_OBJECTS=\
 $(USER_RUNTIME_OBJECTS) \
 user/gui/graphics.user.o \
@@ -76,7 +76,6 @@ device/input/ps2_keyboard.o \
 device/input/ps2_mouse.o \
 device/ata_pio.o \
 device/rtc.o \
-device/serial_device.o \
 device/video/frame_buffer.o \
 fs/pckfs.o \
 panic.o \
@@ -234,3 +233,6 @@ install-kernel: pckos.bin
 	cp pckos.bin $(DESTDIR)$(BOOTDIR)
 
 -include $(OBJS:.o=.d)
+
+user/lib/io.user.o: user/lib/io.cpp include/user/lib/io.hh include/user/syscall.hh
+	$(CC) $(USER_APP_CFLAGS) -c $< -o $@

@@ -18,6 +18,7 @@ namespace device
         volatile uint8_t queue_read = 0;
         volatile uint8_t queue_write = 0;
         bool shift_pressed = false;
+        uint8_t control_keys = 0;
         bool extended_scancode = false;
 
         void queue_character(uint8_t character)
@@ -44,6 +45,19 @@ namespace device
 
             const bool released = (scancode & 0x80) != 0;
             const uint8_t code = scancode & 0x7F;
+            if (code == 0x1D)
+            {
+                const uint8_t bit = extended_scancode ? 2 : 1;
+                if (released) control_keys &= static_cast<uint8_t>(~bit);
+                else control_keys |= bit;
+                extended_scancode = false;
+                return;
+            }
+            if (control_keys != 0 && code == 0x20 && !released && !extended_scancode)
+            {
+                queue_character(4);
+                return;
+            }
             if (code == 0x2A || code == 0x36)
             {
                 shift_pressed = !released;

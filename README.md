@@ -44,6 +44,16 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ![PCKOS'ta Not Defteri, Hesap Makinesi ve Terminal pencereleri](assets/screenshots/qemu-apps.png)
 
+## İndirmeler
+
+Güncel derlemeyi denemek için iki dosyayı da indirin:
+
+- [PCKOS açılış ISO'su — pckos.iso](downloads/pckos.iso?raw=1)
+- [PCKFS kök disk imajı — pckfs.img](downloads/pckfs.img?raw=1)
+- [SHA-256 doğrulama değerleri](downloads/SHA256SUMS)
+
+ISO ve disk imajını aynı derlemeden kullanın. Bağlantılar bu repodaki imajlara gider. Bu kopyaları kaynak koddan yenilemek için `./downloads.sh` çalıştırın; betik iki imajı derleyip `downloads/` dizinine kopyalar ve doğrulama değerlerini günceller. `clean.sh` bu indirme kopyalarını korur.
+
 ## QEMU'da çalıştırma
 
 `pckos.iso` ve `pckfs.img` dosyalarını indirdikten sonra bu iki dosyayı aynı dizine koyup şu komutla başlatın:
@@ -97,8 +107,8 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 
 1. `./qemu.sh`, `pckos.iso` dosyasını CD-ROM, `pckfs.img` dosyasını IDE disk olarak QEMU'ya bağlar. `iso.sh` tarafından yazılan `isodir/boot/grub/grub.cfg`, GRUB'a `pckos.bin` çekirdeğini ve 1024×768×32 grafik modunu söyler.
 2. `kernel/arch/i386/boot.asm` içindeki Multiboot başlığı GRUB tarafından okunur. `_start` ilk 16 KiB çekirdek yığınını kurar, Multiboot bilgi adresini `kernel_main()` fonksiyonuna verir. `kernel/arch/i386/linker.ld` çekirdeği 1 MiB adresine bağlar.
-3. `kernel/kernel.cpp` kesmeleri kapatır; seri portu ve işlemci tablolarını kurar, sayfalamayı başlatır. `_init()`, çekirdek heap'i hazır olduktan sonra global C++ kurucularını çalıştırır.
-4. Klavye, fare, framebuffer, ATA PIO disk ve PCKFS başlatılır. `_kprintf` ile açılış bilgileri çekirdek günlüğüne/seri porta yazılır. PIT 100 Hz ayarlanır.
+3. `kernel/kernel.cpp` kesmeleri kapatır; işlemci tablolarını kurar, sayfalamayı başlatır. `_init()`, çekirdek heap'i hazır olduktan sonra global C++ kurucularını çalıştırır.
+4. Klavye, fare, framebuffer, ATA PIO disk ve PCKFS başlatılır. `_kprintf` ile açılış bilgileri çekirdek konsol günlüğüne yazılır. PIT 100 Hz ayarlanır. Framebuffer hazır olduğunda açılış günlüğü ekranda gösterilir; CPU üreticisi/modeli, Multiboot bilgileri, GDT/IDT/TSS, CR3, fiziksel sayfa sayıları, görüntü boyutları, disk/PCKFS durumu ve RTC tarihi yazılır. Masaüstüne geçmeden önce syscall, kullanıcı heap/yığın ve zamanlayıcı bilgileri gösterilir. Masaüstünde ESC tuşuna bastığınızda açılış mesajları ve sonraki çekirdek çıktıları sistem konsolunda görünür. Günlüğü `dmesg` ile de okuyabilirsiniz.
 5. `kernel/user_mode.cpp` kullanıcı sayfalarını, kullanıcı yığınını ve sistem çağrılarını hazırlar; `kernel/thread.cpp` zamanlayıcıyı kurar. `user_mode_run_desktop()` masaüstü imajını `0x40000000` adresine yükler. `kernel/arch/i386/user_mode.asm` içindeki `iret` Ring 3'e geçer.
 6. Masaüstü `kernel/user/apps/desktop.cpp` içindeki `_start` ile çalışır. Dosyalar, Terminal, Görevler, Hesap Makinesi veya Not Defteri açıldığında `process_spawn()` çağrılır; çekirdek `/apps/*.bin` imajını PCKFS'ten yükler, yeni PID, adres alanı ve ana thread oluşturur.
 
@@ -125,7 +135,7 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 | `kernel/user/apps/terminal.cpp`, `file_manager.cpp`, `task_manager.cpp` | Uygulama içeriği/iş mantığı |
 | `tools/mkpckfs.py`, `host-share/` | Disk imajı üretimi ve host'tan aktarılacak dosyalar |
 
-Çekirdek heap'i büyürken yeni sayfalar önce ana çekirdek sayfa dizinine (`KERN_PAGE_DIRECTORY`) eşlenir. `Vmm::sync_all_from_kernel()` bu eşlemeleri açık kullanıcı süreçlerine yayar. Sayfa hatasında `serial` günlüğündeki `[PageFault]` satırı hatalı adresi (`CR2`), komut adresini (`EIP`), hata kodunu ve etkin sayfa dizinini (`CR3`) gösterir.
+Çekirdek heap'i büyürken yeni sayfalar önce ana çekirdek sayfa dizinine (`KERN_PAGE_DIRECTORY`) eşlenir. `Vmm::sync_all_from_kernel()` bu eşlemeleri açık kullanıcı süreçlerine yayar. Sayfa hatasında çekirdek konsol günlüğündeki `[PageFault]` satırı hatalı adresi (`CR2`), komut adresini (`EIP`), hata kodunu ve etkin sayfa dizinini (`CR3`) gösterir.
 
 ## 3. Derleme ve çalışma
 
@@ -140,7 +150,7 @@ Gereken araçlar: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkre
 | `./vbox.sh` | Mevcut `pckfs.img` dosyasını `pckfs-vbox.vdi` biçimine çevirir. Önce güncel imajı `./qemu.sh` veya `./share.sh` ile üretin. |
 | `./clean.sh` | Derleme ve imaj çıktılarını temizler; `host-share/` korunur. |
 
-`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `qemu.sh` erişim varsa KVM, yoksa TCG kullanır. Seri çıktı proje kökündeki `serial` dosyasındadır.
+`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `qemu.sh` erişim varsa KVM, yoksa TCG kullanır. Seri port kapalıdır. Çekirdek çıktılarını ESC konsolunda veya `dmesg` ile görebilirsiniz.
 
 `vbox.sh` mevcut `pckfs-vbox.vdi` çıktısını kaldırıp `convertfromraw` ile tekrar üretir. Dönüşümde sanal makineye kayıtlı sabit disk UUID'sini kullanır; böylece VirtualBox'ın disk kaydı bozulmaz. ISO'yu, çekirdeği veya VirtualBox makine ayarlarını değiştirmez. Yeniden üretim sırasında VirtualBox makinesi kapalı olsun.
 
@@ -187,18 +197,52 @@ if (fd >= 0) {
 }
 ```
 
-`stdout` ve `stderr` masaüstü penceresine değil çekirdek günlüğüne/seri porta gider. Dizin için `root_inode()` ve `read_directory(inode, index, &entry)` kullanın: dönüş `1` öğe, `0` liste sonu, negatif değer hatadır. `DirectoryEntry::type == user::directory_type` dizini gösterir.
+`run` ile başlatılan uygulamalarda `stdout` ve `stderr` çağıran terminale gider; ayrıntılar aşağıdadır. Dizin için `root_inode()` ve `read_directory(inode, index, &entry)` kullanın: dönüş `1` öğe, `0` liste sonu, negatif değer hatadır. `DirectoryEntry::type == user::directory_type` dizini gösterir.
 
 ## 5. SDK ve sistem çağrıları
 
 Kullanıcı API'si `kernel/include/user/syscall.hh`, grafik yardımcıları `kernel/include/user/gui.hh` ve `kernel/user/gui/graphics.cpp` içindedir. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/lib/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
+
+### Standart giriş, çıktı ve hata akışları
+
+`run /apps/merhaba.bin` uygulamayı ayrı süreçte başlatır ve terminal bağlantısını aktarır. `stdin` (0) terminalden giriş alır; `stdout` (1) normal çıktı, `stderr` (2) hata çıktısıdır. İki çıktı akışı aynı terminalde çağrı sırasıyla gösterilir; uygulama çıktısı bu durumda çekirdek günlüğüne eklenmez. Alt süreçler de terminal bağlantısını devralır. Terminal bağlantısı olmayan uygulamalarda çıktı sistem konsol günlüğüne gider. Seri porta yazılmaz.
+
+Terminal, `run` ile başlattığınız süreç bitene kadar yeni kabuk komutu çalıştırmaz; Enter ile gönderdiğiniz satırları uygulamanın `stdin` kuyruğuna koyar. Boş girişte Ctrl+D EOF gönderir; yazılmış metin varsa önce o metni gönderir. Program bitince `pckos>` geri gelir. Grafik uygulaması pencere kaydettiğinde odağı kendi penceresine alır. Simge durumundaki terminal de çıktıları toplamaya devam eder.
+
+```cpp
+#include <user/lib/io.hh>
+
+extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
+{
+    print("Merhaba %s! Deger: %d\n", "PCKOS", 42);
+    eprint("Ornek hata kodu: %d\n", -1);
+    print("Bir satir yazin ve Enter'a basin:\n");
+    char input[128];
+    const int32_t count = user::io::read(input, sizeof(input));
+    if (count > 0)
+        user::io::write_all(user::stdout_descriptor, input, count);
+    user::exit(count < 0 ? 1 : 0);
+}
+```
+
+`<user/lib/io.hh>` başlığını ekleyip doğrudan `print("Deger: %d\n", value)` kullanın. `print` stdout'a, `eprint` stderr'e yazar; `fprint(fd, format, ...)` ile bu iki tanıtıcıdan birini seçebilirsiniz. İşlevlere `user::io` içinden de erişebilirsiniz. Dönüş değeri yazılan bayt sayısı veya negatif hata kodudur. Uygulama `kernel/user/lib/io.cpp` içindedir; elle derlediğiniz uygulamanın bağlantısına `kernel/user/lib/io.user.o` ekleyin. Projenin Makefile'ı bunu otomatik bağlar.
+
+Desteklenen biçimler: `%s`, `%c`, `%d`, `%i`, `%u`, `%x`, `%X`, `%o`, `%p`, `%%`; alan genişliği, `-`, `0`, `+`, boşluk ve `#` bayrakları; `%.3s` veya `%08x` gibi hassasiyet/genişlik; `*` ile genişlik/hassasiyet ve tam sayılar için `h`, `hh`, `l`, `z` değiştiricileri. Genişlik ve hassasiyet en çok 4096 olabilir. Ondalıklı sayı biçimleri, `ll` ve `%n` henüz desteklenmez; desteklenmeyen biçim `-22` döndürür. İçinde yüzde işareti bulunan hazır metni `print("%s", text)` ile yazın.
+
+`user::io::write_all` ham baytları yazar; `user::io::read` giriş hazır olana kadar thread'i uyutarak bekler, EOF için `0`, hata için negatif değer döndürür. Kitaplık minimaldir; tam libc veya iostream desteği değildir.
+
+Masaüstü, yeni çekirdek mesajlarını `read_kernel_log(buffer, capacity, &cursor)` (syscall 47) ile takip eder. Okuma konumunu sıfırdan başlatıp çağrılar arasında koruyun. Çekirdek günlüğü 4096 baytlık bir halkadır; okuyucu geride kalırsa kalan en eski bayttan devam eder. ESC konsolu aynı günlüğü tekrar tekrar eklemeden yeni mesajları gösterir.
+
+Alt düzey `user::write(fd, buffer, length)` bir çağrıda en çok 4096 bayt kabul eder. Terminalin ortak çıktı kuyruğu 8192 bayttır; kısa yazma dönebilir, tamamen doluysa `-11` (EAGAIN) döner. `write_all` bunları tekrar deneyerek tamamlar. Terminal kapanmışsa yazma `-32` (EPIPE) döner; sinyal üretilmez. Süreç başına giriş kuyruğu 512 bayttır; bağlı `stdin` boşken `user::read` `-11`, EOF sonrasında `0` döner. Çıktılar ayrı `write` çağrıları arasında satır devamlılığını korur; ANSI kaçış dizileri henüz yorumlanmaz.
+
+Terminal ön yüzü için `terminal_attach()` (44) çağıran süreci terminal sahibi yapar; `terminal_read(buffer, length)` (45) sıradaki çıktıyı tüketir; `terminal_send(pid, buffer, length)` (46) yalnızca bu terminale bağlı sürece giriş yollar. Sıfır uzunluk EOF anlamına gelir. Normal uygulamalar bu çağrıları kullanmaz; `read`/`write` veya `user::io` yardımcılarını kullanın. Dosyaya yönlendirme (`>`), pipe (`|`), `dup2`, sinyaller ve tam iş denetimi henüz yoktur.
 
 `user::call()`, `int 0x80` çalıştırır. `EAX` çağrı numarası, `EBX/ECX/EDX/ESI/EDI` en çok beş argüman, sonuç yine `EAX` içindedir. `kernel/syscall.cpp` çağrıyı dağıtır; kullanıcı işaretçilerini ve uzunlukları doğrular. Hatalar negatif sayı olarak döner. Kodda sayıları elle kullanmak yerine sarmalayıcı fonksiyonları çağırın.
 
 | Alan | Önemli API'ler |
 | --- | --- |
 | Dosya | `open`, `read`, `close`, `root_inode`, `read_directory` |
-| Günlük/giriş | `write`, `get_kernel_log`, `wait_event` |
+| Günlük/giriş | `read`, `write`, `<user/lib/io.hh>`, `terminal_attach`, `terminal_read`, `terminal_send`, `get_kernel_log`, `read_kernel_log`, `wait_event` |
 | Process | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Thread | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
 | Bellek | `heap_alloc`, `heap_free`, `<user/lib/new.hh>` ile `new`/`delete`, `<user/lib/memory.hh>` ile `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` |
@@ -222,7 +266,7 @@ Yeni syscall eklerken: numarayı ve kullanıcı sarmalayıcısını `kernel/incl
 
 `kernel/include/user/lib/memory.hh` başlığı `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy` ve `strncpy` işlevlerini sunar. Bunlara `user::memory::copy`, `move`, `fill`, `compare`, `length` ve `equal` yardımcılarıyla da erişebilirsiniz. Uygulamanın bağlantısına `kernel/user/lib/memory.user.o` ekleyin.
 
-`kernel/include/user/lib/new.hh` başlığı ve `kernel/user/lib/new.cpp` kullanıcı alanına `new`, `new[]`, `delete`, `delete[]`, placement new ve C++17 hizalı tahsis desteği sağlar. Uygulamanın bağlantısına `kernel/user/lib/new.user.o` ekleyin. Mevcut Makefile iki kullanıcı runtime nesnesini de yerleşik uygulamalar için otomatik bağlar. Çekirdeğin `kernel/mem/new.cpp` uygulaması çekirdek heap'ini kullanmaya devam eder.
+`kernel/include/user/lib/new.hh` başlığı ve `kernel/user/lib/new.cpp` kullanıcı alanına `new`, `new[]`, `delete`, `delete[]`, placement new ve C++17 hizalı tahsis desteği sağlar. Uygulamanın bağlantısına `kernel/user/lib/new.user.o` ekleyin. Mevcut Makefile üç kullanıcı runtime nesnesini de yerleşik uygulamalar için otomatik bağlar. Çekirdeğin `kernel/mem/new.cpp` uygulaması çekirdek heap'ini kullanmaya devam eder.
 
 Örnek:
 
@@ -254,13 +298,13 @@ Her süreçte `0x40100000–0x40400000` adres aralığında 3 MiB'lık heap vard
 
 `heap_alloc(size, alignment)` (syscall 42) ham bellek verir, başarısızlıkta `nullptr` döndürür; `heap_free(address)` (syscall 43) belleği geri verir. Tahsis kayıtları çekirdekte saklanır; yalnızca çağıran sürecin geçerli tahsis başlangıcı serbest bırakılabilir. İşlemler mevcut tek çekirdekli sistemde kesmeler kapalı sistem çağrısı içinde tamamlanır. Normal `new` bellek bulamazsa istisnalar kapalı olduğu için günlüğe hata yazıp çağıran süreci `-12` durumuyla sonlandırır. Hatayı uygulamada ele almak için `new (std::nothrow)` kullanın. `get_heap_usage()` hâlâ çekirdek heap kullanımını bildirir.
 
-Basit örnek `kernel/user/apps/new_demo_process.cpp` içindedir: `int *ptr = new int;` ile bellek alır, adresi seri günlüğe yazar ve `delete ptr;` ile bırakır. `./qemu.sh` ile açtıktan sonra **PCKOS terminalinde** çalıştırın:
+Basit örnek `kernel/user/apps/new_demo_process.cpp` içindedir: `int *ptr = new int;` ile bellek alır, adresi standart çıktıya yazar ve `delete ptr;` ile bırakır. `./qemu.sh` ile açtıktan sonra **PCKOS terminalinde** çalıştırın:
 
 ```text
 run /apps/new_demo.bin
 ```
 
-Host üzerindeki `serial` dosyasında veya PCKOS terminalindeki `dmesg` çıktısında adresi ve `delete tamamlandi` mesajını görebilirsiniz. Uygulama pencere açmadan kapanır.
+Adresi ve `delete tamamlandi` mesajını doğrudan komutu çalıştırdığınız terminalde görebilirsiniz. Uygulama pencere açmadan kapanır.
 
 ## 6. Process nasıl oluşturulur?
 
@@ -358,7 +402,7 @@ Bu örnekte uygulamayı elle derliyoruz. Mevcut Makefile yalnızca içinde tanı
 ./build.sh
 ```
 
-Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o`, `kernel/user/lib/new.user.o` ve `kernel/user/lib/memory.user.o` dosyalarını üretir. Henüz yeni `merhaba_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
+Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o`, `kernel/user/lib/new.user.o`, `kernel/user/lib/memory.user.o` ve `kernel/user/lib/io.user.o` dosyalarını üretir. Henüz yeni `merhaba_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
 
 **2. Uygulamanın C++ kodunu derleyin.**
 
@@ -378,7 +422,7 @@ Girdi, yazdığınız `merhaba_process.cpp` dosyasıdır. `-c` seçeneği yalnı
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/merhaba_process.elf \
-  kernel/user/lib/new.user.o kernel/user/lib/memory.user.o \
+  kernel/user/lib/new.user.o kernel/user/lib/memory.user.o kernel/user/lib/io.user.o \
   kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
 ```
 
@@ -425,15 +469,7 @@ Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `
 - Çekirdek global C++ kurucularını `_init()` ile başlatır. Çekirdek için RTTI minimal olarak port edilmiştir ve `dynamic_cast` çalışmaktadır. Exception'lar kapalıdır; kullanıcı uygulamaları `-fno-rtti` ile derlenir.
 - GUI'de pencere kaydı ve çizim katmanları vardır; uygulama türü başına tek açık kopya izlenir.
 
-```sh
-python3 tools/tests/run_user_heap_test.py
-sh tools/tests/run_framebuffer_tests.sh
-python3 tools/test_app_layout.py
-# Önce ISO ve PCKFS imajlarını üretin:
-python3 tools/tests/qemu_gui_smoke.py
-```
-
-QEMU ekran kontrolünün görüntü/günlük çıktıları `tools/tests/gui-output/` içine yazılır. Normal kullanım için `./qemu.sh` çalıştırıp masaüstünü ve `serial` günlüğünü inceleyin.
+Yerelde kontrol etmek için `./qemu.sh` çalıştırın; terminalde `run /apps/new_demo.bin` komutunu deneyin ve masaüstünde ESC ile çekirdek günlüğünü inceleyin. İndirilecek imajları hazırlamak için `./downloads.sh` çalıştırın.
 
 ## Sıradaki işler
 

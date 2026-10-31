@@ -41,6 +41,16 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 ![Notepad, Calculator, and Terminal windows in PCKOS](assets/screenshots/qemu-apps.png)
 
+## Downloads
+
+Download both files from the current build:
+
+- [PCKOS boot ISO — pckos.iso](downloads/pckos.iso?raw=1)
+- [PCKFS root disk — pckfs.img](downloads/pckfs.img?raw=1)
+- [SHA-256 checksums](downloads/SHA256SUMS)
+
+Use the ISO and disk image from the same build. The links point to the images in this repository. To refresh these copies from source, run `./downloads.sh`; it builds both images, copies them to `downloads/`, and updates the checksums. `clean.sh` preserves these download copies.
+
 ## Run in QEMU
 
 After downloading `pckos.iso` and `pckfs.img`, place both files in the same directory and start PCKOS with:
@@ -92,8 +102,8 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 
 1. `./qemu.sh` attaches `pckos.iso` as a CD-ROM and `pckfs.img` as an IDE disk. `iso.sh` writes `isodir/boot/grub/grub.cfg`, which tells GRUB to load `pckos.bin` in 1024×768×32 graphics mode.
 2. GRUB reads the Multiboot header in `kernel/arch/i386/boot.asm`. `_start` sets up the first 16 KiB kernel stack and passes the Multiboot info address to `kernel_main()`. `kernel/arch/i386/linker.ld` links the kernel at 1 MiB.
-3. `kernel/kernel.cpp` disables interrupts, initializes the serial port and processor tables, and starts paging. After the kernel heap is ready, `_init()` runs global C++ constructors.
-4. The keyboard, mouse, framebuffer, ATA PIO disk, and PCKFS are initialized. `_kprintf` writes boot messages to the kernel log/serial port. The PIT is set to 100 Hz.
+3. `kernel/kernel.cpp` disables interrupts, initializes the processor tables, and starts paging. After the kernel heap is ready, `_init()` runs global C++ constructors.
+4. The keyboard, mouse, framebuffer, ATA PIO disk, and PCKFS are initialized. `_kprintf` writes boot messages to the kernel console log. The PIT is set to 100 Hz. Once the framebuffer is ready, the boot log is displayed on screen: CPU vendor/model, Multiboot information, GDT/IDT/TSS, CR3, physical page counts, display dimensions, disk/PCKFS status, and RTC date/time. Syscall, user heap/stack, and scheduler information is shown before entering the desktop. Press ESC on the desktop to see the system console with boot messages and subsequent kernel output. `dmesg` also reads the log.
 5. `kernel/user_mode.cpp` prepares user pages, the user stack, and system calls; `kernel/thread.cpp` initializes scheduling. `user_mode_run_desktop()` loads the desktop image at `0x40000000`. `iret` in `kernel/arch/i386/user_mode.asm` enters Ring 3.
 6. The desktop starts at `_start` in `kernel/user/apps/desktop.cpp`. Opening Files, Terminal, Tasks, Calculator, or Notepad calls `process_spawn()`. The kernel loads `/apps/*.bin` from PCKFS and creates a PID, address space, and main thread.
 
@@ -120,7 +130,7 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 | `kernel/user/apps/terminal.cpp`, `file_manager.cpp`, `task_manager.cpp` | Application behavior |
 | `tools/mkpckfs.py`, `host-share/` | Disk-image generation and optional host files |
 
-When the kernel heap grows, new pages are first mapped in the master kernel page directory (`KERN_PAGE_DIRECTORY`). `Vmm::sync_all_from_kernel()` propagates these mappings to active user processes. A `[PageFault]` entry in the `serial` log reports the faulting address (`CR2`), instruction pointer (`EIP`), error code, and active page directory (`CR3`).
+When the kernel heap grows, new pages are first mapped in the master kernel page directory (`KERN_PAGE_DIRECTORY`). `Vmm::sync_all_from_kernel()` propagates these mappings to active user processes. A `[PageFault]` entry in the kernel console log reports the faulting address (`CR2`), instruction pointer (`EIP`), error code, and active page directory (`CR3`).
 
 ## 3. Build and run
 
@@ -135,7 +145,7 @@ Required tools: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkresc
 | `./vbox.sh` | Converts the current `pckfs.img` to `pckfs-vbox.vdi`. Build a fresh image first. |
 | `./clean.sh` | Removes build and image outputs; preserves `host-share/`. |
 
-`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. `.elf` is a linker output; the loader receives a flat `.bin` image produced by `objcopy`. `qemu.sh` uses KVM when available and TCG otherwise. Serial output goes to `serial` in the project root.
+`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. `.elf` is a linker output; the loader receives a flat `.bin` image produced by `objcopy`. `qemu.sh` uses KVM when available and TCG otherwise. The serial port is disabled. View kernel output in the ESC console or with `dmesg`.
 
 `vbox.sh` removes the previous `pckfs-vbox.vdi` and recreates it with `convertfromraw`. It uses a fixed disk UUID registered with the VM so VirtualBox's disk registration remains stable. It does not change the ISO, kernel, or VM settings. Shut down the VirtualBox VM before regenerating the disk.
 
@@ -182,18 +192,52 @@ if (fd >= 0) {
 }
 ```
 
-`stdout` and `stderr` go to the kernel log/serial port, not a desktop window. Use `root_inode()` and `read_directory(inode, index, &entry)` for directories: return values are `1` for an entry, `0` for end of list, and a negative error otherwise. `DirectoryEntry::type == user::directory_type` identifies a directory.
+`stdout` and `stderr` from applications started with `run` go to the calling terminal; see below. Use `root_inode()` and `read_directory(inode, index, &entry)` for directories: return values are `1` for an entry, `0` for end of list, and a negative error otherwise. `DirectoryEntry::type == user::directory_type` identifies a directory.
 
 ## 5. SDK and system calls
 
 The user API is declared in `kernel/include/user/syscall.hh`; graphics helpers are in `kernel/include/user/gui.hh` and `kernel/user/gui/graphics.cpp`. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/lib/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
+
+### Standard input, output, and error streams
+
+`run /apps/merhaba.bin` starts a separate process and passes on the terminal connection. `stdin` (0) receives terminal input; `stdout` (1) carries normal output and `stderr` (2) carries errors. Both output streams appear in the same terminal in syscall order; attached application output is not added to the kernel log. Child processes inherit the terminal connection. Output from applications without a terminal connection goes to the system console log. Nothing is written to the serial port.
+
+The terminal waits for the process started by `run` before accepting another shell command. Lines submitted with Enter go to the application's `stdin` queue. Ctrl+D on empty input sends EOF; if text has been entered, it sends that text first. The `pckos>` prompt returns when the process ends. A graphical application takes focus when it registers its window. Minimized terminals continue collecting output.
+
+```cpp
+#include <user/lib/io.hh>
+
+extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
+{
+    print("Hello %s! Value: %d\n", "PCKOS", 42);
+    eprint("Example error code: %d\n", -1);
+    print("Type a line and press Enter:\n");
+    char input[128];
+    const int32_t count = user::io::read(input, sizeof(input));
+    if (count > 0)
+        user::io::write_all(user::stdout_descriptor, input, count);
+    user::exit(count < 0 ? 1 : 0);
+}
+```
+
+Include `<user/lib/io.hh>` to use `print("Value: %d\n", value)` directly. `print` writes to stdout, `eprint` to stderr, and `fprint(fd, format, ...)` chooses either descriptor. These functions are also available in `user::io`. They return the number of bytes written or a negative error. The implementation is `kernel/user/lib/io.cpp`; link `kernel/user/lib/io.user.o` when building an application manually. The project Makefile links it automatically.
+
+Supported formats: `%s`, `%c`, `%d`, `%i`, `%u`, `%x`, `%X`, `%o`, `%p`, and `%%`; field width, `-`, `0`, `+`, space and `#` flags; precision such as `%.3s` or `%08x`; `*` width/precision; and `h`, `hh`, `l`, `z` integer modifiers. Width and precision are limited to 4096. Floating-point formats, `ll`, and `%n` are not supported; unsupported formats return `-22`. Use `print("%s", text)` for text containing literal percent signs.
+
+`user::io::write_all` writes raw bytes, and `user::io::read` sleeps the thread until input is available, returning `0` for EOF or a negative error. The library remains minimal; it is not full libc or iostream.
+
+The desktop follows new kernel messages with `read_kernel_log(buffer, capacity, &cursor)` (syscall 47). Start the cursor at zero and preserve it across calls. The kernel log is a 4096-byte ring; if the reader falls behind, it resumes at the oldest remaining byte. The ESC console displays new messages without repeatedly appending the same snapshot.
+
+Low-level `user::write(fd, buffer, length)` accepts at most 4096 bytes per call. The terminal's shared output queue holds 8192 bytes; writes may be short, or return `-11` (EAGAIN) when full. `write_all` retries these cases. If the terminal has closed, writes return `-32` (EPIPE); no signal is raised. Each process has a 512-byte input queue. An empty attached `stdin` returns `-11` from `user::read`, and EOF returns `0`. Output lines continue across separate `write` calls; ANSI escape sequences are not interpreted yet.
+
+For terminal frontends, `terminal_attach()` (44) makes the caller a terminal owner; `terminal_read(buffer, length)` (45) drains pending output; `terminal_send(pid, buffer, length)` (46) sends input only to processes attached to that terminal. Zero length signals EOF. Normal applications use `read`/`write` or the `user::io` helpers instead. File redirection (`>`), pipes (`|`), `dup2`, signals, and full job control are not implemented yet.
 
 `user::call()` invokes `int 0x80`. `EAX` contains the syscall number; `EBX/ECX/EDX/ESI/EDI` carry up to five arguments; the result is returned in `EAX`. `kernel/syscall.cpp` dispatches calls and validates user pointers and lengths. Errors are negative values. Prefer wrapper functions to hard-coded syscall numbers.
 
 | Area | Main APIs |
 | --- | --- |
 | Files | `open`, `read`, `close`, `root_inode`, `read_directory` |
-| Logging/input | `write`, `get_kernel_log`, `wait_event` |
+| Logging/input | `read`, `write`, `<user/lib/io.hh>`, `terminal_attach`, `terminal_read`, `terminal_send`, `get_kernel_log`, `read_kernel_log`, `wait_event` |
 | Processes | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Threads | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
 | Memory | `heap_alloc`, `heap_free`, `new`/`delete` via `<user/lib/new.hh>`, `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` via `<user/lib/memory.hh>` |
@@ -217,7 +261,7 @@ To add a syscall, add its number and user wrapper to `kernel/include/user/syscal
 
 The `kernel/include/user/lib/memory.hh` header provides `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, and `strncpy`. You can also call these through `user::memory::copy`, `move`, `fill`, `compare`, `length`, and `equal`. Link `kernel/user/lib/memory.user.o` into the application.
 
-The `kernel/include/user/lib/new.hh` header and `kernel/user/lib/new.cpp` provide user-space `new`, `new[]`, `delete`, `delete[]`, placement new, and C++17 aligned allocation. Link `kernel/user/lib/new.user.o` into the application. The existing Makefile links both runtime objects automatically for built-in apps. The kernel's `kernel/mem/new.cpp` continues to use its own heap.
+The `kernel/include/user/lib/new.hh` header and `kernel/user/lib/new.cpp` provide user-space `new`, `new[]`, `delete`, `delete[]`, placement new, and C++17 aligned allocation. Link `kernel/user/lib/new.user.o` into the application. The existing Makefile links all three runtime objects automatically for built-in apps. The kernel's `kernel/mem/new.cpp` continues to use its own heap.
 
 Example:
 
@@ -247,13 +291,13 @@ Each process has a 3 MiB heap at `0x40100000–0x40400000`; physical pages are a
 
 `heap_alloc(size, alignment)` (syscall 42) returns raw memory or `nullptr` on failure; `heap_free(address)` (syscall 43) releases it. Allocation records are stored in the kernel; only a valid allocation start in the calling process can be freed. Operations complete inside the syscall with interrupts disabled on the current single-core system. If normal `new` cannot allocate memory, it logs an error and terminates the calling process with status `-12`, since exceptions are disabled. Use `new (std::nothrow)` to handle failure in the application. `get_heap_usage()` still reports kernel heap usage.
 
-The simple example in `kernel/user/apps/new_demo_process.cpp` allocates with `int *ptr = new int;`, logs the address to serial, and releases it with `delete ptr;`. After booting with `./qemu.sh`, run this in the **PCKOS terminal**:
+The simple example in `kernel/user/apps/new_demo_process.cpp` allocates with `int *ptr = new int;`, writes the address to standard output, and releases it with `delete ptr;`. After booting with `./qemu.sh`, run this in the **PCKOS terminal**:
 
 ```text
 run /apps/new_demo.bin
 ```
 
-The host `serial` file or the PCKOS terminal's `dmesg` output shows the address and `delete tamamlandi` message. The app exits without opening a window.
+The terminal where you ran the command shows the address and `delete tamamlandi` message directly. The app exits without opening a window.
 
 ## 6. Creating a process
 
@@ -340,7 +384,7 @@ This example builds the app manually. The existing Makefile builds only the appl
 ./build.sh
 ```
 
-This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, `kernel/user/lib/new.user.o`, and `kernel/user/lib/memory.user.o`, which our example links. It does not yet compile our new `merhaba_process.cpp`; we will do that in the next step.
+This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, `kernel/user/lib/new.user.o`, `kernel/user/lib/memory.user.o`, and `kernel/user/lib/io.user.o`, which our example links. It does not yet compile our new `merhaba_process.cpp`; we will do that in the next step.
 
 **2. Compile the application's C++ source.**
 
@@ -360,7 +404,7 @@ The input is your `merhaba_process.cpp` file. The `-c` option compiles it into t
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/merhaba_process.elf \
-  kernel/user/lib/new.user.o kernel/user/lib/memory.user.o \
+  kernel/user/lib/new.user.o kernel/user/lib/memory.user.o kernel/user/lib/io.user.o \
   kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
 ```
 
@@ -407,15 +451,7 @@ The terminal starts a new process from this file. You do not need to edit `deskt
 - The kernel runs global C++ constructors through `_init()`. RTTI has been minimally ported for the kernel, and `dynamic_cast` works. Exceptions remain disabled; user applications are built with `-fno-rtti`.
 - The GUI supports window registration and drawing layers; only one instance of each application type is tracked.
 
-```sh
-python3 tools/tests/run_user_heap_test.py
-sh tools/tests/run_framebuffer_tests.sh
-python3 tools/test_app_layout.py
-# Build the ISO and PCKFS images first:
-python3 tools/tests/qemu_gui_smoke.py
-```
-
-QEMU screen captures and logs from the GUI check go to `tools/tests/gui-output/`. For normal use, run `./qemu.sh` and inspect the desktop and `serial` log.
+For a local check, run `./qemu.sh`, try `run /apps/new_demo.bin` in the terminal, and view the kernel log by pressing ESC on the desktop. To prepare the downloadable images, run `./downloads.sh`.
 
 ## What's next
 

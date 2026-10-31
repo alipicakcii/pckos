@@ -57,9 +57,6 @@ namespace mem
 	extern "C" void _enable_paging(uint32_t *);
 
 	
-
-	
-
 	class Vmm
 	{
 

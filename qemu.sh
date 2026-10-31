@@ -38,7 +38,7 @@ $CPU_ARGS \
 $DISPLAY_ARGS \
 -cdrom "$SCRIPT_DIR/pckos.iso" \
 -drive file="$SCRIPT_DIR/pckfs.img",format=raw,if=ide,index=0,media=disk \
--serial "file:$SCRIPT_DIR/serial" \
+-serial none \
 -audiodev "$AUDIO_BACKEND",id=snd0 -machine pcspk-audiodev=snd0 \
 -monitor stdio \
 -machine pc,smbios-entry-point-type=32 \

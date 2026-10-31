@@ -12,8 +12,6 @@
 /sysroot/
 /isodir/
 /serial
-/tools/tests/gui-output/
-/tools/tests/heap-output/
 __pycache__/
 /host-code-test/
 
@@ -24,3 +22,9 @@ __pycache__/
 /.codex/
 /.vscode/
 /compile_flags.txt
+
+# README üzerinden indirilen güncel imajlar
+!/downloads/pckos.iso
+!/downloads/pckfs.img
+
+/tools/tests/

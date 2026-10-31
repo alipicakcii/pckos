@@ -63,6 +63,7 @@ namespace user::apps
     Terminal::Terminal()
     {
         dirty_ = 0;
+        log_cursor_ = 0;
         reset();
     }
 
@@ -73,6 +74,8 @@ namespace user::apps
             for (uint32_t column = 0; column < MAX_COLUMNS; ++column)
                 lines_[row][column] = '\0';
         line_count_ = 0;
+        foreground_process_ = 0;
+        output_open_ = false;
         command_length_ = 0;
         command_[0] = '\0';
         print_line("PCKOS komut kabugu");
@@ -92,6 +95,7 @@ namespace user::apps
 
     void Terminal::print_line(const char *value)
     {
+        output_open_ = false;
         // Bir komut geçmiş satırından uzun olsa bile çıktının tamamını koru.
         do
         {
@@ -133,6 +137,81 @@ namespace user::apps
         {
             line[column] = '\0';
             print_line(line);
+        }
+    }
+
+    void Terminal::append_output(const char *text, uint32_t size)
+    {
+        for (uint32_t i = 0; i < size; ++i)
+        {
+            char c = text[i];
+            if (c == '\r')
+            {
+                if (output_open_) lines_[line_count_ - 1][0] = '\0';
+                continue;
+            }
+            if (!output_open_)
+            {
+                print_line("");
+                output_open_ = true;
+            }
+            if (c == '\n') { output_open_ = false; continue; }
+            uint32_t column = length(lines_[line_count_ - 1]);
+            if (c == '\b')
+            {
+                if (column != 0) lines_[line_count_ - 1][column - 1] = '\0';
+                continue;
+            }
+            if (column + 1 >= MAX_COLUMNS)
+            {
+                print_line("");
+                output_open_ = true;
+                column = 0;
+            }
+            lines_[line_count_ - 1][column++] = c >= 32 && c <= 126 ? c : ' ';
+            lines_[line_count_ - 1][column] = '\0';
+        }
+        if (size != 0) dirty_ = 1;
+    }
+
+    void Terminal::poll_kernel_log()
+    {
+        LockGuard guard(lock_);
+        char buffer[512];
+        for (uint32_t i = 0; i < 8; ++i)
+        {
+            const int32_t count = user::read_kernel_log(buffer, sizeof(buffer), &log_cursor_);
+            if (count <= 0) break;
+            append_output(buffer, static_cast<uint32_t>(count));
+        }
+    }
+
+    void Terminal::poll_output()
+    {
+        LockGuard guard(lock_);
+        char buffer[512];
+        for (uint32_t i = 0; i < 16; ++i)
+        {
+            const int32_t count = user::terminal_read(buffer, sizeof(buffer));
+            if (count <= 0) break;
+            append_output(buffer, static_cast<uint32_t>(count));
+        }
+        if (foreground_process_ != 0)
+        {
+            bool running = false;
+            for (uint32_t i = 0; i < user::process_count(); ++i)
+            {
+                user::ProcessInfo info{};
+                if (user::process_get_info(i, &info) == 0 && info.id == foreground_process_)
+                    running = true;
+            }
+            if (!running)
+            {
+                foreground_process_ = 0;
+                command_length_ = 0;
+                command_[0] = '\0';
+                dirty_ = 1;
+            }
         }
     }
 
@@ -252,7 +331,9 @@ namespace user::apps
                 print_line("Kullanim: run /apps/uygulama.bin");
             else
             {
-                const int32_t pid = user::process_spawn(path, "Uygulama");
+                const int32_t attached = user::terminal_attach();
+                const int32_t pid = attached < 0 ? attached :
+                    user::process_spawn(path, "Uygulama");
                 char number[12];
                 if (pid < 0)
                 {
@@ -261,10 +342,9 @@ namespace user::apps
                 }
                 else
                 {
-                    print_line("Uygulama baslatildi. PID:");
-                    to_number(static_cast<uint32_t>(pid), number);
+                    foreground_process_ = static_cast<uint32_t>(pid);
                 }
-                print_line(number);
+                if (pid < 0) print_line(number);
             }
         }
         else if (starts_with(command_, "echo "))
@@ -356,12 +436,14 @@ namespace user::apps
         }
 
         const uint32_t prompt_y = text_y + drawn_rows * row_height;
-        user::gui::text(text_x, prompt_y, "pckos> ", 0xFFC0FFC0);
+        const uint32_t prompt_columns = foreground_process_ == 0 ? 7 : 0;
+        if (foreground_process_ == 0)
+            user::gui::text(text_x, prompt_y, "pckos> ", 0xFFC0FFC0);
         // Girdi sınırında bile dolu imleç için bir karakter hücresini boş bırak.
-        const uint32_t input_columns = columns - 7 - 1;
+        const uint32_t input_columns = columns - prompt_columns - 1;
         const uint32_t start = command_length_ > input_columns
             ? command_length_ - input_columns : 0;
-        uint32_t input_x = text_x + 7 * user::gui::FONT_WIDTH;
+        uint32_t input_x = text_x + prompt_columns * user::gui::FONT_WIDTH;
         user::gui::text(input_x, prompt_y, command_ + start, 0xFFC0FFC0);
         input_x += (command_length_ - start) * user::gui::FONT_WIDTH;
         user::gui::fill(input_x, prompt_y, user::gui::FONT_WIDTH,
@@ -374,7 +456,31 @@ namespace user::apps
     {
         LockGuard guard(lock_);
         dirty_ = 1;
-        if (key_value == '\n')
+        if (key_value == 4 && foreground_process_ != 0)
+        {
+            const int32_t result = user::terminal_send(foreground_process_, command_,
+                                                       command_length_);
+            if (result >= 0 && command_length_ != 0)
+            {
+                print_line(command_);
+                command_length_ = 0;
+                command_[0] = '\0';
+            }
+        }
+        else if (key_value == '\n' && foreground_process_ != 0)
+        {
+            command_[command_length_] = '\n';
+            const int32_t result = user::terminal_send(foreground_process_, command_,
+                                                       command_length_ + 1);
+            command_[command_length_] = '\0';
+            if (result >= 0)
+            {
+                print_line(command_);
+                command_length_ = 0;
+                command_[0] = '\0';
+            }
+        }
+        else if (key_value == '\n')
             execute();
         else if (key_value == '\b')
         {
@@ -409,6 +515,7 @@ namespace user::apps
             user::thread_exit();
         for (;;)
         {
+            terminal->poll_output();
             AppEvent event{};
             if (!terminal->events_.pop(&event))
             {

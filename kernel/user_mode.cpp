@@ -10,6 +10,7 @@
 #include <interrupts/isr.hh>
 #include <library/kernel_panic.hh>
 #include <library/kprint.hh>
+#include <library/kernel_log.hh>
 #include <library/mem.hh>
 #include <mem/vmm.hh>
 
@@ -70,6 +71,14 @@ namespace kernel
                 uint32_t offset;
                 uint32_t size;
             };
+            // Akış kuyruklarına kesmeler kapalı sistem çağrılarından erişilir.
+            uint32_t terminal_id;
+            bool terminal_owner;
+            char output[8192];
+            uint32_t output_head, output_size;
+            char input[512];
+            uint32_t input_head, input_size;
+            bool input_eof;
             bool reserved;
             uint32_t process_id;
             uint32_t page_directory_address;
@@ -351,6 +360,8 @@ namespace kernel
             return ERROR_NO_MEMORY;
         }
         space->process_id = process_id;
+        const UserProcessSpace *parent = find_process_space(parent_id);
+        space->terminal_id = parent == nullptr ? 0 : parent->terminal_id;
         const int32_t thread_id = thread_create_user(USER_CODE_ADDRESS,
             USER_STACK_TOP, USER_STACK_ADDRESS, USER_STACK_PAGES,
             space->page_directory_address, process_id, name);
@@ -361,8 +372,100 @@ namespace kernel
             return thread_id;
         }
         process_set_main_thread(process_id, static_cast<uint32_t>(thread_id));
-        process_set_input_focus(process_id);
+        if (space->terminal_id == 0)
+            process_set_input_focus(process_id);
         return static_cast<int32_t>(process_id);
+    }
+
+    int32_t user_mode_terminal_attach()
+    {
+        UserProcessSpace *space = find_process_space(thread_current_process_id());
+        if (space == nullptr) return -22;
+        space->terminal_owner = true;
+        space->terminal_id = space->process_id;
+        return 0;
+    }
+
+    int32_t user_mode_terminal_read(char *buffer, uint32_t length)
+    {
+        UserProcessSpace *space = find_process_space(thread_current_process_id());
+        if (space == nullptr || !space->terminal_owner) return -9;
+        uint32_t count = 0;
+        while (count < length && space->output_size != 0)
+        {
+            buffer[count++] = space->output[space->output_head];
+            space->output_head = (space->output_head + 1) % sizeof(space->output);
+            --space->output_size;
+        }
+        return static_cast<int32_t>(count);
+    }
+
+    int32_t user_mode_stream_write(const char *buffer, uint32_t length)
+    {
+        UserProcessSpace *space = find_process_space(thread_current_process_id());
+        if (space == nullptr) return -9;
+        if (space->terminal_id == 0)
+        {
+            for (uint32_t i = 0; i < length; ++i)
+                lib::kernel_log_write_char(buffer[i]);
+            return static_cast<int32_t>(length);
+        }
+        UserProcessSpace *terminal = find_process_space(space->terminal_id);
+        if (terminal == nullptr || !terminal->terminal_owner) return -32;
+        uint32_t count = 0;
+        while (count < length && terminal->output_size < sizeof(terminal->output))
+        {
+            const uint32_t tail = (terminal->output_head + terminal->output_size) %
+                                  sizeof(terminal->output);
+            terminal->output[tail] = buffer[count++];
+            ++terminal->output_size;
+        }
+        return count == 0 && length != 0 ? -11 : static_cast<int32_t>(count);
+    }
+
+    bool user_mode_has_terminal()
+    {
+        const UserProcessSpace *space = find_process_space(thread_current_process_id());
+        return space != nullptr && space->terminal_id != 0;
+    }
+
+    int32_t user_mode_stream_read(char *buffer, uint32_t length)
+    {
+        UserProcessSpace *space = find_process_space(thread_current_process_id());
+        if (space == nullptr) return -9;
+        if (length == 0) return 0;
+        uint32_t count = 0;
+        while (count < length && space->input_size != 0)
+        {
+            buffer[count++] = space->input[space->input_head];
+            space->input_head = (space->input_head + 1) % sizeof(space->input);
+            --space->input_size;
+        }
+        if (count != 0) return static_cast<int32_t>(count);
+        if (space->input_eof || find_process_space(space->terminal_id) == nullptr)
+            return 0;
+        return -11;
+    }
+
+    int32_t user_mode_terminal_send(uint32_t process_id, const char *buffer,
+                                    uint32_t length)
+    {
+        UserProcessSpace *owner = find_process_space(thread_current_process_id());
+        UserProcessSpace *target = find_process_space(process_id);
+        if (owner == nullptr || !owner->terminal_owner || target == nullptr ||
+            target->terminal_id != owner->process_id || target == owner)
+            return -13;
+        if (length == 0) { target->input_eof = true; return 0; }
+        if (target->input_eof) return -32;
+        // Bir giriş satırı ya bütünüyle kuyruğa alınır ya da yeniden denenir.
+        if (length > sizeof(target->input) - target->input_size) return -11;
+        for (uint32_t i = 0; i < length; ++i)
+        {
+            target->input[(target->input_head + target->input_size) %
+                          sizeof(target->input)] = buffer[i];
+            ++target->input_size;
+        }
+        return static_cast<int32_t>(length);
     }
 
     int32_t user_mode_heap_alloc(uint32_t size, uint32_t alignment)

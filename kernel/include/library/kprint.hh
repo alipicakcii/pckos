@@ -5,7 +5,7 @@
 
 extern "C" int __kprintf(const char *format, ...);
 
-// Çekirdek iletileri seri porta ve bellekteki sistem günlüğüne yazılır.
+// Çekirdek iletileri konsolda gösterilen sistem günlüğüne yazılır.
 template <typename... Args>
 void _kprintf(const char *format, Args&&... args)
 {

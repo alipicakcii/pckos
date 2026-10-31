@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include <library/kernel_log.hh>
-#include <device/serial_device.hh>
 #include <stdint.h>
 
 namespace lib
@@ -11,6 +10,7 @@ namespace lib
         char log_buffer[KERNEL_LOG_CAPACITY];
         size_t log_start = 0;
         size_t log_size = 0;
+        uint32_t log_sequence = 0;
 
         uint32_t disable_interrupts_and_save_flags()
         {
@@ -42,8 +42,23 @@ namespace lib
             log_start = (log_start + 1) % KERNEL_LOG_CAPACITY;
         }
 
-        device::serial_write_char(character);
+        ++log_sequence;
         restore_interrupts(flags);
+    }
+
+    size_t kernel_log_read(char *destination, size_t capacity, uint32_t *cursor)
+    {
+        if (destination == nullptr || cursor == nullptr || capacity == 0) return 0;
+        const uint32_t flags = disable_interrupts_and_save_flags();
+        uint32_t pending = log_sequence - *cursor;
+        if (pending > log_size) pending = static_cast<uint32_t>(log_size);
+        const size_t copied = pending < capacity ? pending : capacity;
+        const size_t start = (log_start + log_size - pending) % KERNEL_LOG_CAPACITY;
+        for (size_t i = 0; i < copied; ++i)
+            destination[i] = log_buffer[(start + i) % KERNEL_LOG_CAPACITY];
+        *cursor = log_sequence - pending + static_cast<uint32_t>(copied);
+        restore_interrupts(flags);
+        return copied;
     }
 
     size_t kernel_log_snapshot(char *destination, size_t capacity)
