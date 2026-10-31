@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
-#include <user/new.hh>
+#include <user/lib/new.hh>
+#include <user/lib/memory.hh>
 #include <user/syscall.hh>
 
 namespace
@@ -79,6 +80,25 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     check(false, "normal new returned on OOM");
 #else
     log("HEAP_BEGIN\n");
+    unsigned char memory[16]{};
+    const unsigned char source[] = {1, 2, 3, 4, 5, 0xFF};
+    check(user::memory::fill(memory, 0xAA, sizeof(memory)) == memory &&
+          memory[15] == 0xAA, "memset/fill");
+    check(user::memory::copy(memory, source, sizeof(source)) == memory &&
+          user::memory::compare(memory, source, sizeof(source)) == 0, "memcpy/compare");
+    user::memory::move(memory + 1, memory, 5);
+    check(memory[1] == 1 && memory[5] == 5, "overlapping memmove");
+    check(user::memory::length("PCKOS") == 5 &&
+          user::memory::equal("memory", "memory") &&
+          !user::memory::equal("PCK", "PCKOS") &&
+          strncmp("kernel", "keymap", 2) == 0, "string functions");
+    char copied_text[8];
+    check(strcpy(copied_text, "PCKOS") == copied_text &&
+          strcmp(copied_text, "PCKOS") == 0, "strcpy/strcmp");
+    char bounded_text[8];
+    strncpy(bounded_text, "PCKOS", sizeof(bounded_text));
+    check(bounded_text[5] == '\0' && bounded_text[7] == '\0', "strncpy padding");
+
     const uint32_t initial_pages = free_pages();
     int *number = new int(123);
     check(*number == 123 && (reinterpret_cast<uintptr_t>(number) & 15) == 0, "new int");

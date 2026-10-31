@@ -30,7 +30,7 @@ USER_APP_CFLAGS=-m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
 	-fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
 	-msoft-float -Iinclude
-USER_RUNTIME_OBJECTS=user/new.user.o
+USER_RUNTIME_OBJECTS=user/lib/new.user.o user/lib/memory.user.o
 USER_APP_OBJECTS=\
 $(USER_RUNTIME_OBJECTS) \
 user/gui/graphics.user.o \
@@ -130,7 +130,10 @@ syscall.o: syscall.cpp
 .asm.o:
 	nasm -felf32 $< -o $@
 
-user/new.user.o: user/new.cpp include/user/new.hh include/user/syscall.hh
+user/lib/new.user.o: user/lib/new.cpp include/user/lib/new.hh include/user/syscall.hh
+	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+
+user/lib/memory.user.o: user/lib/memory.cpp include/user/lib/memory.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/gui/graphics.user.o: user/gui/graphics.cpp include/user/gui.hh include/user/syscall.hh
@@ -202,7 +205,7 @@ user/apps/notepad_process.bin: user/apps/notepad_process.elf
 arch/i386/user_desktop.o: arch/i386/user_desktop.asm user/apps/desktop.bin
 	nasm -felf32 $< -o $@
 
-user/apps/new_demo_process.user.o: user/apps/new_demo_process.cpp include/user/new.hh include/user/syscall.hh
+user/apps/new_demo_process.user.o: user/apps/new_demo_process.cpp include/user/lib/new.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/new_demo_process.elf: $(USER_RUNTIME_OBJECTS) user/apps/new_demo_process.user.o user/apps/linker.ld

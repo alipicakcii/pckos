@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
-#include <user/new.hh>
+#include <user/lib/new.hh>
 #include <user/syscall.hh>
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()

@@ -32,7 +32,8 @@ def main():
             run(["i686-elf-g++", *flags, f"-DHEAP_TEST_ROLE={role}", "-c", str(source), "-o", str(obj)])
             run(["i686-elf-g++", "-m32", "-no-pie", "-nostdlib",
                  "-Wl,-T,kernel/user/apps/linker.ld", "-Wl,--build-id=none",
-                 "-o", str(elf), str(obj), "kernel/user/new.user.o"])
+                 "-o", str(elf), str(obj), "kernel/user/lib/new.user.o",
+                 "kernel/user/lib/memory.user.o"])
             run(["i686-elf-objcopy", "-O", "binary", str(elf), str(apps / f"{name}.bin")])
         shutil.copyfile(ROOT / "kernel/user/apps/new_demo_process.bin", apps / "new_demo.bin")
         run(["python3", "tools/mkpckfs.py", "--source", str(OUT / "source"),
@@ -77,7 +78,7 @@ def main():
                     assert "new: kullanici bellegi ayrilamadi" in output, output
                     assert "[new-demo] ptr = 0x40100000" in output, output
                     assert "[new-demo] delete tamamlandi" in output, output
-                    print("PASS: new/delete, diziler, hizalama, sayfa iadesi, thread'ler, süreç yalıtımı ve OOM")
+                    print("PASS: memory/string helpers, new/delete, hizalama, sayfalar, thread'ler, süreç yalıtımı ve OOM")
                     return
                 if process.poll() is not None:
                     raise RuntimeError("QEMU erken kapandı: " + output)

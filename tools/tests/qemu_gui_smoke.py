@@ -91,7 +91,7 @@ class Guest:
 
     def key(self, key):
         self.hmp(f'sendkey {key} 1')
-        time.sleep(0.035)
+        time.sleep(0.12)
 
     def type(self, text):
         keys = {' ': 'spc', '\n': 'ret', '/': 'slash', '.': 'dot', '-': 'minus', '_': 'shift-minus'}
@@ -129,14 +129,13 @@ def main():
         guest.type('threads\n')
         thread_status = guest.shot('terminal-threads')
         assert ImageChops.difference(thread_status, terminal).getbbox() is not None, 'Thread status command did not update the terminal'
-        guest.type('echo ' + 'abcdefghij' * 11 + '\n')
-        guest.type('dmesg\n')
         guest.type('run /apps/new_demo.bin\n')
-        time.sleep(0.3)
-        guest.shot('new-demo-run')
+        time.sleep(0.5)
         heap_log = (OUT / 'serial.log').read_text()
         assert '[new-demo] ptr = 0x40100000' in heap_log, heap_log
         assert '[new-demo] delete tamamlandi' in heap_log, heap_log
+        guest.type('echo ' + 'abcdefghij' * 11 + '\n')
+        guest.type('dmesg\n')
         long_output = guest.shot('terminal-long-output')
         # 1024x768 çözünürlükte Terminal sınırları: x=287, y=214, genişlik=560, yükseklik=340.
         # İşaretçi ve saati hesaba katmamak için masaüstünün sağ ve sol şeritlerini denetle.

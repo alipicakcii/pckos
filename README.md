@@ -191,7 +191,7 @@ if (fd >= 0) {
 
 ## 5. SDK ve sistem çağrıları
 
-Kullanıcı tarafında kullanılabilen API'nin kaynağı `kernel/include/user/syscall.hh`; grafik yardımcısı `kernel/include/user/gui.hh` ve `kernel/user/gui/graphics.cpp` dosyalarıdır. Henüz bağımsız paketlenmiş SDK veya standart C/C++ çalışma kütüphanesi yoktur.
+Kullanıcı API'si `kernel/include/user/syscall.hh`, grafik yardımcıları `kernel/include/user/gui.hh` ve `kernel/user/gui/graphics.cpp` içindedir. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/lib/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
 
 `user::call()`, `int 0x80` çalıştırır. `EAX` çağrı numarası, `EBX/ECX/EDX/ESI/EDI` en çok beş argüman, sonuç yine `EAX` içindedir. `kernel/syscall.cpp` çağrıyı dağıtır; kullanıcı işaretçilerini ve uzunlukları doğrular. Hatalar negatif sayı olarak döner. Kodda sayıları elle kullanmak yerine sarmalayıcı fonksiyonları çağırın.
 
@@ -201,7 +201,7 @@ Kullanıcı tarafında kullanılabilen API'nin kaynağı `kernel/include/user/sy
 | Günlük/giriş | `write`, `get_kernel_log`, `wait_event` |
 | Process | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Thread | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
-| Bellek | `heap_alloc`, `heap_free`; `<user/new.hh>` ile `new`/`delete` |
+| Bellek | `heap_alloc`, `heap_free`, `<user/lib/new.hh>` ile `new`/`delete`, `<user/lib/memory.hh>` ile `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` |
 | Sistem | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
 | Grafik | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
@@ -218,12 +218,27 @@ if (user::wait_event(&event, 10) > 0 &&
 
 Yeni syscall eklerken: numarayı ve kullanıcı sarmalayıcısını `kernel/include/user/syscall.hh` içine; işleyiciyi `kernel/syscall.cpp` içindeki dağıtıcıya ekleyin. Kullanıcıdan gelen adresleri `is_user_range` ile denetleyin. Gerekiyorsa asıl çekirdek işlevini `kernel/` altında ilgili modülde uygulayın. Dönüş kodu ve sınırları burada belgeleyin.
 
-**Kullanıcı uygulamalarında dinamik bellek**
+**Kullanıcı uygulamalarında bellek ve temel yardımcılar**
 
-`kernel/include/user/new.hh` başlığı ve `kernel/user/new.cpp` kullanıcı alanına `new`, `new[]`, `delete`, `delete[]`, placement new ve C++17 hizalı tahsis desteği sağlar. Uygulamanın bağlantı komutuna `kernel/user/new.user.o` ekleyin; mevcut Makefile bunu yerleşik uygulamalar için otomatik yapar. Çekirdeğin `kernel/mem/new.cpp` uygulaması kendi heap'ini kullanmaya devam eder.
+`kernel/include/user/lib/memory.hh` başlığı `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy` ve `strncpy` işlevlerini sunar. Bunlara `user::memory::copy`, `move`, `fill`, `compare`, `length` ve `equal` yardımcılarıyla da erişebilirsiniz. Uygulamanın bağlantısına `kernel/user/lib/memory.user.o` ekleyin.
+
+`kernel/include/user/lib/new.hh` başlığı ve `kernel/user/lib/new.cpp` kullanıcı alanına `new`, `new[]`, `delete`, `delete[]`, placement new ve C++17 hizalı tahsis desteği sağlar. Uygulamanın bağlantısına `kernel/user/lib/new.user.o` ekleyin. Mevcut Makefile iki kullanıcı runtime nesnesini de yerleşik uygulamalar için otomatik bağlar. Çekirdeğin `kernel/mem/new.cpp` uygulaması çekirdek heap'ini kullanmaya devam eder.
+
+Örnek:
 
 ```cpp
-#include <user/new.hh>
+#include <user/lib/memory.hh>
+
+char text[16];
+user::memory::fill(text, 0, sizeof(text));
+user::memory::copy(text, "PCKOS", 6);
+if (user::memory::equal(text, "PCKOS")) {
+    // Metinler eşleşti.
+}
+```
+
+```cpp
+#include <user/lib/new.hh>
 
 int *value = new int(42);
 delete value;
@@ -343,7 +358,7 @@ Bu örnekte uygulamayı elle derliyoruz. Mevcut Makefile yalnızca içinde tanı
 ./build.sh
 ```
 
-Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o` ve `kernel/user/new.user.o` dosyalarını üretir. Henüz yeni `merhaba_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
+Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o`, `kernel/user/lib/new.user.o` ve `kernel/user/lib/memory.user.o` dosyalarını üretir. Henüz yeni `merhaba_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
 
 **2. Uygulamanın C++ kodunu derleyin.**
 
@@ -363,10 +378,11 @@ Girdi, yazdığınız `merhaba_process.cpp` dosyasıdır. `-c` seçeneği yalnı
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/merhaba_process.elf \
-  kernel/user/new.user.o kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
+  kernel/user/lib/new.user.o kernel/user/lib/memory.user.o \
+  kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
 ```
 
-Bu adım, uygulamanızın nesne dosyasını ilk adımda üretilen `graphics.user.o` ve kullanıcı alanının `new`/`delete` desteğini sağlayan `new.user.o` ile birleştirir. `linker.ld`, uygulamanın bellek yerleşimini ve `_start` girişini tanımlar. Sonuç `merhaba_process.elf` dosyasıdır. Bu ELF, bağlantı ara çıktısıdır; mevcut PCKOS yükleyicisi düz ikili dosya bekler.
+Bu adım uygulama nesnesini grafik, bellek ve `new`/`delete` runtime nesneleriyle birleştirir. `linker.ld`, uygulamanın bellek yerleşimini ve `_start` girişini tanımlar. Sonuç `merhaba_process.elf` dosyasıdır. Bu ELF, bağlantı ara çıktısıdır; mevcut PCKOS yükleyicisi düz ikili dosya bekler.
 
 **4. ELF dosyasını PCKOS'un yükleyebileceği biçime çevirin.**
 

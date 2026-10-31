@@ -186,7 +186,7 @@ if (fd >= 0) {
 
 ## 5. SDK and system calls
 
-The user API is declared in `kernel/include/user/syscall.hh`; graphics helpers are in `kernel/include/user/gui.hh` and `kernel/user/gui/graphics.cpp`. There is not yet a separately packaged SDK or standard C/C++ runtime library.
+The user API is declared in `kernel/include/user/syscall.hh`; graphics helpers are in `kernel/include/user/gui.hh` and `kernel/user/gui/graphics.cpp`. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/lib/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
 
 `user::call()` invokes `int 0x80`. `EAX` contains the syscall number; `EBX/ECX/EDX/ESI/EDI` carry up to five arguments; the result is returned in `EAX`. `kernel/syscall.cpp` dispatches calls and validates user pointers and lengths. Errors are negative values. Prefer wrapper functions to hard-coded syscall numbers.
 
@@ -196,7 +196,7 @@ The user API is declared in `kernel/include/user/syscall.hh`; graphics helpers a
 | Logging/input | `write`, `get_kernel_log`, `wait_event` |
 | Processes | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Threads | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
-| Memory | `heap_alloc`, `heap_free`; `new`/`delete` via `<user/new.hh>` |
+| Memory | `heap_alloc`, `heap_free`, `new`/`delete` via `<user/lib/new.hh>`, `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` via `<user/lib/memory.hh>` |
 | System | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
 | Graphics | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
@@ -213,12 +213,25 @@ if (user::wait_event(&event, 10) > 0 &&
 
 To add a syscall, add its number and user wrapper to `kernel/include/user/syscall.hh`, then add its handler to the dispatcher in `kernel/syscall.cpp`. Validate user-provided addresses with `is_user_range`. Implement kernel functionality in the relevant module under `kernel/`. Document return values and limits here.
 
-**Dynamic memory in user applications**
+**Memory and basic helpers in user applications**
 
-The `kernel/include/user/new.hh` header and `kernel/user/new.cpp` provide user-space `new`, `new[]`, `delete`, `delete[]`, placement new, and C++17 aligned allocation. Add `kernel/user/new.user.o` to the application's link command; the existing Makefile does this automatically for built-in apps. The kernel's `kernel/mem/new.cpp` continues to use its own heap.
+The `kernel/include/user/lib/memory.hh` header provides `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, and `strncpy`. You can also call these through `user::memory::copy`, `move`, `fill`, `compare`, `length`, and `equal`. Link `kernel/user/lib/memory.user.o` into the application.
+
+The `kernel/include/user/lib/new.hh` header and `kernel/user/lib/new.cpp` provide user-space `new`, `new[]`, `delete`, `delete[]`, placement new, and C++17 aligned allocation. Link `kernel/user/lib/new.user.o` into the application. The existing Makefile links both runtime objects automatically for built-in apps. The kernel's `kernel/mem/new.cpp` continues to use its own heap.
+
+Example:
 
 ```cpp
-#include <user/new.hh>
+#include <user/lib/memory.hh>
+
+char text[16];
+user::memory::fill(text, 0, sizeof(text));
+user::memory::copy(text, "PCKOS", 6);
+const bool matches = user::memory::equal(text, "PCKOS");
+```
+
+```cpp
+#include <user/lib/new.hh>
 
 int *value = new int(42);
 delete value;
@@ -327,7 +340,7 @@ This example builds the app manually. The existing Makefile builds only the appl
 ./build.sh
 ```
 
-This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o` and `kernel/user/new.user.o`, which our example links. It does not yet compile our new `merhaba_process.cpp`; we will do that in the next step.
+This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, `kernel/user/lib/new.user.o`, and `kernel/user/lib/memory.user.o`, which our example links. It does not yet compile our new `merhaba_process.cpp`; we will do that in the next step.
 
 **2. Compile the application's C++ source.**
 
@@ -347,10 +360,11 @@ The input is your `merhaba_process.cpp` file. The `-c` option compiles it into t
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/merhaba_process.elf \
-  kernel/user/new.user.o kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
+  kernel/user/lib/new.user.o kernel/user/lib/memory.user.o \
+  kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
 ```
 
-This combines your application's object file with `graphics.user.o` and the user-space `new`/`delete` support in `new.user.o`, both produced in step 1. `linker.ld` defines the application's memory layout and `_start` entry point. The result is `merhaba_process.elf`. This ELF file is a linker intermediate; the current PCKOS loader expects a flat binary.
+This links your app with the graphics, memory, and `new`/`delete` runtime objects. `linker.ld` defines the application's memory layout and `_start` entry point. The result is `merhaba_process.elf`. This ELF file is a linker intermediate; the current PCKOS loader expects a flat binary.
 
 **4. Convert the ELF file into the format PCKOS loads.**
 
