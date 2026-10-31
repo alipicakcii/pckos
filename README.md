@@ -48,7 +48,7 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 Güncel derlemeyi denemek için iki dosyayı da indirin:
 
-- [PCKOS açılış ISO'su — pckos.iso](downloads/pckos.iso?raw=1)
+- [PCKOS  ISO'su — pckos.iso](downloads/pckos.iso?raw=1)
 - [PCKFS kök disk imajı — pckfs.img](downloads/pckfs.img?raw=1)
 - [SHA-256 doğrulama değerleri](downloads/SHA256SUMS)
 
