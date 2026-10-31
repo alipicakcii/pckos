@@ -1,3 +1,6 @@
+; SPDX-License-Identifier: GPL-3.0-or-later
+; Copyright (C) PCK
+
 ; A20 hattımı acıkmı kapalımı kontroluı devre dışı bıraklmıştır
 ; buradaki Assembly kodlaru şu an için çekirdek kullanilmamaktadir ancak derlenmektedir
 section .data

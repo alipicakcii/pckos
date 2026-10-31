@@ -6,8 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-template <typename... Args>
-void _kprintf(const char *format, Args &&...args);
+
 
 // C++ referans çöküşü örnekleri
 // A&  &  olur  A&
