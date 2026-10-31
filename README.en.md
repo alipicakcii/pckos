@@ -45,9 +45,9 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 Download both files from the current build:
 
-- [PCKOS boot ISO — pckos.iso](downloads/pckos.iso?raw=1)
-- [PCKFS root disk — pckfs.img](downloads/pckfs.img?raw=1)
-- [SHA-256 checksums](downloads/SHA256SUMS)
+- [PCKOS boot ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
+- [PCKFS root disk — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
+- [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
 Use the ISO and disk image from the same build. The links point to the images in this repository. To refresh these copies from source, run `./downloads.sh`; it builds both images, copies them to `downloads/`, and updates the checksums. `clean.sh` preserves these download copies.
 
