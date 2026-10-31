@@ -45,7 +45,7 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 Download both files from the current build:
 
-- [PCKOS boot ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
+- [PCKOS ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
 - [PCKFS root disk — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
 - [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
