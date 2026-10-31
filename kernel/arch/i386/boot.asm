@@ -17,14 +17,14 @@ align 4
     dd  MBOOT_HEADER_FLAGS
     dd  MBOOT_CHECKSUM
     
-    ; Multiboot a.out klonlama / adres alanları (Grafik modu açıldığında GRUB bunları zorunlu bekler)
+    ; Grafik modu açıldığında GRUB bunları zorunlu bekler:)
     dd  0          ; header_addr
     dd  0          ; load_addr
     dd  0          ; load_end_addr
     dd  0          ; bss_end_addr
     dd  0          ; entry_addr
     
-    ; Grafik İstek Alanı (Linear Framebuffer)
+    ; Grafik İstek Alani(Linear Framebuffer)
     dd  0          ; mode_type (0 = grafik modu)
     dd  1024       ; width
     dd  768        ; height
