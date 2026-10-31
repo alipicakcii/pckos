@@ -153,7 +153,7 @@ namespace mem
 
 #endif
 
-	// Bu işlevi çağırırken:
+	// Bu fonskiyıonu çağırırken:
 	// Çekirdek belleği tahsis edilmesi amaçlanıyorsa v_addr < KERN_HEAP_END olmalıdır.
 	// Kullanıcı belleği tahsis edilmesi amaçlanıyorsa v_addr > KERN_HEAP_END olmalıdır.
 	// Aktif Sayfa Dizini için çalışır!

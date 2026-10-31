@@ -46,7 +46,7 @@ _start:
 	; multiboot yapı adresi
 	push ebx
 
-	; kernel_main işlevini çalıştır
+	; main foksinoyunu cagir
 	call kernel_main
 
 	; buraya asla ulaşılmaz

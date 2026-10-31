@@ -22,7 +22,7 @@ cpu_halt:
 %macro ISR_ERROR_CODE 1
   global isr%1
   isr%1:
-    push dword %1         ; kesme numarasını itin
+    push dword %1         ; kesme numarasını yığına ekliyoruz
     jmp handle_isr_common
 %endmacro
 
@@ -30,8 +30,8 @@ cpu_halt:
 %macro ISR_NO_ERROR_CODE 1
   global isr%1
   isr%1:
-    push dword 0          ; yapı kayıtlarını yukarıdaki makroyla aynı tutmak için sahte bir hata kodu girin
-    push dword %1         ; kesme numarasını itin
+    push dword 0          ; yapı kayıtlarını yukarıdaki makroyla aynı tutmak için sahte bir hata kodu giriliyor
+    push dword %1         ; kesme numarasını yığına itiliyor
     jmp handle_isr_common
 %endmacro
 
@@ -40,7 +40,7 @@ cpu_halt:
 %macro IRQ 2
   global irq%1
   irq%1:
-    push dword 0          ; yapı kayıtlarını tekrar aynı tutmak için sahte bir hata kodu itin
+    push dword 0          ; yapı kayıtlarını tekrar aynı tutmak için sahte bir hata kodu yığına itiliyor
     push dword %2
     jmp handle_irq_common
 %endmacro
@@ -105,7 +105,7 @@ IRQ  15,    47
         push gs
 
         push ebx
-        mov bx, 0x10      ; çekirdek veri segmenti tanımlayıcısını yükleyin
+        mov bx, 0x10      ; çekirdek veri segmenti tanımlayıcısını yükleyelim
         mov ds, bx
         mov es, bx
         mov fs, bx
