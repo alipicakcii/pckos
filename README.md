@@ -9,7 +9,15 @@ Artık PCKOS'u açık kaynak olarak paylaşmaya karar verdim. Amacım, projeye i
 
 Daha fazla bilgi için: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
+## İndirmeler
 
+Güncel derlemeyi denemek için iki dosyayı da indirin:
+
+- [PCKOS ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
+- [PCKFS kök disk imajı — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
+- [SHA-256 doğrulama değerleri](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
+
+ISO ve disk imajını aynı derlemeden kullanın. Bağlantılar bu repodaki imajlara gider. Bu kopyaları kaynak koddan yenilemek için `./downloads.sh` çalıştırın; betik iki imajı derleyip `downloads/` dizinine kopyalar ve doğrulama değerlerini günceller. `clean.sh` bu indirme kopyalarını korur.
 
 PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çekirdeğin başlıca yetenekleri:
 
@@ -43,16 +51,6 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 ### Birden fazla uygulama
 
 ![PCKOS'ta Not Defteri, Hesap Makinesi ve Terminal pencereleri](assets/screenshots/qemu-apps.png)
-
-## İndirmeler
-
-Güncel derlemeyi denemek için iki dosyayı da indirin:
-
-- [PCKOS ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
-- [PCKFS kök disk imajı — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
-- [SHA-256 doğrulama değerleri](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
-
-ISO ve disk imajını aynı derlemeden kullanın. Bağlantılar bu repodaki imajlara gider. Bu kopyaları kaynak koddan yenilemek için `./downloads.sh` çalıştırın; betik iki imajı derleyip `downloads/` dizinine kopyalar ve doğrulama değerlerini günceller. `clean.sh` bu indirme kopyalarını korur.
 
 ## QEMU'da çalıştırma
 

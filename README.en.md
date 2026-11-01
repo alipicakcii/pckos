@@ -9,6 +9,16 @@ I have now decided to share PCKOS as an open-source project. My goal is to build
 
 More information: [PCKOS on my blog](https://pckblog.com/pckos.html)
 
+## Downloads
+
+Download both files from the current build:
+
+- [PCKOS ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
+- [PCKFS root disk — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
+- [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
+
+Use the ISO and disk image from the same build. The links point to the images in this repository. To refresh these copies from source, run `./downloads.sh`; it builds both images, copies them to `downloads/`, and updates the checksums. `clean.sh` preserves these download copies.
+
 PCKOS is currently a minimal system under development. The kernel currently provides:
 
 - i386 boot, paging, and separation between kernel and user mode.
@@ -40,16 +50,6 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 ### Multiple applications
 
 ![Notepad, Calculator, and Terminal windows in PCKOS](assets/screenshots/qemu-apps.png)
-
-## Downloads
-
-Download both files from the current build:
-
-- [PCKOS ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
-- [PCKFS root disk — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
-- [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
-
-Use the ISO and disk image from the same build. The links point to the images in this repository. To refresh these copies from source, run `./downloads.sh`; it builds both images, copies them to `downloads/`, and updates the checksums. `clean.sh` preserves these download copies.
 
 ## Run in QEMU
 
