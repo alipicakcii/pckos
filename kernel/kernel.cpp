@@ -80,6 +80,8 @@ namespace
 }
 
 
+
+
 extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
                             [[maybe_unused]] uint32_t multiboot_magic)
 {
@@ -94,7 +96,8 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
     mem::Vmm virtual_memory;
     virtual_memory.initialize_paging(multiboot_info->mem_upper);
 
-    // Dosya kapsamındaki C++ kurucuları, sayfalama kurulurken hazırlanan heap’e ihtiyaç duyar.
+    // _init fonksiyonu. C++ sınıflarından oluşturulan
+    // Global nesnelerin Yapıcılarının derleyici tarafından çağrılması içindir.
     _init();
     _kprintf("C++ global kurucular: tamamlandi\n");
     _kprintf("Sayfalama: 4 KiB | CR3=0x%x\n", cpu::read_cr3());

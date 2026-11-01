@@ -28,3 +28,5 @@ __pycache__/
 !/downloads/pckfs.img
 
 /tools/tests/
+
+opcode
