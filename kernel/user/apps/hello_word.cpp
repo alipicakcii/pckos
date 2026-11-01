@@ -1,7 +1,7 @@
 #include <user/lib/io.hh>
 
 
-
+// adres aralıklarını kullanıcı alanında deneyelim
 
 int _global =80;
 
