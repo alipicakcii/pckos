@@ -23,7 +23,7 @@ namespace user::gui
     // Kare ekran dışında birleştirilir ve yalnızca tamamlandığında gösterilir.
     void begin_frame();
     void end_frame();
-    // Kırpma alanları iç içe kesişimlerdir. Her push için eşleşen bir pop gerekir.
+    // Kırpma alanları iç içe kesişimlerdir. Her push için eşleşen bir pop gerekir...
     void push_clip(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
     void pop_clip();
     uint32_t text_width(const char *text);
