@@ -9,8 +9,6 @@ Artık PCKOS'u açık kaynak olarak paylaşmaya karar verdim. Amacım, projeye i
 
 Daha fazla bilgi için: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
-## İndirmeler
-
 Güncel derlemeyi denemek için iki dosyayı da indirin:
 
 - [PCKOS ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
