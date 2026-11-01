@@ -24,7 +24,10 @@ namespace user::apps
 
     private:
         uint32_t child_count();
+        bool filtered_entry(uint32_t index, user::DirectoryEntry *entry);
+        bool matches_search(const char *name) const;
         void activate_selected();
+        void load_preview(const user::DirectoryEntry &entry);
         void go_parent();
         bool enter_directory(const user::DirectoryEntry &entry);
         void draw_row(uint32_t x, uint32_t y, uint32_t width,
@@ -36,7 +39,10 @@ namespace user::apps
         uint32_t selected_;
         bool selected_valid_;
         char path_[128];
-        char preview_[512];
+        char search_[48];
+        uint32_t search_length_;
+        bool search_focused_;
+        char preview_[4096];
         uint32_t preview_size_;
         uint32_t last_click_index_;
         uint32_t last_click_ticks_;

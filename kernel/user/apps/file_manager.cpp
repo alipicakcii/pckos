@@ -34,6 +34,40 @@ namespace user::apps
             return result;
         }
 
+        char lower_ascii(char value)
+        {
+            return value >= 'A' && value <= 'Z'
+                ? static_cast<char>(value - 'A' + 'a') : value;
+        }
+
+        const char *entry_type(const user::DirectoryEntry &entry)
+        {
+            if (entry.type == user::directory_type)
+                return "Klasor";
+            const char *extension = nullptr;
+            for (const char *at = entry.name; *at != '\0'; ++at)
+                if (*at == '.') extension = at + 1;
+            if (extension == nullptr) return "Dosya";
+            const uint32_t extension_length = length(extension);
+            if (extension_length == 3 && (lower_ascii(extension[0]) == 't') &&
+                (lower_ascii(extension[1]) == 'x') &&
+                (lower_ascii(extension[2]) == 't'))
+                return "TXT";
+            if (extension_length == 3 && (lower_ascii(extension[0]) == 'b') &&
+                (lower_ascii(extension[1]) == 'm') &&
+                (lower_ascii(extension[2]) == 'p'))
+                return "BMP";
+            if (extension_length == 3 && (lower_ascii(extension[0]) == 'b') &&
+                (lower_ascii(extension[1]) == 'i') &&
+                (lower_ascii(extension[2]) == 'n'))
+                return "BIN";
+            if (extension_length == 3 && (lower_ascii(extension[0]) == 'e') &&
+                (lower_ascii(extension[1]) == 'l') &&
+                (lower_ascii(extension[2]) == 'f'))
+                return "ELF";
+            return "Dosya";
+        }
+
         void copy(char *destination, const char *source, uint32_t capacity)
         {
             if (capacity == 0)
@@ -45,6 +79,14 @@ namespace user::apps
                 ++i;
             }
             destination[i] = '\0';
+        }
+
+        void append_text(char *destination, uint32_t capacity, const char *text)
+        {
+            uint32_t at = length(destination);
+            while (text[0] != '\0' && at + 1 < capacity)
+                destination[at++] = *text++;
+            destination[at] = '\0';
         }
 
         bool append(char *path, uint32_t capacity, const char *name)
@@ -132,6 +174,9 @@ namespace user::apps
         directory_ = root < 0 ? 0 : static_cast<uint32_t>(root);
         selected_ = 0;
         selected_valid_ = false;
+        search_[0] = '\0';
+        search_length_ = 0;
+        search_focused_ = false;
         path_[0] = '/';
         path_[1] = '\0';
         preview_size_ = 0;
@@ -142,18 +187,60 @@ namespace user::apps
 
     uint32_t FileManager::child_count()
     {
-        user::DirectoryEntry entry{};
         uint32_t count = 0;
-        while (count < 256 && user::read_directory(directory_, count, &entry) == 1)
-            ++count;
+        for (uint32_t index = 0; index < 256; ++index)
+        {
+            user::DirectoryEntry entry{};
+            if (user::read_directory(directory_, index, &entry) != 1)
+                break;
+            if (matches_search(entry.name))
+                ++count;
+        }
         return count;
+    }
+
+    bool FileManager::matches_search(const char *name) const
+    {
+        if (search_length_ == 0)
+            return true;
+        for (uint32_t start = 0; name[start] != '\0'; ++start)
+        {
+            uint32_t offset = 0;
+            while (offset < search_length_ && name[start + offset] != '\0' &&
+                   lower_ascii(name[start + offset]) == lower_ascii(search_[offset]))
+                ++offset;
+            if (offset == search_length_)
+                return true;
+        }
+        return false;
+    }
+
+    bool FileManager::filtered_entry(uint32_t index, user::DirectoryEntry *result)
+    {
+        if (result == nullptr)
+            return false;
+        uint32_t visible_index = 0;
+        for (uint32_t disk_index = 0; disk_index < 256; ++disk_index)
+        {
+            user::DirectoryEntry entry{};
+            if (user::read_directory(directory_, disk_index, &entry) != 1)
+                return false;
+            if (!matches_search(entry.name))
+                continue;
+            if (visible_index++ == index)
+            {
+                *result = entry;
+                return true;
+            }
+        }
+        return false;
     }
 
     void FileManager::draw_row(uint32_t x, uint32_t y, uint32_t width,
                                uint32_t index, bool selected)
     {
         user::DirectoryEntry entry{};
-        if (user::read_directory(directory_, index, &entry) != 1)
+        if (!filtered_entry(index, &entry))
             return;
         const uint32_t background = selected ? user::gui::COLOR_SELECTION
                                               : user::gui::COLOR_WHITE;
@@ -162,16 +249,21 @@ namespace user::apps
         user::gui::push_clip(x, y, width, ROW_HEIGHT);
         user::gui::fill(x, y, width, ROW_HEIGHT, background);
         small_file_icon(x + 3, y + 2, entry.type == user::directory_type);
-        const bool show_size = width >= 220;
-        const uint32_t size_column = show_size ? width - 88 : width - 4;
-        const uint32_t name_chars = (size_column - 29) / user::gui::FONT_WIDTH;
+        const bool show_details = width >= 300;
+        const uint32_t type_column = show_details ? width - 124 : width - 4;
+        const uint32_t name_chars = (type_column - 29) / user::gui::FONT_WIDTH;
         draw_name(x + 25, y + 3, entry.name, name_chars, foreground);
-        if (entry.type != user::directory_type && show_size)
+        if (show_details)
         {
-            char size[11];
-            number(entry.size, size);
-            user::gui::text(x + size_column, y + 3, size,
+            user::gui::text(x + type_column, y + 3, entry_type(entry),
                             selected ? user::gui::COLOR_WHITE : 0xFF505050);
+            if (entry.type != user::directory_type)
+            {
+                char size[11];
+                number(entry.size, size);
+                user::gui::text(x + width - 55, y + 3, size,
+                                selected ? user::gui::COLOR_WHITE : 0xFF505050);
+            }
         }
         user::gui::pop_clip();
     }
@@ -186,10 +278,12 @@ namespace user::apps
         user::gui::push_clip(x, y, width, height);
         user::gui::fill(x, y, width, height, user::gui::COLOR_FACE);
         user::gui::button(x + 7, y + 6, 62, 26, "Ust");
-        user::gui::frame(x + 76, y + 6, width - 84, 26,
+        const bool search_enabled = width >= 500;
+        const uint32_t path_width = search_enabled ? width - 260 : width - 84;
+        user::gui::frame(x + 76, y + 6, path_width, 26,
                          user::gui::COLOR_WHITE, true);
-        user::gui::push_clip(x + 82, y + 9, width - 96, 20);
-        const uint32_t path_columns = (width - 100) / user::gui::FONT_WIDTH;
+        user::gui::push_clip(x + 82, y + 9, path_width - 12, 20);
+        const uint32_t path_columns = (path_width - 20) / user::gui::FONT_WIDTH;
         const uint32_t path_length = length(path_);
         if (path_length > path_columns && path_columns > 3)
         {
@@ -200,6 +294,19 @@ namespace user::apps
         else
             user::gui::text(x + 84, y + 11, path_, user::gui::COLOR_TEXT);
         user::gui::pop_clip();
+        if (search_enabled)
+        {
+            const uint32_t search_x = x + width - 174;
+            user::gui::frame(search_x, y + 6, 167, 26,
+                             user::gui::COLOR_WHITE, true);
+            user::gui::text(search_x + 5, y + 11, "Ara:",
+                            user::gui::COLOR_DARK);
+            user::gui::push_clip(search_x + 38, y + 9, 123, 20);
+            user::gui::text(search_x + 40, y + 11, search_,
+                            search_focused_ ? user::gui::COLOR_TITLE
+                                            : user::gui::COLOR_TEXT);
+            user::gui::pop_clip();
+        }
 
         const uint32_t list_x = x + 7;
         const uint32_t list_y = y + 40;
@@ -216,9 +323,13 @@ namespace user::apps
         user::gui::fill(list_x + 2, list_y + 2, area.list_width - 4, 24,
                         user::gui::COLOR_FACE);
         user::gui::text(list_x + 8, list_y + 6, "Ad", user::gui::COLOR_TEXT);
-        if (area.list_width - 4 >= 220)
-            user::gui::text(list_x + area.list_width - 90, list_y + 6,
-                             "Boyut", user::gui::COLOR_TEXT);
+        if (area.list_width - 4 >= 300)
+        {
+            user::gui::text(list_x + area.list_width - 126, list_y + 6,
+                            "Tur", user::gui::COLOR_TEXT);
+            user::gui::text(list_x + area.list_width - 58, list_y + 6,
+                            "Boyut", user::gui::COLOR_TEXT);
+        }
         for (uint32_t row = 0; row < area.visible_rows && first + row < count; ++row)
             draw_row(list_x + 2, list_y + 26 + row * ROW_HEIGHT,
                      area.list_width - 4, first + row,
@@ -238,11 +349,29 @@ namespace user::apps
                                  area.list_height - 4);
             user::gui::text(pane_x + 10, list_y + 8, "Onizleme",
                             user::gui::COLOR_TITLE);
-            user::gui::fill(pane_x + 7, list_y + 29, pane_width - 14, 1,
+            char metadata[64] = "Metin dosyasi secin";
+            if (selected_valid_)
+            {
+                user::DirectoryEntry entry{};
+                if (filtered_entry(selected_, &entry) &&
+                    entry.type != user::directory_type)
+                {
+                    metadata[0] = '\0';
+                    append_text(metadata, sizeof(metadata), entry_type(entry));
+                    append_text(metadata, sizeof(metadata), " | ");
+                    char size[11];
+                    number(entry.size, size);
+                    append_text(metadata, sizeof(metadata), size);
+                    append_text(metadata, sizeof(metadata), " bayt");
+                }
+            }
+            user::gui::text(pane_x + 10, list_y + 32, metadata,
+                            preview_size_ == 0 ? 0xFF606060 : user::gui::COLOR_TEXT);
+            user::gui::fill(pane_x + 7, list_y + 53, pane_width - 14, 1,
                             0xFF808080);
             const uint32_t row_height = user::gui::FONT_HEIGHT + 2;
-            const uint32_t max_lines = area.list_height > 43
-                ? (area.list_height - 43) / row_height : 0;
+            const uint32_t max_lines = area.list_height > 67
+                ? (area.list_height - 67) / row_height : 0;
             const uint32_t max_columns = (pane_width - 20) / user::gui::FONT_WIDTH;
             const char *text = preview_size_ == 0 ? "Metin dosyasi secin" : preview_;
             const uint32_t text_size = preview_size_ == 0 ? 18 : preview_size_;
@@ -257,7 +386,7 @@ namespace user::apps
                        columns + 1 < sizeof(segment))
                     segment[columns++] = text[offset++];
                 segment[columns] = '\0';
-                user::gui::text(pane_x + 10, list_y + 39 + line * row_height,
+                    user::gui::text(pane_x + 10, list_y + 63 + line * row_height,
                                  segment, preview_size_ == 0 ? 0xFF606060
                                                             : user::gui::COLOR_TEXT);
                 if (offset < text_size && text[offset] == '\r')
@@ -292,6 +421,9 @@ namespace user::apps
         directory_stack_[depth_++] = directory_;
         directory_ = entry.inode;
         copy(path_, next, sizeof(path_));
+        search_[0] = '\0';
+        search_length_ = 0;
+        search_focused_ = false;
         selected_ = 0;
         selected_valid_ = false;
         preview_size_ = 0;
@@ -322,11 +454,22 @@ namespace user::apps
         if (!selected_valid_)
             return;
         user::DirectoryEntry entry{};
-        if (user::read_directory(directory_, selected_, &entry) != 1)
+        if (!filtered_entry(selected_, &entry))
             return;
         if (entry.type == user::directory_type)
         {
             enter_directory(entry);
+            return;
+        }
+
+        load_preview(entry);
+    }
+
+    void FileManager::load_preview(const user::DirectoryEntry &entry)
+    {
+        if (entry.type == user::directory_type)
+        {
+            preview_size_ = 0;
             return;
         }
 
@@ -357,6 +500,24 @@ namespace user::apps
     {
         LockGuard guard(lock_);
         dirty_ = 1;
+        if (search_focused_)
+        {
+            last_click_index_ = UINT32_MAX;
+            if (key_value == '\n')
+                search_focused_ = false;
+            else if (key_value == '\b' && search_length_ != 0)
+                search_[--search_length_] = '\0';
+            else if (key_value >= 32 && key_value <= 126 &&
+                     search_length_ + 1 < sizeof(search_))
+            {
+                search_[search_length_++] = static_cast<char>(key_value);
+                search_[search_length_] = '\0';
+            }
+            selected_ = 0;
+            selected_valid_ = false;
+            preview_size_ = 0;
+            return;
+        }
         const uint32_t count = child_count();
         last_click_index_ = UINT32_MAX;
         if (key_value == 0xE2 && count != 0)
@@ -389,10 +550,17 @@ namespace user::apps
         const Layout area = layout(width, height);
         if (y >= 6 && y < 32 && x >= 7 && x < 69)
         {
+            search_focused_ = false;
             go_parent();
             return;
         }
+        if (width >= 500 && y >= 6 && y < 32 && x >= static_cast<int32_t>(width - 174))
+        {
+            search_focused_ = true;
+            return;
+        }
 
+        search_focused_ = false;
         if (x < 9 || x >= static_cast<int32_t>(5 + area.list_width) || y < 66)
             return;
         const uint32_t row = static_cast<uint32_t>(y - 66) / ROW_HEIGHT;
@@ -417,6 +585,10 @@ namespace user::apps
             selected_ = index;
             selected_valid_ = true;
             preview_size_ = 0;
+            user::DirectoryEntry entry{};
+            if (filtered_entry(selected_, &entry) &&
+                entry.type != user::directory_type)
+                load_preview(entry);
             last_click_index_ = index;
             last_click_ticks_ = now;
         }

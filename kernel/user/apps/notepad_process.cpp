@@ -145,7 +145,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     user::GraphicsInfo screen{};
     if (user::graphics_get_info(&screen) < 0 || screen.width < 400 || screen.height < 300)
         user::exit(-1);
-    user::thread_set_name("Not defteri");
+    user::thread_set_name("Metin Goruntuleyici");
     const uint32_t usable_height = screen.height - 48;
     const uint32_t width = screen.width > 630 ? 610 : screen.width - 20;
     const uint32_t height = usable_height > 500 ? 480 : usable_height - 10;
@@ -171,7 +171,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         }
         user::gui::begin_frame();
         drag.restore_old_position(x, y);
-        user::gui::window(x, y, width, height, "PCKOS - Not Defteri", true);
+        user::gui::window(x, y, width, height, "PCKOS - Metin Goruntuleyici", true);
         const uint32_t content_x = x + 7, content_y = y + 32;
         user::gui::push_clip(content_x, content_y, width - 14, height - 40);
         notepad.draw(content_x, content_y, width - 14, height - 40);

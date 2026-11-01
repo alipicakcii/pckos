@@ -21,4 +21,7 @@ cp kernel/user/apps/calculator_process.bin "$STAGING/apps/calculator.bin"
 cp kernel/user/apps/notepad_process.bin "$STAGING/apps/notepad.bin"
 cp kernel/user/apps/new_demo_process.bin "$STAGING/apps/new_demo.bin"
 cp kernel/user/apps/hello_word.bin "$STAGING/apps/hello_word.bin"
+cp kernel/user/apps/system_info_process.bin "$STAGING/apps/system_info.bin"
+cp kernel/user/apps/clock_process.bin "$STAGING/apps/clock.bin"
+cp kernel/user/apps/unit_converter_process.bin "$STAGING/apps/unit_converter.bin"
 python3 tools/mkpckfs.py --source "$STAGING" --output pckfs.img
