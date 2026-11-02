@@ -15,7 +15,7 @@ Güncel derlemeyi denemek için iki dosyayı da indirin:
 - [PCKFS kök disk imajı — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
 - [SHA-256 doğrulama değerleri](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
-ISO ve disk imajını aynı derlemeden kullanın. Bağlantılar bu repodaki imajlara gider. Bu kopyaları kaynak koddan yenilemek için `./downloads.sh` çalıştırın; betik iki imajı derleyip `downloads/` dizinine kopyalar ve doğrulama değerlerini günceller. `clean.sh` bu indirme kopyalarını korur.
+ISO ve disk imajı, PCKOS'un en güncel hâlinin derlenmiş çıktılarıdır. Kaynak koddan yeniden derlemek için `./downloads.sh` çalıştırın; betik iki imajı derleyip `downloads/` dizinine kopyalar ve doğrulama değerlerini günceller. `clean.sh` bu indirme kopyalarını korur.
 
 PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çekirdeğin başlıca yetenekleri:
 

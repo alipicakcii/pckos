@@ -15,7 +15,7 @@ Download both files from the current build:
 - [PCKFS root disk — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
 - [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
-Use the ISO and disk image from the same build. The links point to the images in this repository. To refresh these copies from source, run `./downloads.sh`; it builds both images, copies them to `downloads/`, and updates the checksums. `clean.sh` preserves these download copies.
+The ISO and disk image are built artifacts of the latest PCKOS version. To rebuild them from source, run `./downloads.sh`; the script builds both images, copies them to the `downloads/` directory, and updates the checksums. `clean.sh` preserves these download copies.
 
 PCKOS is currently a minimal system under development. The kernel currently provides:
 
