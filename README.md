@@ -455,18 +455,9 @@ Masaüstündeki Terminal'i açıp **PCKOS terminaline** şu komutu yazın:
 run /apps/merhaba.bin
 ```
 
-Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `desktop.cpp` dosyasını değiştirmeniz gerekmez. Merhaba penceresine odaklanıp ESC ile kapatabilirsiniz. Başka bir uygulamanın kodundan başlatmak için `user::process_spawn("/apps/merhaba.bin", "Merhaba")` kullanın.
+Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `desktop.cpp` dosyasını değiştirmeniz gerekmez.  Başka bir uygulamanın kodundan başlatmak için `user::process_spawn("/apps/merhaba.bin", "Merhaba")` kullanın.
 
 **Uygulamanın kodunu değiştirdiğinizde:** 2, 3 ve 4. adımları tekrar çalıştırarak `host-share/apps/merhaba.bin` dosyasını güncelleyin. Ardından `./qemu.sh` ile deneyin; bu betik 5. adımdaki paketlemeyi de kendisi yapar. Yalnızca disk imajını yenilemek isterseniz `./share.sh` çalıştırın. Temizleme sonrasında `graphics.user.o` bulunmuyorsa veya grafik kitaplığını değiştirdiyseniz önce 1. adımı da uygulayın.
-
-## 9. Bugünkü teknik sınırlar ve kontrol
-
-- Yükleyici ELF ayrıştırmaz: düz `.bin`, `_start` ve `0x40000000` bağlantı adresi kullanılır. İmaj en çok 64 sayfa (256 KiB) olabilir.
-- En çok 8 process kaydı ve 16 scheduler thread girdisi vardır; masaüstü bir process yerini kullanır. Kullanıcı alanında süreç başına 3 MiB heap ve en çok 1024 eşzamanlı tahsisle `new`/`delete` desteği vardır. Tam standart kütüphane, process argümanları ve dosya yazma API'si henüz yoktur.
-- Çekirdek global C++ kurucularını `_init()` ile başlatır. Çekirdek için RTTI minimal olarak port edilmiştir ve `dynamic_cast` çalışmaktadır. Exception'lar kapalıdır; kullanıcı uygulamaları `-fno-rtti` ile derlenir.
-- GUI'de pencere kaydı ve çizim katmanları vardır; uygulama türü başına tek açık kopya izlenir.
-
-Yerelde kontrol etmek için `./qemu.sh` çalıştırın; terminalde `run /apps/new_demo.bin` komutunu deneyin ve masaüstünde ESC ile çekirdek günlüğünü inceleyin. İndirilecek imajları hazırlamak için `./downloads.sh` çalıştırın.
 
 ## Sıradaki işler
 

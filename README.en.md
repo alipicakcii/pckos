@@ -439,18 +439,9 @@ Open Terminal on the desktop and enter this in the **PCKOS terminal**:
 run /apps/merhaba.bin
 ```
 
-The terminal starts a new process from this file. You do not need to edit `desktop.cpp` to launch the app. Focus the Merhaba window and press ESC to close it. To launch it from another application, use `user::process_spawn("/apps/merhaba.bin", "Merhaba")`.
+The terminal starts a new process from this file. You do not need to edit `desktop.cpp` to launch the app. To launch it from another application, use `user::process_spawn("/apps/merhaba.bin", "Merhaba")`.
 
 **After changing the application's source:** Repeat steps 2, 3, and 4 to update `host-share/apps/merhaba.bin`. Then try it with `./qemu.sh`, which also performs the packaging in step 5. To refresh only the disk image, run `./share.sh`. If cleanup has removed `graphics.user.o`, or if you changed the graphics library, repeat step 1 first.
-
-## 9. Current limits and checks
-
-- The loader does not parse ELF: it uses flat `.bin` images, `_start`, and link address `0x40000000`. An image is limited to 64 pages (256 KiB).
-- There are at most 8 process records and 16 scheduler thread slots; the desktop uses one process slot. User space supports `new`/`delete` with a 3 MiB heap per process and up to 1024 live allocations. A full standard library, process arguments, and a file-write API are not available yet.
-- The kernel runs global C++ constructors through `_init()`. RTTI has been minimally ported for the kernel, and `dynamic_cast` works. Exceptions remain disabled; user applications are built with `-fno-rtti`.
-- The GUI supports window registration and drawing layers; only one instance of each application type is tracked.
-
-For a local check, run `./qemu.sh`, try `run /apps/new_demo.bin` in the terminal, and view the kernel log by pressing ESC on the desktop. To prepare the downloadable images, run `./downloads.sh`.
 
 ## What's next
 
