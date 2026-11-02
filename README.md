@@ -429,12 +429,11 @@ Bu adım uygulama nesnesini grafik, bellek ve `new`/`delete` runtime nesneleriyl
 **4. ELF dosyasını PCKOS'un yükleyebileceği biçime çevirin.**
 
 ```sh
-mkdir -p host-share/apps
 i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
   host-share/apps/merhaba.bin
 ```
 
-`objcopy -O binary`, ELF içindeki yüklenebilir içeriği düz ikili dosyaya dönüştürür. Sonuç `host-share/apps/merhaba.bin` olur. `host-share`, host makinenizdeki dosyaların PCKFS'e aktarılması için kullanılan dizindir; `apps` klasörünü `mkdir -p` ile oluşturuyoruz.
+`objcopy -O binary`, ELF içindeki yüklenebilir içeriği düz ikili dosyaya dönüştürür. Sonuç `host-share/apps/merhaba.bin` olur. `host-share`, host makinenizdeki dosyaların PCKFS'e aktarılması için kullanılan dizindir. `host-share/apps` proje içinde zaten bulunur.
 
 **5. Uygulamayı PCKFS disk imajına aktarın.**
 

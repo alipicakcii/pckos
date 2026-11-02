@@ -413,12 +413,11 @@ This links your app with the graphics, memory, and `new`/`delete` runtime object
 **4. Convert the ELF file into the format PCKOS loads.**
 
 ```sh
-mkdir -p host-share/apps
 i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
   host-share/apps/merhaba.bin
 ```
 
-`objcopy -O binary` converts the loadable contents of the ELF into a flat binary. The result is `host-share/apps/merhaba.bin`. `host-share` is the host directory used to transfer files into PCKFS; `mkdir -p` creates its `apps` subdirectory.
+`objcopy -O binary` converts the loadable contents of the ELF into a flat binary. The result is `host-share/apps/merhaba.bin`. `host-share` is the host directory used to transfer files into PCKFS. The `host-share/apps` directory is already included in the project.
 
 **5. Package the app in the PCKFS disk image.**
 
