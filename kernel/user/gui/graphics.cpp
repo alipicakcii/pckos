@@ -338,12 +338,20 @@ namespace user::gui
         {
             frame(x + 4, y + 4, 36, 32, 0xFF17251D);
             fill(x + 8, y + 8, 28, 24, 0xFF0D1711);
+            fill(x + 13, y + 8, 1, 24, 0xFF124020);
+            fill(x + 20, y + 8, 1, 24, 0xFF124020);
+            fill(x + 27, y + 8, 1, 24, 0xFF124020);
+            fill(x + 8, y + 15, 28, 1, 0xFF124020);
+            fill(x + 8, y + 22, 28, 1, 0xFF124020);
             fill(x + 12, y + 10, 5, 5, 0xFF73D66B);
             fill(x + 17, y + 10, 5, 5, 0xFF73D66B);
             fill(x + 22, y + 10, 5, 5, 0xFF73D66B);
             fill(x + 22, y + 15, 5, 5, 0xFF73D66B);
             fill(x + 17, y + 15, 5, 5, 0xFFB8F28B);
-            fill(x + 29, y + 23, 4, 4, 0xFFFF5A55);
+            fill(x + 29, y + 23, 5, 5, 0xFFB8F265);
+            fill(x + 30, y + 22, 2, 1, 0xFFB8F265);
+            fill(x + 33, y + 24, 1, 3, 0xFFB8F265);
+            fill(x + 30, y + 28, 2, 1, 0xFFB8F265);
         }
     }
 }

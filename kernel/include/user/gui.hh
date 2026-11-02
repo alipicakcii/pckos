@@ -9,7 +9,7 @@ namespace user::gui
 {
     constexpr uint32_t FONT_WIDTH = 8;
     constexpr uint32_t FONT_HEIGHT = 16;
-    constexpr uint32_t COLOR_DESKTOP = 0xFF202B23;
+    constexpr uint32_t COLOR_DESKTOP = 0xFF012A11;
     constexpr uint32_t COLOR_FACE = 0xFFC0C0C0;
     constexpr uint32_t COLOR_LIGHT = 0xFFFFFFFF;
     constexpr uint32_t COLOR_DARK = 0xFF404040;

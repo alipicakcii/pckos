@@ -38,17 +38,17 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ## Ekran görüntüleri
 
-### Masaüstünde Yılan oyunu
+### Hesap Makinesi
 
-![PCKOS masaüstünde Terminal penceresinin arkasında açık Yılan oyunu](assets/screenshots/qemu-desktop.png)
+![PCKOS masaüstünde açık Hesap Makinesi](assets/screenshots/qemu-desktop.png)
 
-### Terminal
+### Bellek Avcısı
 
-![PCKOS masaüstünde açık Terminal penceresi](assets/screenshots/qemu-terminal.png)
+![PCKOS masaüstünde Bellek Avcısı oyunu](assets/screenshots/qemu-terminal.png)
 
-### Birden fazla uygulama
+### Dosya Yöneticisi ve Hesap Makinesi
 
-![PCKOS masaüstünde Yılan oyunu ve Hesap Makinesi pencereleri](assets/screenshots/qemu-apps.png)
+![PCKOS masaüstünde Dosya Yöneticisi ve Hesap Makinesi pencereleri](assets/screenshots/qemu-apps.png)
 
 ## QEMU'da çalıştırma
 

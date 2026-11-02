@@ -37,17 +37,17 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 ## Screenshots
 
-### Snake game on the desktop
+### Calculator
 
-![Snake game open on the PCKOS desktop with Terminal behind it](assets/screenshots/qemu-desktop.png)
+![Calculator open on the PCKOS desktop](assets/screenshots/qemu-desktop.png)
 
-### Terminal
+### Memory Hunter
 
-![Terminal window on the PCKOS desktop](assets/screenshots/qemu-terminal.png)
+![Memory Hunter game on the PCKOS desktop](assets/screenshots/qemu-terminal.png)
 
-### Multiple applications
+### File Manager and Calculator
 
-![Snake game and Calculator windows on the PCKOS desktop](assets/screenshots/qemu-apps.png)
+![File Manager and Calculator windows on the PCKOS desktop](assets/screenshots/qemu-apps.png)
 
 ## Run in QEMU
 

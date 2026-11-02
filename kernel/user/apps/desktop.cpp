@@ -374,7 +374,7 @@ namespace
                 : id == WINDOW_SYSTEM_INFO ? "Sistem Bilgisi"
                 : id == WINDOW_CLOCK ? "Saat ve Takvim"
                 : id == WINDOW_UNIT_CONVERTER ? "Birim Donusturucu"
-                : "Yilan";
+                : "Bellek Avcisi";
             file_visible_ = terminal_visible_ = task_visible_ = false;
             if (id == WINDOW_FILE) file_taskbar_ = true;
             else if (id == WINDOW_TERMINAL) terminal_taskbar_ = true;
@@ -417,6 +417,14 @@ namespace
                 draw_logo_small(x + 2, y + 1, 40);
             else
                 user::gui::icon(x, y, kind);
+            if (kind == 4)
+            {
+                user::gui::text(x - 1, y + 43, "Bellek", user::gui::COLOR_BLACK);
+                user::gui::text(x - 2, y + 42, "Bellek", user::gui::COLOR_WHITE);
+                user::gui::text(x - 1, y + 59, "Avcisi", user::gui::COLOR_BLACK);
+                user::gui::text(x - 2, y + 58, "Avcisi", user::gui::COLOR_WHITE);
+                return;
+            }
             user::gui::text(x - 1, y + 43, label, user::gui::COLOR_BLACK);
             user::gui::text(x - 2, y + 42, label, user::gui::COLOR_WHITE);
         }
@@ -497,7 +505,7 @@ namespace
             if (id == WINDOW_SYSTEM_INFO) return "Sistem";
             if (id == WINDOW_CLOCK) return "Saat";
             if (id == WINDOW_UNIT_CONVERTER) return "Donustur";
-            return "Yilan";
+            return "Bellek Avcisi";
         }
 
         uint32_t taskbar_app_x(uint32_t app_id) const
@@ -588,7 +596,7 @@ namespace
             user::gui::button(51, y + 198, 162, 34, "Sistem Bilgisi");
             user::gui::button(51, y + 236, 162, 34, "Saat ve Takvim");
             user::gui::button(51, y + 274, 162, 34, "Birim Donusturucu");
-            user::gui::button(51, y + 312, 162, 34, "Yilan");
+            user::gui::button(51, y + 312, 162, 34, "Bellek Avcisi");
             user::gui::button(51, y + 350, 162, 34, "PCKOS Hakkinda");
             user::gui::button(51, y + 388, 162, 34, "Konsol");
         }
@@ -700,7 +708,7 @@ namespace
             draw_icon_label(18, 96, 1, "Dosyalar");
             draw_icon_label(18, 170, 2, "Terminal");
             draw_icon_label(18, 244, 3, "Gorevler");
-            draw_icon_label(18, 318, 4, "Yilan");
+            draw_icon_label(18, 318, 4, "Bellek Avcisi");
             if (logo_available_ && screen_.width > 150)
                 user::gui::bitmap(screen_.width - 148, 68,
                                   logo_pixels_, 128, 128);
