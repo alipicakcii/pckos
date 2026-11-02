@@ -9,16 +9,16 @@ namespace
     class Notepad
     {
     public:
-        Notepad() : path_length_(6), length_(0), scroll_(0), path_focused_(true),
+        Notepad() : path_input_(path_, sizeof(path_)), length_(0), scroll_(0),
+                    path_focused_(true),
                     status_("Dosya yolunu yazip Enter veya Ac tusuna bas")
         {
-            const char initial[] = "/home/";
-            for (uint32_t i = 0; i <= path_length_; ++i) path_[i] = initial[i];
+            path_input_.set_text("/home/");
         }
 
         void open_file()
         {
-            const int32_t descriptor = user::open(path_);
+            const int32_t descriptor = user::open(path_input_.value());
             if (descriptor < 0)
             {
                 status_ = "Dosya acilamadi";
@@ -55,13 +55,7 @@ namespace
             if (path_focused_)
             {
                 if (key == '\n') { open_file(); return; }
-                if (key == '\b' && path_length_ > 1)
-                    path_[--path_length_] = '\0';
-                else if (key >= 32 && key <= 126 && path_length_ + 1 < sizeof(path_))
-                {
-                    path_[path_length_++] = static_cast<char>(key);
-                    path_[path_length_] = '\0';
-                }
+                (void)path_input_.handle_key(key);
                 return;
             }
             if (key == '\t') path_focused_ = true;
@@ -76,7 +70,11 @@ namespace
             if (y >= 5 && y < 33)
             {
                 if (x >= 8 && x < static_cast<int32_t>(width - 92))
+                {
                     path_focused_ = true;
+                    path_input_.place_cursor_from_x(static_cast<uint32_t>(x),
+                                                    13, width - 110);
+                }
                 else if (x >= static_cast<int32_t>(width - 86) &&
                          x < static_cast<int32_t>(width - 8))
                     open_file();
@@ -86,14 +84,7 @@ namespace
 
         void draw(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
         {
-            user::gui::frame(x + 8, y + 5, width - 100, 28,
-                             user::gui::COLOR_WHITE, true);
-            user::gui::push_clip(x + 13, y + 10, width - 110, 18);
-            const uint32_t visible = (width - 110) / user::gui::FONT_WIDTH;
-            const uint32_t first = path_length_ > visible ? path_length_ - visible : 0;
-            user::gui::text(x + 13, y + 11, path_ + first,
-                            user::gui::COLOR_TEXT);
-            user::gui::pop_clip();
+            path_input_.draw(x + 8, y + 5, width - 100, 28, path_focused_);
             user::gui::button(x + width - 86, y + 5, 78, 28, "Ac");
             user::gui::text(x + 8, y + 40, status_, user::gui::COLOR_TEXT);
             const uint32_t area_y = y + 62;
@@ -133,8 +124,9 @@ namespace
 
     private:
         char path_[128];
+        user::gui::TextInput path_input_;
         char text_[8192];
-        uint32_t path_length_, length_, scroll_;
+        uint32_t length_, scroll_;
         bool path_focused_;
         const char *status_;
     };

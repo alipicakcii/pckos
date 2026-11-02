@@ -8,7 +8,10 @@
 
 namespace
 {
-    constexpr uint32_t TASKBAR_HEIGHT = 48;
+    constexpr uint32_t TASKBAR_HEIGHT = 38;
+    constexpr uint32_t TASKBAR_APP_START_X = 104;
+    constexpr uint32_t TASKBAR_APP_GAP = 3;
+    constexpr uint32_t TASKBAR_CLOCK_WIDTH = 126;
     constexpr uint32_t WINDOW_FILE = 1;
     constexpr uint32_t WINDOW_TERMINAL = 2;
     constexpr uint32_t WINDOW_TASK_MANAGER = 3;
@@ -440,93 +443,82 @@ namespace
                 ? screen_.height - TASKBAR_HEIGHT : 0;
             user::gui::frame(0, y, screen_.width, TASKBAR_HEIGHT,
                              user::gui::COLOR_FACE);
-            user::gui::frame(5, y + 4, 98, 40, user::gui::COLOR_FACE, menu_open_);
-            draw_logo_small(13, y + 12, 24);
-            user::gui::text(43, y + 15, "Baslat", user::gui::COLOR_TEXT);
+            user::gui::frame(5, y + 3, 94, 32, user::gui::COLOR_FACE, menu_open_);
+            draw_logo_small(11, y + 9, 20);
+            user::gui::text(36, y + 11, "Baslat", user::gui::COLOR_TEXT);
 
-            if (file_taskbar_)
-                user::gui::button(110, y + 4, task_button_width(), 40, "Dosyalar",
-                                  focused_process == app_process_ids_[WINDOW_FILE]);
-            if (terminal_taskbar_)
-                user::gui::button(terminal_task_x(), y + 4, task_button_width(), 40, "Terminal",
-                                  focused_process == app_process_ids_[WINDOW_TERMINAL]);
-            if (task_taskbar_)
-                user::gui::button(task_manager_task_x(), y + 4,
-                                  task_button_width(), 40, "Gorevler",
-                                  focused_process == app_process_ids_[WINDOW_TASK_MANAGER]);
-            if (calculator_taskbar_)
-                user::gui::button(calculator_task_x(), y + 4,
-                                  task_button_width(), 40, "Hesap",
-                                  focused_process == app_process_ids_[WINDOW_CALCULATOR]);
-            if (notepad_taskbar_)
-                user::gui::button(notepad_task_x(), y + 4,
-                                  task_button_width(), 40, "Metin",
-                                  focused_process == app_process_ids_[WINDOW_NOTEPAD]);
-            if (system_info_taskbar_)
-                user::gui::button(system_info_task_x(), y + 4,
-                                  task_button_width(), 40, "Sistem",
-                                  focused_process == app_process_ids_[WINDOW_SYSTEM_INFO]);
-            if (clock_taskbar_)
-                user::gui::button(clock_task_x(), y + 4,
-                                  task_button_width(), 40, "Saat",
-                                  focused_process == app_process_ids_[WINDOW_CLOCK]);
-            if (unit_converter_taskbar_)
-                user::gui::button(unit_converter_task_x(), y + 4,
-                                  task_button_width(), 40, "Donustur",
-                                  focused_process == app_process_ids_[WINDOW_UNIT_CONVERTER]);
-            if (snake_taskbar_)
-                user::gui::button(snake_task_x(), y + 4,
-                                  task_button_width(), 40, "Yilan",
-                                  focused_process == app_process_ids_[WINDOW_SNAKE]);
+            for (uint32_t id = WINDOW_FILE; id <= WINDOW_SNAKE; ++id)
+            {
+                if (!taskbar_visible(id))
+                    continue;
+                user::gui::button(taskbar_app_x(id), y + 3,
+                                  task_button_width(), 32, taskbar_label(id),
+                                  focused_process == app_process_ids_[id]);
+            }
 
             draw_clock();
         }
 
         uint32_t task_button_width() const
         {
-            return min_u32(136, screen_.width > 280
-                ? (screen_.width - 280) / 9 : 24);
+            uint32_t count = 0;
+            for (uint32_t id = WINDOW_FILE; id <= WINDOW_SNAKE; ++id)
+                if (taskbar_visible(id))
+                    ++count;
+            if (count == 0)
+                return 0;
+            const uint32_t reserved = TASKBAR_APP_START_X + TASKBAR_CLOCK_WIDTH + 12;
+            const uint32_t available = screen_.width > reserved
+                ? screen_.width - reserved : count * 42;
+            const uint32_t gaps = (count - 1) * TASKBAR_APP_GAP;
+            return min_u32(140, available > gaps ? (available - gaps) / count : 42);
         }
 
-        uint32_t terminal_task_x() const { return 115 + task_button_width(); }
-        uint32_t task_manager_task_x() const
+        bool taskbar_visible(uint32_t id) const
         {
-            return terminal_task_x() + task_button_width() + 5;
+            if (id == WINDOW_FILE) return file_taskbar_;
+            if (id == WINDOW_TERMINAL) return terminal_taskbar_;
+            if (id == WINDOW_TASK_MANAGER) return task_taskbar_;
+            if (id == WINDOW_CALCULATOR) return calculator_taskbar_;
+            if (id == WINDOW_NOTEPAD) return notepad_taskbar_;
+            if (id == WINDOW_SYSTEM_INFO) return system_info_taskbar_;
+            if (id == WINDOW_CLOCK) return clock_taskbar_;
+            if (id == WINDOW_UNIT_CONVERTER) return unit_converter_taskbar_;
+            return id == WINDOW_SNAKE && snake_taskbar_;
         }
-        uint32_t calculator_task_x() const
+
+        const char *taskbar_label(uint32_t id) const
         {
-            return task_manager_task_x() + task_button_width() + 5;
+            if (id == WINDOW_FILE) return "Dosyalar";
+            if (id == WINDOW_TERMINAL) return "Terminal";
+            if (id == WINDOW_TASK_MANAGER) return "Gorevler";
+            if (id == WINDOW_CALCULATOR) return "Hesap";
+            if (id == WINDOW_NOTEPAD) return "Metin";
+            if (id == WINDOW_SYSTEM_INFO) return "Sistem";
+            if (id == WINDOW_CLOCK) return "Saat";
+            if (id == WINDOW_UNIT_CONVERTER) return "Donustur";
+            return "Yilan";
         }
-        uint32_t notepad_task_x() const
+
+        uint32_t taskbar_app_x(uint32_t app_id) const
         {
-            return calculator_task_x() + task_button_width() + 5;
-        }
-        uint32_t system_info_task_x() const
-        {
-            return notepad_task_x() + task_button_width() + 5;
-        }
-        uint32_t clock_task_x() const
-        {
-            return system_info_task_x() + task_button_width() + 5;
-        }
-        uint32_t unit_converter_task_x() const
-        {
-            return clock_task_x() + task_button_width() + 5;
-        }
-        uint32_t snake_task_x() const
-        {
-            return unit_converter_task_x() + task_button_width() + 5;
+            uint32_t x = TASKBAR_APP_START_X;
+            for (uint32_t id = WINDOW_FILE; id < app_id; ++id)
+                if (taskbar_visible(id))
+                    x += task_button_width() + TASKBAR_APP_GAP;
+            return x;
         }
 
         void draw_clock()
         {
             const uint32_t y = screen_.height - TASKBAR_HEIGHT;
-            const uint32_t clock_x = screen_.width > 130 ? screen_.width - 126 : 4;
-            user::gui::frame(clock_x, y + 4, 120, 40, user::gui::COLOR_FACE, true);
+            const uint32_t clock_x = screen_.width > TASKBAR_CLOCK_WIDTH + 6
+                ? screen_.width - TASKBAR_CLOCK_WIDTH : 4;
+            user::gui::frame(clock_x, y + 3, 120, 32, user::gui::COLOR_FACE, true);
             user::DateTime now{};
             if (user::get_datetime(&now) != 0)
             {
-                user::gui::text(clock_x + 28, y + 16, "Saat yok",
+                user::gui::text(clock_x + 28, y + 11, "Saat yok",
                                 user::gui::COLOR_TEXT);
                 return;
             }
@@ -548,8 +540,8 @@ namespace
                 static_cast<char>('0' + now.year / 10 % 10),
                 static_cast<char>('0' + now.year % 10), '\0'
             };
-            user::gui::text(clock_x + 28, y + 5, clock, user::gui::COLOR_TEXT);
-            user::gui::text(clock_x + 20, y + 24, date, user::gui::COLOR_TEXT);
+            user::gui::text(clock_x + 28, y + 3, clock, user::gui::COLOR_TEXT);
+            user::gui::text(clock_x + 20, y + 19, date, user::gui::COLOR_TEXT);
         }
 
         void draw_window(uint32_t id)
@@ -585,20 +577,20 @@ namespace
         {
             const uint32_t y = screen_.height > TASKBAR_HEIGHT + 438
                 ? screen_.height - TASKBAR_HEIGHT - 438 : 0;
-            user::gui::frame(7, y, 226, 430, user::gui::COLOR_FACE);
+            user::gui::frame(7, y, 214, 430, user::gui::COLOR_FACE);
             user::gui::fill(11, y + 4, 34, 422, user::gui::COLOR_TITLE);
             user::gui::text(24, y + 15, "P\nC\nK\nO\nS", user::gui::COLOR_WHITE);
-            user::gui::button(51, y + 8, 174, 34, "PCKFS Gezgini");
-            user::gui::button(51, y + 46, 174, 34, "Terminal");
-            user::gui::button(51, y + 84, 174, 34, "Gorev Yoneticisi");
-            user::gui::button(51, y + 122, 174, 34, "Hesap Makinesi");
-            user::gui::button(51, y + 160, 174, 34, "Metin Goruntuleyici");
-            user::gui::button(51, y + 198, 174, 34, "Sistem Bilgisi");
-            user::gui::button(51, y + 236, 174, 34, "Saat ve Takvim");
-            user::gui::button(51, y + 274, 174, 34, "Birim Donusturucu");
-            user::gui::button(51, y + 312, 174, 34, "Yilan");
-            user::gui::button(51, y + 350, 174, 34, "PCKOS Hakkinda");
-            user::gui::button(51, y + 388, 174, 34, "Konsol");
+            user::gui::button(51, y + 8, 162, 34, "PCKFS Gezgini");
+            user::gui::button(51, y + 46, 162, 34, "Terminal");
+            user::gui::button(51, y + 84, 162, 34, "Gorev Yoneticisi");
+            user::gui::button(51, y + 122, 162, 34, "Hesap Makinesi");
+            user::gui::button(51, y + 160, 162, 34, "Metin Goruntuleyici");
+            user::gui::button(51, y + 198, 162, 34, "Sistem Bilgisi");
+            user::gui::button(51, y + 236, 162, 34, "Saat ve Takvim");
+            user::gui::button(51, y + 274, 162, 34, "Birim Donusturucu");
+            user::gui::button(51, y + 312, 162, 34, "Yilan");
+            user::gui::button(51, y + 350, 162, 34, "PCKOS Hakkinda");
+            user::gui::button(51, y + 388, 162, 34, "Konsol");
         }
 
         void draw_about()
@@ -868,42 +860,42 @@ namespace
             {
                 const uint32_t menu_y = screen_.height > TASKBAR_HEIGHT + 438
                     ? screen_.height - TASKBAR_HEIGHT - 438 : 0;
-                if (x >= 51 && x < 225 && y >= static_cast<int32_t>(menu_y + 8) &&
+                if (x >= 51 && x < 213 && y >= static_cast<int32_t>(menu_y + 8) &&
                     y < static_cast<int32_t>(menu_y + 42))
                     open_window(WINDOW_FILE);
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 46) &&
                          y < static_cast<int32_t>(menu_y + 80))
                     open_window(WINDOW_TERMINAL);
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 84) &&
                          y < static_cast<int32_t>(menu_y + 118))
                     open_window(WINDOW_TASK_MANAGER);
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 122) &&
                          y < static_cast<int32_t>(menu_y + 156))
                     open_window(WINDOW_CALCULATOR);
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 160) &&
                          y < static_cast<int32_t>(menu_y + 194))
                     open_window(WINDOW_NOTEPAD);
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 198) &&
                          y < static_cast<int32_t>(menu_y + 232))
                     open_window(WINDOW_SYSTEM_INFO);
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 236) &&
                          y < static_cast<int32_t>(menu_y + 270))
                     open_window(WINDOW_CLOCK);
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 274) &&
                          y < static_cast<int32_t>(menu_y + 308))
                     open_window(WINDOW_UNIT_CONVERTER);
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 312) &&
                          y < static_cast<int32_t>(menu_y + 346))
                     open_window(WINDOW_SNAKE);
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 350) &&
                          y < static_cast<int32_t>(menu_y + 384))
                 {
@@ -911,7 +903,7 @@ namespace
                     about_open_ = true;
                     render();
                 }
-                else if (x >= 51 && x < 225 &&
+                else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 388) &&
                          y < static_cast<int32_t>(menu_y + 422))
                 {
@@ -929,61 +921,23 @@ namespace
 
             if (y >= static_cast<int32_t>(taskbar_y))
             {
-                if (x >= 5 && x < 103)
+                if (x >= 5 && x < 99)
                 {
                     menu_open_ = true;
                     render();
                 }
-                else if (file_taskbar_ && x >= 110 && x < static_cast<int32_t>(110 + task_button_width()))
+                else
                 {
-                    (void)restore_app(WINDOW_FILE);
-                }
-                else if (terminal_taskbar_ && x >= static_cast<int32_t>(terminal_task_x()) &&
-                         x < static_cast<int32_t>(terminal_task_x() + task_button_width()))
-                {
-                    (void)restore_app(WINDOW_TERMINAL);
-                }
-                else if (task_taskbar_ &&
-                         x >= static_cast<int32_t>(task_manager_task_x()) &&
-                         x < static_cast<int32_t>(task_manager_task_x() + task_button_width()))
-                {
-                    (void)restore_app(WINDOW_TASK_MANAGER);
-                }
-                else if (calculator_taskbar_ &&
-                         x >= static_cast<int32_t>(calculator_task_x()) &&
-                         x < static_cast<int32_t>(calculator_task_x() + task_button_width()))
-                {
-                    (void)restore_app(WINDOW_CALCULATOR);
-                }
-                else if (notepad_taskbar_ &&
-                         x >= static_cast<int32_t>(notepad_task_x()) &&
-                         x < static_cast<int32_t>(notepad_task_x() + task_button_width()))
-                {
-                    (void)restore_app(WINDOW_NOTEPAD);
-                }
-                else if (system_info_taskbar_ &&
-                         x >= static_cast<int32_t>(system_info_task_x()) &&
-                         x < static_cast<int32_t>(system_info_task_x() + task_button_width()))
-                {
-                    (void)restore_app(WINDOW_SYSTEM_INFO);
-                }
-                else if (clock_taskbar_ &&
-                         x >= static_cast<int32_t>(clock_task_x()) &&
-                         x < static_cast<int32_t>(clock_task_x() + task_button_width()))
-                {
-                    (void)restore_app(WINDOW_CLOCK);
-                }
-                else if (unit_converter_taskbar_ &&
-                         x >= static_cast<int32_t>(unit_converter_task_x()) &&
-                         x < static_cast<int32_t>(unit_converter_task_x() + task_button_width()))
-                {
-                    (void)restore_app(WINDOW_UNIT_CONVERTER);
-                }
-                else if (snake_taskbar_ &&
-                         x >= static_cast<int32_t>(snake_task_x()) &&
-                         x < static_cast<int32_t>(snake_task_x() + task_button_width()))
-                {
-                    (void)restore_app(WINDOW_SNAKE);
+                    for (uint32_t id = WINDOW_FILE; id <= WINDOW_SNAKE; ++id)
+                    {
+                        if (taskbar_visible(id) &&
+                            x >= static_cast<int32_t>(taskbar_app_x(id)) &&
+                            x < static_cast<int32_t>(taskbar_app_x(id) + task_button_width()))
+                        {
+                            (void)restore_app(id);
+                            break;
+                        }
+                    }
                 }
                 return;
             }

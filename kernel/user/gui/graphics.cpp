@@ -108,6 +108,151 @@ namespace user::gui
         pop_clip();
     }
 
+    TextInput::TextInput(char *buffer, uint32_t capacity)
+        : buffer_(buffer), capacity_(capacity), length_(0), cursor_(0)
+    {
+        if (buffer_ != nullptr && capacity_ != 0)
+            buffer_[0] = '\0';
+    }
+
+    const char *TextInput::value() const
+    {
+        return buffer_ != nullptr ? buffer_ : "";
+    }
+
+    uint32_t TextInput::length() const { return length_; }
+    uint32_t TextInput::cursor() const { return cursor_; }
+
+    void TextInput::clear()
+    {
+        length_ = cursor_ = 0;
+        if (buffer_ != nullptr && capacity_ != 0)
+            buffer_[0] = '\0';
+    }
+
+    void TextInput::set_text(const char *value)
+    {
+        clear();
+        if (buffer_ == nullptr || capacity_ == 0 || value == nullptr)
+            return;
+        while (value[length_] != '\0' && length_ + 1 < capacity_)
+        {
+            buffer_[length_] = value[length_];
+            ++length_;
+        }
+        buffer_[length_] = '\0';
+        cursor_ = length_;
+    }
+
+    bool TextInput::handle_key(int32_t key)
+    {
+        if (buffer_ == nullptr || capacity_ == 0)
+            return false;
+        if (key == 0xE4)
+        {
+            if (cursor_ != 0) --cursor_;
+            return true;
+        }
+        if (key == 0xE5)
+        {
+            if (cursor_ < length_) ++cursor_;
+            return true;
+        }
+        if (key == 0xE0)
+        {
+            cursor_ = 0;
+            return true;
+        }
+        if (key == 0xE1)
+        {
+            cursor_ = length_;
+            return true;
+        }
+        if (key == 0xE9)
+        {
+            if (cursor_ < length_)
+            {
+                for (uint32_t i = cursor_; i < length_; ++i)
+                    buffer_[i] = buffer_[i + 1];
+                --length_;
+            }
+            return true;
+        }
+        if (key == '\b')
+        {
+            if (cursor_ != 0)
+            {
+                for (uint32_t i = cursor_ - 1; i < length_; ++i)
+                    buffer_[i] = buffer_[i + 1];
+                --cursor_;
+                --length_;
+            }
+            return true;
+        }
+        if (key < 32 || key > 126 || length_ + 1 >= capacity_)
+            return false;
+        for (uint32_t i = length_; i > cursor_; --i)
+            buffer_[i] = buffer_[i - 1];
+        buffer_[cursor_++] = static_cast<char>(key);
+        ++length_;
+        buffer_[length_] = '\0';
+        return true;
+    }
+
+    uint32_t TextInput::visible_start(uint32_t columns) const
+    {
+        if (columns == 0 || cursor_ < columns)
+            return 0;
+        return cursor_ - columns + 1;
+    }
+
+    void TextInput::place_cursor_from_x(uint32_t pixel_x, uint32_t text_x,
+                                        uint32_t text_width)
+    {
+        if (text_width == 0)
+        {
+            cursor_ = length_;
+            return;
+        }
+        const uint32_t columns = text_width / FONT_WIDTH;
+        const uint32_t first = visible_start(columns);
+        const uint32_t relative = pixel_x > text_x
+            ? (pixel_x - text_x + FONT_WIDTH / 2) / FONT_WIDTH : 0;
+        cursor_ = first + relative;
+        if (cursor_ > length_) cursor_ = length_;
+    }
+
+    void TextInput::draw_inline(uint32_t x, uint32_t y, uint32_t width,
+                                bool focused, uint32_t color,
+                                uint32_t cursor_color) const
+    {
+        if (buffer_ == nullptr || width == 0)
+            return;
+        const uint32_t columns = width / FONT_WIDTH;
+        if (columns == 0)
+            return;
+        const uint32_t first = visible_start(columns);
+        push_clip(x, y, width, FONT_HEIGHT);
+        text(x, y, buffer_ + first, color);
+        if (focused)
+        {
+            const uint32_t caret_x = x + (cursor_ - first) * FONT_WIDTH;
+            fill(caret_x, y + 1, 2, FONT_HEIGHT - 2, cursor_color);
+        }
+        pop_clip();
+    }
+
+    void TextInput::draw(uint32_t x, uint32_t y, uint32_t width,
+                         uint32_t height, bool focused) const
+    {
+        frame(x, y, width, height, COLOR_WHITE, true);
+        const uint32_t text_x = x + 5;
+        const uint32_t text_y = y + (height > FONT_HEIGHT
+            ? (height - FONT_HEIGHT) / 2 : 0);
+        draw_inline(text_x, text_y, width > 10 ? width - 10 : 0,
+                    focused, COLOR_TEXT, COLOR_TITLE);
+    }
+
     void window(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
                 const char *title, bool active)
     {

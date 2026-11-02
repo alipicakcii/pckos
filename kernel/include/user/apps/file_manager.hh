@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <user/apps/app_thread.hh>
+#include <user/gui.hh>
 #include <user/syscall.hh>
 
 namespace user::apps
@@ -40,7 +41,7 @@ namespace user::apps
         bool selected_valid_;
         char path_[128];
         char search_[48];
-        uint32_t search_length_;
+        user::gui::TextInput search_input_;
         bool search_focused_;
         char preview_[4096];
         uint32_t preview_size_;

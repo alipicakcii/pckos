@@ -36,6 +36,31 @@ namespace user::gui
                uint32_t fill_color, bool sunken = false);
     void button(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
                 const char *label, bool pressed = false);
+    class TextInput
+    {
+    public:
+        TextInput(char *buffer, uint32_t capacity);
+        const char *value() const;
+        uint32_t length() const;
+        uint32_t cursor() const;
+        void clear();
+        void set_text(const char *value);
+        bool handle_key(int32_t key);
+        void place_cursor_from_x(uint32_t pixel_x, uint32_t x,
+                                 uint32_t width);
+        void draw(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+                  bool focused = true) const;
+        void draw_inline(uint32_t x, uint32_t y, uint32_t width,
+                         bool focused, uint32_t color,
+                         uint32_t cursor_color = COLOR_TITLE) const;
+
+    private:
+        uint32_t visible_start(uint32_t columns) const;
+        char *buffer_;
+        uint32_t capacity_;
+        uint32_t length_;
+        uint32_t cursor_;
+    };
     void window(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
                 const char *title, bool active);
     void pckos_mark(uint32_t x, uint32_t y, uint32_t size);

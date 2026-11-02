@@ -63,17 +63,15 @@ namespace
     }
 
     void draw_converter(uint32_t x, uint32_t y, uint32_t width,
-                        const char *input, uint32_t unit, bool overflow)
+                        user::gui::TextInput &input, uint32_t unit,
+                        bool overflow)
     {
         user::gui::window(x, y, width, 330, "PCKOS - Birim Donusturucu", true);
         const uint32_t left = x + 7, top = y + 32;
         user::gui::push_clip(left, top, width - 14, 290);
         user::gui::text(left + 16, top + 14, "Bellek miktarini girin",
                         user::gui::COLOR_TITLE);
-        user::gui::frame(left + 16, top + 42, width - 46, 34,
-                         user::gui::COLOR_WHITE, true);
-        user::gui::text(left + 24, top + 51, input[0] == '\0' ? "0" : input,
-                        user::gui::COLOR_TEXT);
+        input.draw(left + 16, top + 42, width - 46, 34);
         user::gui::button(left + 16, top + 88, 86, 32, "Bayt", unit == 0);
         user::gui::button(left + 112, top + 88, 86, 32, "KiB", unit == 1);
         user::gui::button(left + 208, top + 88, 86, 32, "MiB", unit == 2);
@@ -85,7 +83,8 @@ namespace
                             user::gui::COLOR_TEXT);
         else
         {
-            const uint32_t value = input[0] == '\0' ? 0 : parse_value(input);
+            const uint32_t value = input.value()[0] == '\0'
+                ? 0 : parse_value(input.value());
             const uint32_t multiplier = unit == 0 ? 1
                 : unit == 1 ? 1024 : 1024 * 1024;
             const uint32_t bytes = value * multiplier;
@@ -125,8 +124,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     if (user::graphics_register_window(x, y, width, height) < 0)
         user::exit(-1);
     user::gui::WindowDrag drag(x, y);
-    char input[11] = {};
-    uint32_t input_length = 0;
+    char input_buffer[11] = {};
+    user::gui::TextInput input(input_buffer, sizeof(input_buffer));
+    input.set_text("0");
     uint32_t unit = 0;
     int32_t mouse_x = static_cast<int32_t>(screen.width / 2);
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
@@ -142,10 +142,10 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             (void)user::wait_event(&ignored, 10);
             continue;
         }
-        uint32_t value = input_length == 0 ? 0 : parse_value(input);
+        uint32_t value = parse_value(input.value());
         const uint32_t multiplier = unit == 0 ? 1
             : unit == 1 ? 1024 : 1024 * 1024;
-        const bool overflow = input_overflow(input) ||
+        const bool overflow = input_overflow(input.value()) ||
                               value > UINT32_MAX / multiplier;
         user::gui::begin_frame();
         drag.restore_old_position(x, y);
@@ -158,15 +158,20 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         if (event.type == 1)
         {
             if (event.value0 == 0x1B) user::exit(0);
-            if ((event.value0 == 'c' || event.value0 == 'C') && input_length != 0)
-            { input_length = 0; input[0] = '\0'; }
-            else if (event.value0 == '\b' && input_length != 0)
-                input[--input_length] = '\0';
-            else if (event.value0 >= '0' && event.value0 <= '9' &&
-                     input_length + 1 < sizeof(input))
+            if (event.value0 == 'c' || event.value0 == 'C')
+                input.set_text("0");
+            else if (event.value0 >= '0' && event.value0 <= '9')
             {
-                input[input_length++] = static_cast<char>(event.value0);
-                input[input_length] = '\0';
+                if (input.length() == 1 && input.value()[0] == '0')
+                    input.clear();
+                (void)input.handle_key(event.value0);
+            }
+            else if (event.value0 == '\b' || event.value0 == 0xE0 ||
+                     event.value0 == 0xE1 || event.value0 == 0xE4 ||
+                     event.value0 == 0xE5 || event.value0 == 0xE9)
+            {
+                (void)input.handle_key(event.value0);
+                if (input.length() == 0) input.set_text("0");
             }
         }
         else if (event.type == 2)
@@ -191,6 +196,12 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
                 mouse_x < static_cast<int32_t>(x + width - 6) &&
                 mouse_y >= static_cast<int32_t>(y + 5) && mouse_y < static_cast<int32_t>(y + 25))
                 user::exit(0);
+            if (pressed && mouse_x >= static_cast<int32_t>(x + 23) &&
+                mouse_x < static_cast<int32_t>(x + width - 23) &&
+                mouse_y >= static_cast<int32_t>(y + 74) &&
+                mouse_y < static_cast<int32_t>(y + 108))
+                input.place_cursor_from_x(static_cast<uint32_t>(mouse_x),
+                                          x + 23, width - 46);
             if (pressed && mouse_y >= static_cast<int32_t>(y + 120) &&
                 mouse_y < static_cast<int32_t>(y + 152))
             {

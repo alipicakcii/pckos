@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <user/apps/app_thread.hh>
+#include <user/gui.hh>
 
 namespace user::apps
 {
@@ -37,6 +38,7 @@ namespace user::apps
         uint32_t log_cursor_;
         bool output_open_;
         char command_[MAX_COMMAND + 1];
+        user::gui::TextInput command_input_;
         uint32_t command_length_;
         AppEventQueue<32> events_;
         SpinLock lock_;

@@ -11,10 +11,12 @@ namespace
     class Calculator
     {
     public:
-        Calculator() : value_(0), pending_(0), operation_(0), entering_(false),
-                       error_(false) { display_[0] = '0'; display_[1] = '\0'; }
+        Calculator() : input_(display_, sizeof(display_)), value_(0), pending_(0),
+                       operation_(0), entering_(false), error_(false)
+        { input_.set_text("0"); }
 
-        const char *display() const { return error_ ? "Hata" : display_; }
+        const char *display() const { return error_ ? "Hata" : input_.value(); }
+        user::gui::TextInput &input() { return input_; }
 
         void key(int32_t key)
         {
@@ -22,20 +24,30 @@ namespace
             if (key == '\b')
             {
                 if (error_) { clear(); return; }
-                uint32_t length = length_();
-                if (length > 1) display_[length - 1] = '\0';
-                else { display_[0] = '0'; display_[1] = '\0'; }
+                (void)input_.handle_key(key);
+                if (input_.length() == 0) input_.set_text("0");
                 value_ = parse();
                 entering_ = true;
+                return;
+            }
+            if (key == 0xE0 || key == 0xE1 || key == 0xE4 ||
+                key == 0xE5 || key == 0xE9)
+            {
+                (void)input_.handle_key(key);
                 return;
             }
             if (error_) return;
             if (key >= '0' && key <= '9')
             {
-                if (!entering_) { display_[0] = '0'; display_[1] = '\0'; entering_ = true; }
-                const uint32_t length = length_();
-                if (length == 1 && display_[0] == '0') display_[0] = static_cast<char>(key);
-                else if (length < 9) { display_[length] = static_cast<char>(key); display_[length + 1] = '\0'; }
+                if (!entering_)
+                {
+                    input_.set_text("0");
+                    entering_ = true;
+                }
+                if (input_.length() == 1 && input_.value()[0] == '0')
+                    input_.clear();
+                if (input_.length() < 9)
+                    (void)input_.handle_key(key);
                 value_ = parse();
                 return;
             }
@@ -60,22 +72,16 @@ namespace
             value_ = pending_ = 0;
             operation_ = 0;
             entering_ = error_ = false;
-            display_[0] = '0'; display_[1] = '\0';
-        }
-
-        uint32_t length_() const
-        {
-            uint32_t length = 0;
-            while (display_[length] != '\0') ++length;
-            return length;
+            input_.set_text("0");
         }
 
         int32_t parse() const
         {
             int32_t value = 0;
-            const bool negative = display_[0] == '-';
-            for (uint32_t i = negative ? 1 : 0; display_[i] != '\0'; ++i)
-                value = value * 10 + display_[i] - '0';
+            const char *text = input_.value();
+            const bool negative = text[0] == '-';
+            for (uint32_t i = negative ? 1 : 0; text[i] != '\0'; ++i)
+                value = value * 10 + text[i] - '0';
             return negative ? -value : value;
         }
 
@@ -87,10 +93,12 @@ namespace
             uint32_t magnitude = static_cast<uint32_t>(negative ? -value : value);
             do { reverse[count++] = static_cast<char>('0' + magnitude % 10); magnitude /= 10; }
             while (magnitude != 0);
+            char formatted[16];
             uint32_t at = 0;
-            if (negative) display_[at++] = '-';
-            while (count != 0) display_[at++] = reverse[--count];
-            display_[at] = '\0';
+            if (negative) formatted[at++] = '-';
+            while (count != 0) formatted[at++] = reverse[--count];
+            formatted[at] = '\0';
+            input_.set_text(formatted);
         }
 
         bool compute(int32_t a, int32_t b, char op, int32_t *out)
@@ -117,10 +125,11 @@ namespace
             return true;
         }
 
+        char display_[16];
+        user::gui::TextInput input_;
         int32_t value_, pending_;
         char operation_;
         bool entering_, error_;
-        char display_[16];
     };
 }
 
@@ -156,13 +165,15 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         user::gui::begin_frame();
         drag.restore_old_position(x, y);
         user::gui::window(x, y, width, height, "PCKOS - Hesap Makinesi", true);
-        user::gui::frame(x + 18, y + 45, width - 36, 56, user::gui::COLOR_WHITE, true);
-        user::gui::push_clip(x + 22, y + 49, width - 44, 48);
-        const char *shown = calculator.display();
-        const uint32_t text_width = user::gui::text_width(shown);
-        user::gui::text(x + width - 28 - (text_width < width - 55 ? text_width : 0),
-                        y + 63, shown, user::gui::COLOR_TEXT);
-        user::gui::pop_clip();
+        if (calculator.display()[0] == 'H')
+        {
+            user::gui::frame(x + 18, y + 45, width - 36, 56,
+                             user::gui::COLOR_WHITE, true);
+            user::gui::text(x + width - 28 - user::gui::text_width("Hata"),
+                            y + 63, "Hata", user::gui::COLOR_TEXT);
+        }
+        else
+            calculator.input().draw(x + 18, y + 45, width - 36, 56);
         for (uint32_t row = 0; row < 4; ++row)
             for (uint32_t column = 0; column < 4; ++column)
             {
@@ -201,6 +212,12 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
                 mouse_x < static_cast<int32_t>(x + width - 6) &&
                 mouse_y >= static_cast<int32_t>(y + 5) && mouse_y < static_cast<int32_t>(y + 25))
                 user::exit(0);
+            if (pressed && mouse_x >= static_cast<int32_t>(x + 18) &&
+                mouse_x < static_cast<int32_t>(x + width - 18) &&
+                mouse_y >= static_cast<int32_t>(y + 45) &&
+                mouse_y < static_cast<int32_t>(y + 101))
+                calculator.input().place_cursor_from_x(
+                    static_cast<uint32_t>(mouse_x), x + 23, width - 46);
             if (pressed && mouse_x >= static_cast<int32_t>(x + 18) &&
                 mouse_x < static_cast<int32_t>(x + 18 + 4 * 78) &&
                 mouse_y >= static_cast<int32_t>(y + 116) &&

@@ -60,7 +60,7 @@ namespace user::apps
         }
     }
 
-    Terminal::Terminal()
+    Terminal::Terminal() : command_input_(command_, sizeof(command_))
     {
         dirty_ = 0;
         log_cursor_ = 0;
@@ -77,7 +77,7 @@ namespace user::apps
         foreground_process_ = 0;
         output_open_ = false;
         command_length_ = 0;
-        command_[0] = '\0';
+        command_input_.clear();
         print_line("PCKOS komut kabugu");
         print_line("Komutlar icin help yazin.");
         dirty_ = 1;
@@ -209,7 +209,7 @@ namespace user::apps
             {
                 foreground_process_ = 0;
                 command_length_ = 0;
-                command_[0] = '\0';
+                command_input_.clear();
                 dirty_ = 1;
             }
         }
@@ -378,7 +378,7 @@ namespace user::apps
             print_line("Bilinmeyen komut. help yazin.");
 
         command_length_ = 0;
-        command_[0] = '\0';
+        command_input_.clear();
     }
 
     void Terminal::draw(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
@@ -439,15 +439,11 @@ namespace user::apps
         const uint32_t prompt_columns = foreground_process_ == 0 ? 7 : 0;
         if (foreground_process_ == 0)
             user::gui::text(text_x, prompt_y, "pckos> ", 0xFFC0FFC0);
-        // Girdi sınırında bile dolu imleç için bir karakter hücresini boş bırak.
-        const uint32_t input_columns = columns - prompt_columns - 1;
-        const uint32_t start = command_length_ > input_columns
-            ? command_length_ - input_columns : 0;
+        const uint32_t input_columns = columns - prompt_columns;
         uint32_t input_x = text_x + prompt_columns * user::gui::FONT_WIDTH;
-        user::gui::text(input_x, prompt_y, command_ + start, 0xFFC0FFC0);
-        input_x += (command_length_ - start) * user::gui::FONT_WIDTH;
-        user::gui::fill(input_x, prompt_y, user::gui::FONT_WIDTH,
-                         user::gui::FONT_HEIGHT, 0xFFC0FFC0);
+        command_input_.draw_inline(input_x, prompt_y,
+            input_columns * user::gui::FONT_WIDTH, true, 0xFFC0FFC0,
+            0xFFC0FFC0);
         user::gui::pop_clip();
         user::gui::pop_clip();
     }
@@ -464,7 +460,7 @@ namespace user::apps
             {
                 print_line(command_);
                 command_length_ = 0;
-                command_[0] = '\0';
+                command_input_.clear();
             }
         }
         else if (key_value == '\n' && foreground_process_ != 0)
@@ -477,21 +473,14 @@ namespace user::apps
             {
                 print_line(command_);
                 command_length_ = 0;
-                command_[0] = '\0';
+                command_input_.clear();
             }
         }
         else if (key_value == '\n')
             execute();
-        else if (key_value == '\b')
+        else if (command_input_.handle_key(key_value))
         {
-            if (command_length_ != 0)
-                command_[--command_length_] = '\0';
-        }
-        else if (key_value >= 32 && key_value <= 126 &&
-                 command_length_ < MAX_COMMAND)
-        {
-            command_[command_length_++] = static_cast<char>(key_value);
-            command_[command_length_] = '\0';
+            command_length_ = command_input_.length();
         }
     }
 

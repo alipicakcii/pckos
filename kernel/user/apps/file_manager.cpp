@@ -160,7 +160,7 @@ namespace user::apps
         }
     }
 
-    FileManager::FileManager()
+    FileManager::FileManager() : search_input_(search_, sizeof(search_))
     {
         dirty_ = 0;
         reset();
@@ -174,8 +174,7 @@ namespace user::apps
         directory_ = root < 0 ? 0 : static_cast<uint32_t>(root);
         selected_ = 0;
         selected_valid_ = false;
-        search_[0] = '\0';
-        search_length_ = 0;
+        search_input_.clear();
         search_focused_ = false;
         path_[0] = '/';
         path_[1] = '\0';
@@ -201,15 +200,15 @@ namespace user::apps
 
     bool FileManager::matches_search(const char *name) const
     {
-        if (search_length_ == 0)
+        if (search_input_.length() == 0)
             return true;
         for (uint32_t start = 0; name[start] != '\0'; ++start)
         {
             uint32_t offset = 0;
-            while (offset < search_length_ && name[start + offset] != '\0' &&
+            while (offset < search_input_.length() && name[start + offset] != '\0' &&
                    lower_ascii(name[start + offset]) == lower_ascii(search_[offset]))
                 ++offset;
-            if (offset == search_length_)
+            if (offset == search_input_.length())
                 return true;
         }
         return false;
@@ -302,9 +301,8 @@ namespace user::apps
             user::gui::text(search_x + 5, y + 11, "Ara:",
                             user::gui::COLOR_DARK);
             user::gui::push_clip(search_x + 38, y + 9, 123, 20);
-            user::gui::text(search_x + 40, y + 11, search_,
-                            search_focused_ ? user::gui::COLOR_TITLE
-                                            : user::gui::COLOR_TEXT);
+            search_input_.draw_inline(search_x + 40, y + 11, 123,
+                search_focused_, user::gui::COLOR_TEXT);
             user::gui::pop_clip();
         }
 
@@ -421,8 +419,7 @@ namespace user::apps
         directory_stack_[depth_++] = directory_;
         directory_ = entry.inode;
         copy(path_, next, sizeof(path_));
-        search_[0] = '\0';
-        search_length_ = 0;
+        search_input_.clear();
         search_focused_ = false;
         selected_ = 0;
         selected_valid_ = false;
@@ -505,14 +502,8 @@ namespace user::apps
             last_click_index_ = UINT32_MAX;
             if (key_value == '\n')
                 search_focused_ = false;
-            else if (key_value == '\b' && search_length_ != 0)
-                search_[--search_length_] = '\0';
-            else if (key_value >= 32 && key_value <= 126 &&
-                     search_length_ + 1 < sizeof(search_))
-            {
-                search_[search_length_++] = static_cast<char>(key_value);
-                search_[search_length_] = '\0';
-            }
+            else
+                (void)search_input_.handle_key(key_value);
             selected_ = 0;
             selected_valid_ = false;
             preview_size_ = 0;
@@ -557,6 +548,8 @@ namespace user::apps
         if (width >= 500 && y >= 6 && y < 32 && x >= static_cast<int32_t>(width - 174))
         {
             search_focused_ = true;
+            search_input_.place_cursor_from_x(static_cast<uint32_t>(x),
+                                              width - 134, 123);
             return;
         }
 

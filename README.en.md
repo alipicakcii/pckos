@@ -37,9 +37,9 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 ## Screenshots
 
-### Desktop, Files, and Task Manager
+### Snake game on the desktop
 
-![PCKOS desktop with Files and Task Manager windows](assets/screenshots/qemu-desktop.png)
+![Snake game open on the PCKOS desktop with Terminal behind it](assets/screenshots/qemu-desktop.png)
 
 ### Terminal
 
@@ -47,7 +47,7 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 ### Multiple applications
 
-![Notepad, Calculator, and Terminal windows in PCKOS](assets/screenshots/qemu-apps.png)
+![Snake game and Calculator windows on the PCKOS desktop](assets/screenshots/qemu-apps.png)
 
 ## Run in QEMU
 

@@ -38,9 +38,9 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ## Ekran görüntüleri
 
-### Masaüstü, Dosyalar ve Görev Yöneticisi
+### Masaüstünde Yılan oyunu
 
-![PCKOS masaüstünde Dosyalar ve Görev Yöneticisi pencereleri](assets/screenshots/qemu-desktop.png)
+![PCKOS masaüstünde Terminal penceresinin arkasında açık Yılan oyunu](assets/screenshots/qemu-desktop.png)
 
 ### Terminal
 
@@ -48,7 +48,7 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ### Birden fazla uygulama
 
-![PCKOS'ta Not Defteri, Hesap Makinesi ve Terminal pencereleri](assets/screenshots/qemu-apps.png)
+![PCKOS masaüstünde Yılan oyunu ve Hesap Makinesi pencereleri](assets/screenshots/qemu-apps.png)
 
 ## QEMU'da çalıştırma
 
