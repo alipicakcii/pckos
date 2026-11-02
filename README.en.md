@@ -442,30 +442,3 @@ run /apps/merhaba.bin
 The terminal starts a new process from this file. You do not need to edit `desktop.cpp` to launch the app. To launch it from another application, use `user::process_spawn("/apps/merhaba.bin", "Merhaba")`.
 
 **After changing the application's source:** Repeat steps 2, 3, and 4 to update `host-share/apps/merhaba.bin`. Then try it with `./qemu.sh`, which also performs the packaging in step 5. To refresh only the disk image, run `./share.sh`. If cleanup has removed `graphics.user.o`, or if you changed the graphics library, repeat step 1 first.
-
-## What's next
-
-This is a roadmap of planned work, not a list of completed features or promises.
-
-### 1. Strengthen the foundations
-
-- Make file descriptors, read positions, and close cleanup process-specific.
-- Make application exit/crash handling, window focus, minimize, and drag behavior consistent.
-- Expand repeatable QEMU checks for multiple windows, keyboard input, process/thread limits, page faults, and resource cleanup.
-
-### 2. File writing and persistence
-
-- Separate user data from the image regenerated at boot; `clean.sh` should not erase user data.
-- Add generic file creation, writing, truncation, deletion, free-block management, and handling for full disks and interrupted writes to PCKFS.
-- Add `write`, `seek`, `truncate`, `mkdir`, and `unlink` system calls; support create/rename in Files and generic save in Notepad.
-
-### 3. Make application development easier
-
-- Move from flat `.bin` loading to a static i386 ELF32 loader; validate `PT_LOAD`, BSS, page permissions, and entry point. Use the [ELF loading specification](https://gabi.xinuos.com/elf/07-loading-intro.html).
-- Prepare a small user-space SDK with allocation, text/number conversion, process arguments, and common window/event helpers.
-- Remove the fixed limits of 8 processes/16 threads and the one-window-per-application assumption.
-
-### 4. Improve the desktop
-
-- Improve Turkish/Unicode text, keyboard layouts, text selection, cursor movement, and mouse-wheel support.
-- Complete window resizing, focus order, shortcuts, and application event queues; prevent flicker and lost events during rapid interaction.

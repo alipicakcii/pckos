@@ -458,30 +458,3 @@ run /apps/merhaba.bin
 Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `desktop.cpp` dosyasını değiştirmeniz gerekmez.  Başka bir uygulamanın kodundan başlatmak için `user::process_spawn("/apps/merhaba.bin", "Merhaba")` kullanın.
 
 **Uygulamanın kodunu değiştirdiğinizde:** 2, 3 ve 4. adımları tekrar çalıştırarak `host-share/apps/merhaba.bin` dosyasını güncelleyin. Ardından `./qemu.sh` ile deneyin; bu betik 5. adımdaki paketlemeyi de kendisi yapar. Yalnızca disk imajını yenilemek isterseniz `./share.sh` çalıştırın. Temizleme sonrasında `graphics.user.o` bulunmuyorsa veya grafik kitaplığını değiştirdiyseniz önce 1. adımı da uygulayın.
-
-## Sıradaki işler
-
-Bu liste planlanan işleri gösterir; tamamlanmış özellikleri değil.
-
-### 1. Temeli sağlamlaştır
-
-- Süreç başına dosya tanıtıcıları, okuma konumları ve kapanış temizliği ekleyin.
-- Uygulama kapanması/çökmesi, pencere odağı, küçültme ve sürükleme davranışlarını tutarlı hale getirin.
-- Çoklu pencere, klavye, süreç/thread sınırları, sayfa hataları ve kaynak temizliği için tekrarlanabilir QEMU kontrollerini genişletin.
-
-### 2. Dosya yazma ve kalıcılık
-
-- Kullanıcı verisini her açılışta yeniden üretilen imajdan ayırın; `clean.sh` kullanıcı verisini silmemelidir.
-- PCKFS'e genel dosya oluşturma, yazma, kısaltma ve silme; boş blok yönetimi ve dolu disk/yarım yazma durumlarını ekleyin.
-- Dosya sistemi çağrılarına `write`, `seek`, `truncate`, `mkdir` ve `unlink` ekleyin; Dosyalar'da oluşturma/yeniden adlandırma ve Not Defteri'nde genel kaydetmeyi destekleyin.
-
-### 3. Uygulama geliştirmeyi kolaylaştır
-
-- Düz `.bin` yüklemesinden statik i386 ELF32 yükleyicisine geçin; `PT_LOAD`, BSS, sayfa izinleri ve giriş adresini doğrulayın. [ELF yükleme belirtimini](https://gabi.xinuos.com/elf/07-loading-intro.html) temel alın.
-- Bellek ayırma, metin/sayı dönüşümü, süreç argümanları ve ortak pencere/olay yardımcıları içeren küçük bir kullanıcı alanı SDK'sı hazırlayın.
-- Sabit 8 süreç/16 thread sınırını ve uygulama başına tek pencere varsayımını kaldırın.
-
-### 4. Masaüstünü olgunlaştır
-
-- Türkçe karakter/Unicode, klavye düzeni, metin seçimi, imleç hareketi ve fare tekerleği desteğini geliştirin.
-- Pencere boyutlandırma, odak sırası, kısayollar ve uygulama olay kuyruklarını tamamlayın; hızlı etkileşimlerde titreşim ve olay kaybını önleyin.
