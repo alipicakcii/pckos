@@ -17,6 +17,7 @@ namespace
     constexpr uint32_t WINDOW_SYSTEM_INFO = 6;
     constexpr uint32_t WINDOW_CLOCK = 7;
     constexpr uint32_t WINDOW_UNIT_CONVERTER = 8;
+    constexpr uint32_t WINDOW_SNAKE = 9;
 
     struct WindowBounds
     {
@@ -36,13 +37,14 @@ namespace
     public:
         DesktopSession()
             : screen_{}, file_manager_{}, terminal_{}, task_manager_{},
-              app_process_ids_{0, 0, 0, 0, 0, 0, 0, 0, 0}, foreground_window_(0),
+              app_process_ids_{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, foreground_window_(0),
               logo_available_(false), file_visible_(false),
               terminal_visible_(false), file_taskbar_(false),
               terminal_taskbar_(false), task_visible_(false), task_taskbar_(false),
               calculator_taskbar_(false), notepad_taskbar_(false),
               system_info_taskbar_(false),
               clock_taskbar_(false), unit_converter_taskbar_(false),
+              snake_taskbar_(false),
               about_open_(false), menu_open_(false),
               console_mode_(false), dragging_(false), drag_window_(0), active_(0),
               mouse_x_(0), mouse_y_(0), last_buttons_(0), drag_offset_x_(0),
@@ -72,7 +74,7 @@ namespace
                 if (user::wait_event(&event, 10) <= 0)
                     continue;
                 bool desktop_changed = false;
-                for (uint32_t id = WINDOW_FILE; id <= WINDOW_UNIT_CONVERTER; ++id)
+                for (uint32_t id = WINDOW_FILE; id <= WINDOW_SNAKE; ++id)
                 {
                     if (app_process_ids_[id] == 0 ||
                         process_is_running(app_process_ids_[id]))
@@ -85,7 +87,8 @@ namespace
                     else if (id == WINDOW_NOTEPAD) notepad_taskbar_ = false;
                     else if (id == WINDOW_SYSTEM_INFO) system_info_taskbar_ = false;
                     else if (id == WINDOW_CLOCK) clock_taskbar_ = false;
-                    else unit_converter_taskbar_ = false;
+                    else if (id == WINDOW_UNIT_CONVERTER) unit_converter_taskbar_ = false;
+                    else snake_taskbar_ = false;
                     desktop_changed = true;
                 }
                 if (foreground_window_ != 0)
@@ -163,7 +166,7 @@ namespace
 
         bool restore_app(uint32_t id)
         {
-            if (id < WINDOW_FILE || id > WINDOW_UNIT_CONVERTER ||
+            if (id < WINDOW_FILE || id > WINDOW_SNAKE ||
                 app_process_ids_[id] == 0)
                 return false;
             active_ = id;
@@ -340,7 +343,7 @@ namespace
 
         void open_window(uint32_t id)
         {
-            if (id < WINDOW_FILE || id > WINDOW_UNIT_CONVERTER)
+            if (id < WINDOW_FILE || id > WINDOW_SNAKE)
                 return;
             if (app_process_ids_[id] != 0)
             {
@@ -358,7 +361,8 @@ namespace
                 : id == WINDOW_NOTEPAD ? "/apps/notepad.bin"
                 : id == WINDOW_SYSTEM_INFO ? "/apps/system_info.bin"
                 : id == WINDOW_CLOCK ? "/apps/clock.bin"
-                : "/apps/unit_converter.bin";
+                : id == WINDOW_UNIT_CONVERTER ? "/apps/unit_converter.bin"
+                : "/apps/snake.bin";
             const char *name = id == WINDOW_FILE ? "Dosya Yoneticisi"
                 : id == WINDOW_TERMINAL ? "Terminal"
                 : id == WINDOW_TASK_MANAGER ? "Gorev Yoneticisi"
@@ -366,7 +370,8 @@ namespace
                 : id == WINDOW_NOTEPAD ? "Metin Goruntuleyici"
                 : id == WINDOW_SYSTEM_INFO ? "Sistem Bilgisi"
                 : id == WINDOW_CLOCK ? "Saat ve Takvim"
-                : "Birim Donusturucu";
+                : id == WINDOW_UNIT_CONVERTER ? "Birim Donusturucu"
+                : "Yilan";
             file_visible_ = terminal_visible_ = task_visible_ = false;
             if (id == WINDOW_FILE) file_taskbar_ = true;
             else if (id == WINDOW_TERMINAL) terminal_taskbar_ = true;
@@ -375,7 +380,8 @@ namespace
             else if (id == WINDOW_NOTEPAD) notepad_taskbar_ = true;
             else if (id == WINDOW_SYSTEM_INFO) system_info_taskbar_ = true;
             else if (id == WINDOW_CLOCK) clock_taskbar_ = true;
-            else unit_converter_taskbar_ = true;
+            else if (id == WINDOW_UNIT_CONVERTER) unit_converter_taskbar_ = true;
+            else snake_taskbar_ = true;
             active_ = id;
             foreground_window_ = id;
             menu_open_ = false;
@@ -393,7 +399,8 @@ namespace
                 else if (id == WINDOW_NOTEPAD) notepad_taskbar_ = false;
                 else if (id == WINDOW_SYSTEM_INFO) system_info_taskbar_ = false;
                 else if (id == WINDOW_CLOCK) clock_taskbar_ = false;
-                else unit_converter_taskbar_ = false;
+                else if (id == WINDOW_UNIT_CONVERTER) unit_converter_taskbar_ = false;
+                else snake_taskbar_ = false;
                 render();
                 return;
             }
@@ -467,14 +474,18 @@ namespace
                 user::gui::button(unit_converter_task_x(), y + 4,
                                   task_button_width(), 40, "Donustur",
                                   focused_process == app_process_ids_[WINDOW_UNIT_CONVERTER]);
+            if (snake_taskbar_)
+                user::gui::button(snake_task_x(), y + 4,
+                                  task_button_width(), 40, "Yilan",
+                                  focused_process == app_process_ids_[WINDOW_SNAKE]);
 
             draw_clock();
         }
 
         uint32_t task_button_width() const
         {
-            return min_u32(136, screen_.width > 275
-                ? (screen_.width - 275) / 8 : 24);
+            return min_u32(136, screen_.width > 280
+                ? (screen_.width - 280) / 9 : 24);
         }
 
         uint32_t terminal_task_x() const { return 115 + task_button_width(); }
@@ -501,6 +512,10 @@ namespace
         uint32_t unit_converter_task_x() const
         {
             return clock_task_x() + task_button_width() + 5;
+        }
+        uint32_t snake_task_x() const
+        {
+            return unit_converter_task_x() + task_button_width() + 5;
         }
 
         void draw_clock()
@@ -568,10 +583,10 @@ namespace
 
         void draw_start_menu()
         {
-            const uint32_t y = screen_.height > TASKBAR_HEIGHT + 396
-                ? screen_.height - TASKBAR_HEIGHT - 396 : 0;
-            user::gui::frame(7, y, 226, 392, user::gui::COLOR_FACE);
-            user::gui::fill(11, y + 4, 34, 384, user::gui::COLOR_TITLE);
+            const uint32_t y = screen_.height > TASKBAR_HEIGHT + 438
+                ? screen_.height - TASKBAR_HEIGHT - 438 : 0;
+            user::gui::frame(7, y, 226, 430, user::gui::COLOR_FACE);
+            user::gui::fill(11, y + 4, 34, 422, user::gui::COLOR_TITLE);
             user::gui::text(24, y + 15, "P\nC\nK\nO\nS", user::gui::COLOR_WHITE);
             user::gui::button(51, y + 8, 174, 34, "PCKFS Gezgini");
             user::gui::button(51, y + 46, 174, 34, "Terminal");
@@ -581,8 +596,9 @@ namespace
             user::gui::button(51, y + 198, 174, 34, "Sistem Bilgisi");
             user::gui::button(51, y + 236, 174, 34, "Saat ve Takvim");
             user::gui::button(51, y + 274, 174, 34, "Birim Donusturucu");
-            user::gui::button(51, y + 312, 174, 34, "PCKOS Hakkinda");
-            user::gui::button(51, y + 350, 174, 34, "Konsol");
+            user::gui::button(51, y + 312, 174, 34, "Yilan");
+            user::gui::button(51, y + 350, 174, 34, "PCKOS Hakkinda");
+            user::gui::button(51, y + 388, 174, 34, "Konsol");
         }
 
         void draw_about()
@@ -692,6 +708,7 @@ namespace
             draw_icon_label(18, 96, 1, "Dosyalar");
             draw_icon_label(18, 170, 2, "Terminal");
             draw_icon_label(18, 244, 3, "Gorevler");
+            draw_icon_label(18, 318, 4, "Yilan");
             if (logo_available_ && screen_.width > 150)
                 user::gui::bitmap(screen_.width - 148, 68,
                                   logo_pixels_, 128, 128);
@@ -849,8 +866,8 @@ namespace
             }
             if (menu_open_)
             {
-                const uint32_t menu_y = screen_.height > TASKBAR_HEIGHT + 396
-                    ? screen_.height - TASKBAR_HEIGHT - 396 : 0;
+                const uint32_t menu_y = screen_.height > TASKBAR_HEIGHT + 438
+                    ? screen_.height - TASKBAR_HEIGHT - 438 : 0;
                 if (x >= 51 && x < 225 && y >= static_cast<int32_t>(menu_y + 8) &&
                     y < static_cast<int32_t>(menu_y + 42))
                     open_window(WINDOW_FILE);
@@ -885,14 +902,18 @@ namespace
                 else if (x >= 51 && x < 225 &&
                          y >= static_cast<int32_t>(menu_y + 312) &&
                          y < static_cast<int32_t>(menu_y + 346))
+                    open_window(WINDOW_SNAKE);
+                else if (x >= 51 && x < 225 &&
+                         y >= static_cast<int32_t>(menu_y + 350) &&
+                         y < static_cast<int32_t>(menu_y + 384))
                 {
                     menu_open_ = false;
                     about_open_ = true;
                     render();
                 }
                 else if (x >= 51 && x < 225 &&
-                         y >= static_cast<int32_t>(menu_y + 350) &&
-                         y < static_cast<int32_t>(menu_y + 384))
+                         y >= static_cast<int32_t>(menu_y + 388) &&
+                         y < static_cast<int32_t>(menu_y + 422))
                 {
                     menu_open_ = false;
                     console_mode_ = true;
@@ -958,6 +979,12 @@ namespace
                 {
                     (void)restore_app(WINDOW_UNIT_CONVERTER);
                 }
+                else if (snake_taskbar_ &&
+                         x >= static_cast<int32_t>(snake_task_x()) &&
+                         x < static_cast<int32_t>(snake_task_x() + task_button_width()))
+                {
+                    (void)restore_app(WINDOW_SNAKE);
+                }
                 return;
             }
 
@@ -994,6 +1021,8 @@ namespace
                 open_window(WINDOW_TERMINAL);
             else if (x >= 18 && x < 72 && y >= 244 && y < 308)
                 open_window(WINDOW_TASK_MANAGER);
+            else if (x >= 18 && x < 72 && y >= 318 && y < 382)
+                open_window(WINDOW_SNAKE);
         }
 
         void handle_mouse(const user::InputEvent &event)
@@ -1057,7 +1086,7 @@ namespace
         user::apps::FileManager file_manager_;
         user::apps::Terminal terminal_;
         user::apps::TaskManager task_manager_;
-        uint32_t app_process_ids_[9];
+        uint32_t app_process_ids_[10];
         uint32_t foreground_window_;
         bool logo_available_;
         uint32_t logo_pixels_[128 * 128];
@@ -1072,6 +1101,7 @@ namespace
         bool system_info_taskbar_;
         bool clock_taskbar_;
         bool unit_converter_taskbar_;
+        bool snake_taskbar_;
         bool about_open_;
         bool menu_open_;
         bool console_mode_;
