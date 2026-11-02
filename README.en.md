@@ -105,7 +105,9 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 5. `kernel/user_mode.cpp` prepares user pages, the user stack, and system calls; `kernel/thread.cpp` initializes scheduling. `user_mode_run_desktop()` loads the desktop image at `0x40000000`. `iret` in `kernel/arch/i386/user_mode.asm` enters Ring 3.
 6. The desktop starts at `_start` in `kernel/user/apps/desktop.cpp`. Opening Files, Terminal, Tasks, Calculator, or Notepad calls `process_spawn()`. The kernel loads `/apps/*.bin` from PCKFS and creates a PID, address space, and main thread.
 
-**There are two loading paths:** the desktop is embedded into the kernel with `incbin` in `kernel/arch/i386/user_desktop.asm`. Other applications are not embedded; they are loaded from the PCKFS disk. The desktop and applications run in Ring 3; drivers and system-call handlers run in Ring 0.
+### Loading the desktop and applications
+
+The desktop program is included in the kernel image by the `incbin` directive in `kernel/arch/i386/user_desktop.asm` and loaded into memory during startup. Other applications are not included in the kernel; when launched, they are loaded from `/apps/*.bin` on the PCKFS disk. Both run in Ring 3; drivers and system-call handlers run in Ring 0.
 
 ## 2. Source map
 

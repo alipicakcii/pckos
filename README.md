@@ -108,7 +108,9 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 5. `kernel/user_mode.cpp` kullanıcı sayfalarını, kullanıcı yığınını ve sistem çağrılarını hazırlar; `kernel/thread.cpp` zamanlayıcıyı kurar. `user_mode_run_desktop()` masaüstü imajını `0x40000000` adresine yükler. `kernel/arch/i386/user_mode.asm` içindeki `iret` Ring 3'e geçer.
 6. Masaüstü `kernel/user/apps/desktop.cpp` içindeki `_start` ile çalışır. Dosyalar, Terminal, Görevler, Hesap Makinesi veya Not Defteri açıldığında `process_spawn()` çağrılır; çekirdek `/apps/*.bin` imajını PCKFS'ten yükler, yeni PID, adres alanı ve ana thread oluşturur.
 
-**İki yükleme yolu var:** Masaüstü `kernel/arch/i386/user_desktop.asm` içindeki `incbin` ile çekirdeğe gömülüdür. Diğer uygulamalar çekirdeğe gömülmez; PCKFS diskinden yüklenir. Masaüstü ve uygulamalar Ring 3'te, sürücüler ve syscall işleyicisi Ring 0'da çalışır.
+### Masaüstü ve uygulamaların yüklenmesi
+
+Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yönergesiyle çekirdek imajına eklenir ve açılışta belleğe alınır. Diğer uygulamalar çekirdeğe eklenmez; başlatıldıklarında PCKFS diskindeki `/apps/*.bin` dosyalarından yüklenir. Her ikisi de Ring 3'te çalışır; sürücüler ve sistem çağrısı işleyicileri Ring 0'da çalışır.
 
 ## 2. Nerede ne var?
 
