@@ -40,15 +40,15 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ### Hesap Makinesi
 
-![PCKOS masaüstünde açık Hesap Makinesi](assets/screenshots/qemu-desktop.png)
+![PCKOS masaüstünde açık Hesap Makinesi](assets/screenshots/qemu-calculator.png)
 
 ### Bellek Avcısı
 
-![PCKOS masaüstünde Bellek Avcısı oyunu](assets/screenshots/qemu-terminal.png)
+![PCKOS masaüstünde Bellek Avcısı oyunu](assets/screenshots/qemu-memory-hunter.png)
 
 ### Dosya Yöneticisi ve Hesap Makinesi
 
-![PCKOS masaüstünde Dosya Yöneticisi ve Hesap Makinesi pencereleri](assets/screenshots/qemu-apps.png)
+![PCKOS masaüstünde Dosya Yöneticisi ve Hesap Makinesi pencereleri](assets/screenshots/qemu-file-manager.png)
 
 ## QEMU'da çalıştırma
 
