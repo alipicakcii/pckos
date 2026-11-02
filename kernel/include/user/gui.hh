@@ -52,7 +52,8 @@ namespace user::gui
                   bool focused = true) const;
         void draw_inline(uint32_t x, uint32_t y, uint32_t width,
                          bool focused, uint32_t color,
-                         uint32_t cursor_color = COLOR_TITLE) const;
+                         uint32_t cursor_color = COLOR_TITLE,
+                         bool block_cursor = false) const;
 
     private:
         uint32_t visible_start(uint32_t columns) const;

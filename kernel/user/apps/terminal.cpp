@@ -443,7 +443,7 @@ namespace user::apps
         uint32_t input_x = text_x + prompt_columns * user::gui::FONT_WIDTH;
         command_input_.draw_inline(input_x, prompt_y,
             input_columns * user::gui::FONT_WIDTH, true, 0xFFC0FFC0,
-            0xFFC0FFC0);
+            0xFFC0FFC0, true);
         user::gui::pop_clip();
         user::gui::pop_clip();
     }

@@ -224,7 +224,8 @@ namespace user::gui
 
     void TextInput::draw_inline(uint32_t x, uint32_t y, uint32_t width,
                                 bool focused, uint32_t color,
-                                uint32_t cursor_color) const
+                                uint32_t cursor_color,
+                                bool block_cursor) const
     {
         if (buffer_ == nullptr || width == 0)
             return;
@@ -237,7 +238,10 @@ namespace user::gui
         if (focused)
         {
             const uint32_t caret_x = x + (cursor_ - first) * FONT_WIDTH;
-            fill(caret_x, y + 1, 2, FONT_HEIGHT - 2, cursor_color);
+            if (block_cursor)
+                fill(caret_x, y, FONT_WIDTH, FONT_HEIGHT, cursor_color);
+            else
+                fill(caret_x, y + 1, 2, FONT_HEIGHT - 2, cursor_color);
         }
         pop_clip();
     }
