@@ -131,7 +131,10 @@ namespace user
 
     using ThreadEntry = void (*)(void *argument);
 
-    // i386 int 0x80 ABI: çağrı numarası EAX’te, bağımsız değişkenler EBX/ECX/EDX/ESI/EDI yazmaçlarındadır.
+    // i386 int 0x80 ABI: çağrı numarası EAX’te,
+    // bağımsız değişkenler EBX/ECX/EDX/ESI/EDI yazmaçlarındadır.
+    // not: bu fonskiyon çekirdekde derlenmez kullanıcı alanından
+    //  bir kod caggirdi zaman inline oldugu icin o kodla birliktde aynı dosyada derlenir
     inline int32_t call(uint32_t number, uint32_t arg0 = 0,
                         uint32_t arg1 = 0, uint32_t arg2 = 0,
                         uint32_t arg3 = 0, uint32_t arg4 = 0)
