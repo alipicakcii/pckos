@@ -50,6 +50,10 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ![PCKOS masaüstünde Dosya Yöneticisi ve Hesap Makinesi pencereleri](assets/screenshots/qemu-file-manager.png)
 
+### Terminal
+
+![PCKOS masaüstünde açık Terminal](assets/screenshots/qemu-terminal-start.png)
+
 ## QEMU'da çalıştırma
 
 `pckos.iso` ve `pckfs.img` dosyalarını indirdikten sonra bu iki dosyayı aynı dizine koyup şu komutla başlatın:

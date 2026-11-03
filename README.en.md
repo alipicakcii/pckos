@@ -49,6 +49,10 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 ![File Manager and Calculator windows on the PCKOS desktop](assets/screenshots/qemu-file-manager.png)
 
+### Terminal
+
+![Terminal open on the PCKOS desktop](assets/screenshots/qemu-terminal-start.png)
+
 ## Run in QEMU
 
 After downloading `pckos.iso` and `pckfs.img`, place both files in the same directory and start PCKOS with:
