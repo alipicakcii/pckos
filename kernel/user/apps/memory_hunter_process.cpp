@@ -20,10 +20,10 @@ namespace
         int32_t y;
     };
 
-    class SnakeGame
+    class MemoryHunterGame
     {
     public:
-        SnakeGame()
+        MemoryHunterGame()
             : length_(6), direction_(DIRECTION_RIGHT), food_{14, 7},
               random_state_(0), started_(false), paused_(false), game_over_(false)
         {
@@ -211,7 +211,7 @@ namespace
     }
 
     void draw_game(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
-                   uint32_t cell_size, const SnakeGame &game)
+                   uint32_t cell_size, const MemoryHunterGame &game)
     {
         user::gui::window(x, y, width, height, "PCKOS - Bellek Avcisi", true);
         const uint32_t content_x = x + 7;
@@ -337,7 +337,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     if (user::graphics_register_window(x, y, width, height) < 0)
         user::exit(-1);
     user::gui::WindowDrag drag(x, y);
-    SnakeGame game;
+    MemoryHunterGame game;
     int32_t mouse_x = static_cast<int32_t>(screen.width / 2);
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
     (void)user::graphics_get_cursor(&mouse_x, &mouse_y);

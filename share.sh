@@ -24,5 +24,5 @@ cp kernel/user/apps/hello_word.bin "$STAGING/apps/hello_word.bin"
 cp kernel/user/apps/system_info_process.bin "$STAGING/apps/system_info.bin"
 cp kernel/user/apps/clock_process.bin "$STAGING/apps/clock.bin"
 cp kernel/user/apps/unit_converter_process.bin "$STAGING/apps/unit_converter.bin"
-cp kernel/user/apps/snake_process.bin "$STAGING/apps/snake.bin"
+cp kernel/user/apps/memory_hunter_process.bin "$STAGING/apps/memory_hunter.bin"
 python3 tools/mkpckfs.py --source "$STAGING" --output pckfs.img

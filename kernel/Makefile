@@ -47,7 +47,7 @@ USER_PROCESS_OBJECTS+=user/apps/new_demo_process.user.o
 USER_PROCESS_OBJECTS+=user/apps/hello_word.user.o
 USER_PROCESS_OBJECTS+=user/apps/system_info_process.user.o
 USER_PROCESS_OBJECTS+=user/apps/clock_process.user.o user/apps/unit_converter_process.user.o
-USER_PROCESS_OBJECTS+=user/apps/snake_process.user.o
+USER_PROCESS_OBJECTS+=user/apps/memory_hunter_process.user.o
 USER_PROCESS_IMAGES=\
 user/apps/terminal_process.bin \
 user/apps/file_manager_process.bin \
@@ -57,7 +57,7 @@ USER_PROCESS_IMAGES+=user/apps/new_demo_process.bin
 USER_PROCESS_IMAGES+=user/apps/hello_word.bin
 USER_PROCESS_IMAGES+=user/apps/system_info_process.bin
 USER_PROCESS_IMAGES+=user/apps/clock_process.bin user/apps/unit_converter_process.bin
-USER_PROCESS_IMAGES+=user/apps/snake_process.bin
+USER_PROCESS_IMAGES+=user/apps/memory_hunter_process.bin
 
 include $(ARCHDIR)/make.config
 
@@ -188,7 +188,7 @@ user/apps/clock_process.user.o: user/apps/clock_process.cpp include/user/gui.hh 
 user/apps/unit_converter_process.user.o: user/apps/unit_converter_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/snake_process.user.o: user/apps/snake_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/memory_hunter_process.user.o: user/apps/memory_hunter_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/terminal_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_process.user.o user/apps/linker.ld
@@ -239,10 +239,10 @@ user/apps/unit_converter_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.
 user/apps/unit_converter_process.bin: user/apps/unit_converter_process.elf
 	$(OBJCOPY) -O binary $< $@
 
-user/apps/snake_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/snake_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/snake_process.user.o
+user/apps/memory_hunter_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/memory_hunter_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/memory_hunter_process.user.o
 
-user/apps/snake_process.bin: user/apps/snake_process.elf
+user/apps/memory_hunter_process.bin: user/apps/memory_hunter_process.elf
 	$(OBJCOPY) -O binary $< $@
 
 arch/i386/user_desktop.o: arch/i386/user_desktop.asm user/apps/desktop.bin
@@ -268,7 +268,7 @@ user/apps/hello_word.bin: user/apps/hello_word.elf
 
 clean:
 	rm -f user/apps/new_demo_process.elf user/apps/hello_word.elf user/apps/system_info_process.elf \
-		user/apps/clock_process.elf user/apps/unit_converter_process.elf user/apps/snake_process.elf
+		user/apps/clock_process.elf user/apps/unit_converter_process.elf user/apps/memory_hunter_process.elf
 	rm -f pckos.bin
 	rm -f $(USER_APP_OBJECTS) $(USER_PROCESS_OBJECTS) user/apps/desktop.elf user/apps/desktop.bin \
 		user/apps/terminal_process.elf user/apps/file_manager_process.elf \

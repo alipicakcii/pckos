@@ -20,7 +20,7 @@ namespace
     constexpr uint32_t WINDOW_SYSTEM_INFO = 6;
     constexpr uint32_t WINDOW_CLOCK = 7;
     constexpr uint32_t WINDOW_UNIT_CONVERTER = 8;
-    constexpr uint32_t WINDOW_SNAKE = 9;
+    constexpr uint32_t WINDOW_MEMORY_HUNTER = 9;
 
     struct WindowBounds
     {
@@ -47,7 +47,7 @@ namespace
               calculator_taskbar_(false), notepad_taskbar_(false),
               system_info_taskbar_(false),
               clock_taskbar_(false), unit_converter_taskbar_(false),
-              snake_taskbar_(false),
+              memory_hunter_taskbar_(false),
               about_open_(false), menu_open_(false),
               console_mode_(false), dragging_(false), drag_window_(0), active_(0),
               mouse_x_(0), mouse_y_(0), last_buttons_(0), drag_offset_x_(0),
@@ -77,7 +77,7 @@ namespace
                 if (user::wait_event(&event, 10) <= 0)
                     continue;
                 bool desktop_changed = false;
-                for (uint32_t id = WINDOW_FILE; id <= WINDOW_SNAKE; ++id)
+                for (uint32_t id = WINDOW_FILE; id <= WINDOW_MEMORY_HUNTER; ++id)
                 {
                     if (app_process_ids_[id] == 0 ||
                         process_is_running(app_process_ids_[id]))
@@ -91,7 +91,7 @@ namespace
                     else if (id == WINDOW_SYSTEM_INFO) system_info_taskbar_ = false;
                     else if (id == WINDOW_CLOCK) clock_taskbar_ = false;
                     else if (id == WINDOW_UNIT_CONVERTER) unit_converter_taskbar_ = false;
-                    else snake_taskbar_ = false;
+                    else memory_hunter_taskbar_ = false;
                     desktop_changed = true;
                 }
                 if (foreground_window_ != 0)
@@ -169,7 +169,7 @@ namespace
 
         bool restore_app(uint32_t id)
         {
-            if (id < WINDOW_FILE || id > WINDOW_SNAKE ||
+            if (id < WINDOW_FILE || id > WINDOW_MEMORY_HUNTER ||
                 app_process_ids_[id] == 0)
                 return false;
             active_ = id;
@@ -346,7 +346,7 @@ namespace
 
         void open_window(uint32_t id)
         {
-            if (id < WINDOW_FILE || id > WINDOW_SNAKE)
+            if (id < WINDOW_FILE || id > WINDOW_MEMORY_HUNTER)
                 return;
             if (app_process_ids_[id] != 0)
             {
@@ -365,7 +365,7 @@ namespace
                 : id == WINDOW_SYSTEM_INFO ? "/apps/system_info.bin"
                 : id == WINDOW_CLOCK ? "/apps/clock.bin"
                 : id == WINDOW_UNIT_CONVERTER ? "/apps/unit_converter.bin"
-                : "/apps/snake.bin";
+                : "/apps/memory_hunter.bin";
             const char *name = id == WINDOW_FILE ? "Dosya Yoneticisi"
                 : id == WINDOW_TERMINAL ? "Terminal"
                 : id == WINDOW_TASK_MANAGER ? "Gorev Yoneticisi"
@@ -384,7 +384,7 @@ namespace
             else if (id == WINDOW_SYSTEM_INFO) system_info_taskbar_ = true;
             else if (id == WINDOW_CLOCK) clock_taskbar_ = true;
             else if (id == WINDOW_UNIT_CONVERTER) unit_converter_taskbar_ = true;
-            else snake_taskbar_ = true;
+            else memory_hunter_taskbar_ = true;
             active_ = id;
             foreground_window_ = id;
             menu_open_ = false;
@@ -403,7 +403,7 @@ namespace
                 else if (id == WINDOW_SYSTEM_INFO) system_info_taskbar_ = false;
                 else if (id == WINDOW_CLOCK) clock_taskbar_ = false;
                 else if (id == WINDOW_UNIT_CONVERTER) unit_converter_taskbar_ = false;
-                else snake_taskbar_ = false;
+                else memory_hunter_taskbar_ = false;
                 render();
                 return;
             }
@@ -455,7 +455,7 @@ namespace
             draw_logo_small(11, y + 9, 20);
             user::gui::text(36, y + 11, "Baslat", user::gui::COLOR_TEXT);
 
-            for (uint32_t id = WINDOW_FILE; id <= WINDOW_SNAKE; ++id)
+            for (uint32_t id = WINDOW_FILE; id <= WINDOW_MEMORY_HUNTER; ++id)
             {
                 if (!taskbar_visible(id))
                     continue;
@@ -470,7 +470,7 @@ namespace
         uint32_t task_button_width() const
         {
             uint32_t count = 0;
-            for (uint32_t id = WINDOW_FILE; id <= WINDOW_SNAKE; ++id)
+            for (uint32_t id = WINDOW_FILE; id <= WINDOW_MEMORY_HUNTER; ++id)
                 if (taskbar_visible(id))
                     ++count;
             if (count == 0)
@@ -492,7 +492,7 @@ namespace
             if (id == WINDOW_SYSTEM_INFO) return system_info_taskbar_;
             if (id == WINDOW_CLOCK) return clock_taskbar_;
             if (id == WINDOW_UNIT_CONVERTER) return unit_converter_taskbar_;
-            return id == WINDOW_SNAKE && snake_taskbar_;
+            return id == WINDOW_MEMORY_HUNTER && memory_hunter_taskbar_;
         }
 
         const char *taskbar_label(uint32_t id) const
@@ -902,7 +902,7 @@ namespace
                 else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 312) &&
                          y < static_cast<int32_t>(menu_y + 346))
-                    open_window(WINDOW_SNAKE);
+                    open_window(WINDOW_MEMORY_HUNTER);
                 else if (x >= 51 && x < 213 &&
                          y >= static_cast<int32_t>(menu_y + 350) &&
                          y < static_cast<int32_t>(menu_y + 384))
@@ -936,7 +936,7 @@ namespace
                 }
                 else
                 {
-                    for (uint32_t id = WINDOW_FILE; id <= WINDOW_SNAKE; ++id)
+                    for (uint32_t id = WINDOW_FILE; id <= WINDOW_MEMORY_HUNTER; ++id)
                     {
                         if (taskbar_visible(id) &&
                             x >= static_cast<int32_t>(taskbar_app_x(id)) &&
@@ -984,7 +984,7 @@ namespace
             else if (x >= 18 && x < 72 && y >= 244 && y < 308)
                 open_window(WINDOW_TASK_MANAGER);
             else if (x >= 18 && x < 72 && y >= 318 && y < 382)
-                open_window(WINDOW_SNAKE);
+                open_window(WINDOW_MEMORY_HUNTER);
         }
 
         void handle_mouse(const user::InputEvent &event)
@@ -1063,7 +1063,7 @@ namespace
         bool system_info_taskbar_;
         bool clock_taskbar_;
         bool unit_converter_taskbar_;
-        bool snake_taskbar_;
+        bool memory_hunter_taskbar_;
         bool about_open_;
         bool menu_open_;
         bool console_mode_;
