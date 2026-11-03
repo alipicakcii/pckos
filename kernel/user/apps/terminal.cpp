@@ -231,7 +231,7 @@ namespace user::apps
         {
             print_line("Komutlar: help, clear, about, ticks, mem, threads, dmesg, ls, pwd, cat, echo, run");
             print_line("cat, PCKFS icindeki metin dosyalarini okur.");
-            print_line("run /apps/new_demo.bin: uygulamayi ayri surecte baslatir.");
+            
         }
         else if (equal(command_, "clear"))
         {
