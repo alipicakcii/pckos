@@ -38,6 +38,10 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ## Ekran görüntüleri
 
+### Terminal
+
+![PCKOS masaüstünde açık Terminal](assets/screenshots/qemu-terminal-start.png)
+
 ### Hesap Makinesi
 
 ![PCKOS masaüstünde açık Hesap Makinesi](assets/screenshots/qemu-calculator.png)
@@ -49,10 +53,6 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 ### Dosya Yöneticisi ve Hesap Makinesi
 
 ![PCKOS masaüstünde Dosya Yöneticisi ve Hesap Makinesi pencereleri](assets/screenshots/qemu-file-manager.png)
-
-### Terminal
-
-![PCKOS masaüstünde açık Terminal](assets/screenshots/qemu-terminal-start.png)
 
 ## QEMU'da çalıştırma
 

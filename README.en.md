@@ -37,6 +37,10 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 ## Screenshots
 
+### Terminal
+
+![Terminal open on the PCKOS desktop](assets/screenshots/qemu-terminal-start.png)
+
 ### Calculator
 
 ![Calculator open on the PCKOS desktop](assets/screenshots/qemu-calculator.png)
@@ -48,10 +52,6 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 ### File Manager and Calculator
 
 ![File Manager and Calculator windows on the PCKOS desktop](assets/screenshots/qemu-file-manager.png)
-
-### Terminal
-
-![Terminal open on the PCKOS desktop](assets/screenshots/qemu-terminal-start.png)
 
 ## Run in QEMU
 
