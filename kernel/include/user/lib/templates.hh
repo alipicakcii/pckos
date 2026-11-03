@@ -127,6 +127,8 @@ constexpr typename remove_reference<_Tp>::type &&move(_Tp &&__t)
     return static_cast<typename remove_reference<_Tp>::type &&>(__t);
 }
 
+
+
 // forward şablon fonksiyonları mükemmel aktarım
 template <typename _Tp>
 constexpr _Tp &&forward(typename remove_reference<_Tp>::type &__t)
