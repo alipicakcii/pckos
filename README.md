@@ -7,7 +7,7 @@ Yaklaşık yedi yıl önce kendi işletim sistemi çekirdeğimi yazmaya başlad�
 Projeye hiçbir zaman tam zamanlı olarak odaklanma fırsatım olmadı. Son iki yıldır da geliştirme sürecinede eskiye nazaran  ara vermiş durumdayım.
 Artık PCKOS'u açık kaynak olarak paylaşmaya karar verdim. Amacım, projeye ilgi duyan insanlarla bir topluluk oluşturmak ve kaldığımız yerden devam etmek. :)
 
-Daha fazla bilgi için: [PCKOS blog yazım](https://pckblog.com/pckos.html)
+Daha fazla bilgi için blog yazım: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
 Güncel derlemeyi denemek için iki dosyayı da indirin:
 
