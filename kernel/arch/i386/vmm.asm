@@ -7,9 +7,9 @@ global change_pd
 global invalidate
 
 ; Bu fonsksiyon işlemcinin sayfalama unitesini etkinleştirir
-; 4KB sayfa desteğini etkinleştiri
-; 4M sayfa desteğini etkimşeitir. Pekiyi işletim sistemi 4M sayfamı olarak çalışacak? 
-; Hayır sadece belleğin tepesi (0x0...) yani çekirdek kodları 4M kolaylık açısından
+; çekirdeğin ilk 16MB kısmı 4M sayfalama olarak eşlenmiştir
+; geri kalan kısım 4KB dir kullanıcı alanıda dahil
+; 4M eşleşme ilk 16MB için sadece kolaylık içindir
 _enable_paging:
         push   ebp
         mov    ebp,esp
