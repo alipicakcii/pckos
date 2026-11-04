@@ -83,6 +83,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             user::graphics_cursor(mouse_x, mouse_y, true);
             const bool pressed = (event.buttons & 1U) != 0 &&
                 ((last_buttons & 1U) == 0 || (event.buttons & 0x100U) != 0);
+            terminal.mouse(mouse_x - static_cast<int32_t>(x + 7),
+                           mouse_y - static_cast<int32_t>(y + 32),
+                           event.buttons, pressed);
             if (pressed && mouse_x >= static_cast<int32_t>(x + width - 47) &&
                 mouse_x < static_cast<int32_t>(x + width - 28) &&
                 mouse_y >= static_cast<int32_t>(y + 5) &&

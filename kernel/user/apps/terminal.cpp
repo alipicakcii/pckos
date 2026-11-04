@@ -64,6 +64,17 @@ namespace user::apps
     {
         dirty_ = 0;
         log_cursor_ = 0;
+        history_count_ = 0;
+        history_index_ = 0;
+        scroll_offset_ = 0;
+        scrollbar_x_ = 0;
+        scrollbar_y_ = 0;
+        scrollbar_height_ = 0;
+        scrollbar_thumb_y_ = 0;
+        scrollbar_thumb_height_ = 0;
+        maximum_scroll_ = 0;
+        scrollbar_grab_offset_ = 0;
+        scrollbar_dragging_ = false;
         reset();
     }
 
@@ -77,6 +88,11 @@ namespace user::apps
         foreground_process_ = 0;
         output_open_ = false;
         command_length_ = 0;
+        history_count_ = 0;
+        history_index_ = 0;
+        scroll_offset_ = 0;
+        scrollbar_dragging_ = false;
+        history_draft_[0] = '\0';
         command_input_.clear();
         print_line("PCKOS komut kabugu");
         print_line("Komutlar icin help yazin.");
@@ -91,6 +107,70 @@ namespace user::apps
         for (uint32_t column = 0; column < MAX_COLUMNS; ++column)
             lines_[MAX_LINES - 1][column] = '\0';
         line_count_ = MAX_LINES - 1;
+    }
+
+    void Terminal::remember_command()
+    {
+        if (command_length_ == 0)
+            return;
+        if (history_count_ != 0 &&
+            equal(command_history_[history_count_ - 1], command_))
+        {
+            history_index_ = history_count_;
+            return;
+        }
+        if (history_count_ == COMMAND_HISTORY_SIZE)
+        {
+            for (uint32_t i = 1; i < COMMAND_HISTORY_SIZE; ++i)
+            {
+                uint32_t j = 0;
+                while (j < MAX_COMMAND && command_history_[i][j] != '\0')
+                {
+                    command_history_[i - 1][j] = command_history_[i][j];
+                    ++j;
+                }
+                command_history_[i - 1][j] = '\0';
+            }
+            --history_count_;
+        }
+        uint32_t i = 0;
+        while (i < command_length_ && i < MAX_COMMAND)
+        {
+            command_history_[history_count_][i] = command_[i];
+            ++i;
+        }
+        command_history_[history_count_][i] = '\0';
+        ++history_count_;
+        history_index_ = history_count_;
+    }
+
+    void Terminal::recall_previous_command()
+    {
+        if (history_count_ == 0 || history_index_ == 0)
+            return;
+        if (history_index_ == history_count_)
+        {
+            uint32_t i = 0;
+            while (i < command_length_ && i < MAX_COMMAND)
+            {
+                history_draft_[i] = command_[i];
+                ++i;
+            }
+            history_draft_[i] = '\0';
+        }
+        --history_index_;
+        command_input_.set_text(command_history_[history_index_]);
+        command_length_ = command_input_.length();
+    }
+
+    void Terminal::recall_next_command()
+    {
+        if (history_index_ >= history_count_)
+            return;
+        ++history_index_;
+        command_input_.set_text(history_index_ == history_count_
+            ? history_draft_ : command_history_[history_index_]);
+        command_length_ = command_input_.length();
     }
 
     void Terminal::print_line(const char *value)
@@ -217,6 +297,10 @@ namespace user::apps
 
     void Terminal::execute()
     {
+        remember_command();
+        history_index_ = history_count_;
+        history_draft_[0] = '\0';
+        scroll_offset_ = 0;
         char echoed[MAX_COMMAND + 10];
         const char *prefix = "pckos> ";
         uint32_t at = 0;
@@ -390,10 +474,13 @@ namespace user::apps
         user::gui::frame(x, y, width, height, user::gui::COLOR_BLACK, true);
         const uint32_t text_x = x + 8;
         const uint32_t text_y = y + 6;
-        const uint32_t columns = (width - 16) / user::gui::FONT_WIDTH;
+        const uint32_t columns = (width - 28) / user::gui::FONT_WIDTH;
         const uint32_t row_height = user::gui::FONT_HEIGHT + 2;
         const uint32_t rows = (height - 12) / row_height;
         const uint32_t visible_output_rows = rows - 1;
+        scrollbar_x_ = width - 13;
+        scrollbar_y_ = 6;
+        scrollbar_height_ = rows * row_height;
         user::gui::push_clip(text_x, text_y, columns * user::gui::FONT_WIDTH,
                              rows * row_height);
 
@@ -405,8 +492,12 @@ namespace user::apps
             const uint32_t size = length(lines_[line]);
             total_rows += size == 0 ? 1 : (size + columns - 1) / columns;
         }
-        uint32_t skip_rows = total_rows > visible_output_rows
+        const uint32_t maximum_scroll = total_rows > visible_output_rows
             ? total_rows - visible_output_rows : 0;
+        maximum_scroll_ = maximum_scroll;
+        if (scroll_offset_ > maximum_scroll)
+            scroll_offset_ = maximum_scroll;
+        uint32_t skip_rows = maximum_scroll - scroll_offset_;
         uint32_t drawn_rows = 0;
         for (uint32_t line = 0; line < line_count_; ++line)
         {
@@ -435,16 +526,31 @@ namespace user::apps
             }
         }
 
+        const uint32_t thumb_height = total_rows <= visible_output_rows || total_rows == 0
+            ? scrollbar_height_
+            : (scrollbar_height_ * visible_output_rows) / total_rows;
+        scrollbar_thumb_height_ = thumb_height < 12 ? 12 : thumb_height;
+        if (scrollbar_thumb_height_ > scrollbar_height_)
+            scrollbar_thumb_height_ = scrollbar_height_;
+        const uint32_t thumb_travel = scrollbar_height_ - scrollbar_thumb_height_;
+        const uint32_t thumb_offset = maximum_scroll == 0 || thumb_travel == 0 ? 0
+            : (scroll_offset_ * thumb_travel) / maximum_scroll;
+        scrollbar_thumb_y_ = scrollbar_y_ + thumb_travel - thumb_offset;
         const uint32_t prompt_y = text_y + drawn_rows * row_height;
         const uint32_t prompt_columns = foreground_process_ == 0 ? 7 : 0;
-        if (foreground_process_ == 0)
+        if (foreground_process_ == 0 && scroll_offset_ == 0)
             user::gui::text(text_x, prompt_y, "pckos> ", 0xFFC0FFC0);
         const uint32_t input_columns = columns - prompt_columns;
         uint32_t input_x = text_x + prompt_columns * user::gui::FONT_WIDTH;
-        command_input_.draw_inline(input_x, prompt_y,
-            input_columns * user::gui::FONT_WIDTH, true, 0xFFC0FFC0,
-            0xFFC0FFC0, true);
+        if (scroll_offset_ == 0)
+            command_input_.draw_inline(input_x, prompt_y,
+                input_columns * user::gui::FONT_WIDTH, true, 0xFFC0FFC0,
+                0xFFC0FFC0, true);
         user::gui::pop_clip();
+        user::gui::fill(x + scrollbar_x_, y + scrollbar_y_, 8,
+                        scrollbar_height_, 0xFF203526);
+        user::gui::frame(x + scrollbar_x_, y + scrollbar_thumb_y_, 8,
+                         scrollbar_thumb_height_, user::gui::COLOR_FACE, false);
         user::gui::pop_clip();
     }
 
@@ -452,7 +558,19 @@ namespace user::apps
     {
         LockGuard guard(lock_);
         dirty_ = 1;
-        if (key_value == 4 && foreground_process_ != 0)
+        if (foreground_process_ == 0 && key_value == 0xE2)
+            recall_previous_command();
+        else if (foreground_process_ == 0 && key_value == 0xE3)
+            recall_next_command();
+        else if (foreground_process_ == 0 && key_value == 0xE6)
+        {
+            scroll_offset_ += 8;
+        }
+        else if (foreground_process_ == 0 && key_value == 0xE7)
+        {
+            scroll_offset_ = scroll_offset_ > 8 ? scroll_offset_ - 8 : 0;
+        }
+        else if (key_value == 4 && foreground_process_ != 0)
         {
             const int32_t result = user::terminal_send(foreground_process_, command_,
                                                        command_length_);
@@ -482,6 +600,59 @@ namespace user::apps
         {
             command_length_ = command_input_.length();
         }
+    }
+
+    void Terminal::mouse(int32_t x, int32_t y, uint32_t buttons, bool pressed)
+    {
+        LockGuard guard(lock_);
+        const bool held = (buttons & 1U) != 0;
+        const int32_t track_top = static_cast<int32_t>(scrollbar_y_);
+        const int32_t track_bottom = track_top + static_cast<int32_t>(scrollbar_height_);
+        const int32_t thumb_top = static_cast<int32_t>(scrollbar_thumb_y_);
+        const int32_t thumb_bottom = thumb_top +
+            static_cast<int32_t>(scrollbar_thumb_height_);
+        const int32_t thumb_travel = static_cast<int32_t>(scrollbar_height_ -
+            scrollbar_thumb_height_);
+        bool changed = false;
+
+        if (pressed && x >= static_cast<int32_t>(scrollbar_x_ - 2) &&
+            x < static_cast<int32_t>(scrollbar_x_ + 11) &&
+            y >= track_top && y < track_bottom && maximum_scroll_ != 0)
+        {
+            if (y >= thumb_top && y < thumb_bottom)
+            {
+                scrollbar_dragging_ = true;
+                scrollbar_grab_offset_ = y - thumb_top;
+            }
+            else if (thumb_travel > 0)
+            {
+                int32_t next_top = y - track_top -
+                    static_cast<int32_t>(scrollbar_thumb_height_ / 2);
+                if (next_top < 0) next_top = 0;
+                if (next_top > thumb_travel) next_top = thumb_travel;
+                scroll_offset_ = maximum_scroll_ - static_cast<uint32_t>(
+                    (static_cast<uint32_t>(next_top) * maximum_scroll_) / thumb_travel);
+                changed = true;
+            }
+        }
+
+        if (held && scrollbar_dragging_ && thumb_travel > 0)
+        {
+            int32_t next_top = y - track_top - scrollbar_grab_offset_;
+            if (next_top < 0) next_top = 0;
+            if (next_top > thumb_travel) next_top = thumb_travel;
+            const uint32_t next_offset = maximum_scroll_ - static_cast<uint32_t>(
+                (static_cast<uint32_t>(next_top) * maximum_scroll_) / thumb_travel);
+            if (next_offset != scroll_offset_)
+            {
+                scroll_offset_ = next_offset;
+                changed = true;
+            }
+        }
+        if (!held)
+            scrollbar_dragging_ = false;
+        if (changed)
+            dirty_ = 1;
     }
 
     void Terminal::post_key(int32_t key_value)
