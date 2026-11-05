@@ -47,15 +47,13 @@ namespace kernel
         constexpr uint32_t USER_THREAD_STACK_BASE = USER_STACK_ADDRESS +
             USER_STACK_PAGES * PAGESIZE_4K + PAGESIZE_4K;
         constexpr uint32_t USER_PROCESS_COUNT = 8;
-        constexpr uint32_t USER_HEAP_ADDRESS = USER_CODE_ADDRESS + 0x100000;
-        constexpr uint32_t USER_HEAP_BYTES = 3 * 1024 * 1024;
+        constexpr uint32_t USER_HEAP_ADDRESS = USER_CODE_ADDRESS + 0x01000000;
+        constexpr uint32_t USER_HEAP_BYTES = 32 * 1024 * 1024;
         constexpr uint32_t USER_HEAP_PAGES = USER_HEAP_BYTES / PAGESIZE_4K;
         constexpr uint32_t USER_HEAP_ALLOCATION_COUNT = 1024;
         static_assert(USER_THREAD_STACK_BASE +
-            USER_THREAD_STACK_COUNT * USER_THREAD_STACK_BYTES <= USER_HEAP_ADDRESS,
+            USER_THREAD_STACK_COUNT * USER_THREAD_STACK_BYTES < USER_HEAP_ADDRESS,
             "User heap overlaps thread stacks");
-        static_assert((USER_HEAP_ADDRESS + USER_HEAP_BYTES - 1) >> 22 ==
-            USER_CODE_ADDRESS >> 22, "User heap must share the user page table");
         constexpr uint32_t RING0_INTERRUPT_STACK_SIZE = 16 * 1024;
         constexpr uint32_t USER_PAGE_DIRECTORY_INDEX = USER_CODE_ADDRESS >> 22;
         constexpr int32_t ERROR_NO_ENTRY = -2;
@@ -209,14 +207,20 @@ namespace kernel
                 unmap_user_page(space, USER_CODE_ADDRESS + page * PAGESIZE_4K);
 
             auto *directory = reinterpret_cast<uint32_t *>(space.page_directory_address);
-            const uint32_t table_entry = directory[USER_PAGE_DIRECTORY_INDEX];
-            directory[USER_PAGE_DIRECTORY_INDEX] = 0;
+            for (uint32_t index = USER_PAGE_DIRECTORY_INDEX; index < 1023; ++index)
+            {
+                const uint32_t table_entry = directory[index];
+                if ((table_entry & (PG_PRESENT | PG_USER | PG_4MB)) !=
+                    (PG_PRESENT | PG_USER))
+                    continue;
+                directory[index] = 0;
+                active_virtual_memory->release_page_frame_4k(
+                    table_entry & 0xFFFFF000);
+            }
             const uint32_t return_cr3 = restore_kernel
                 ? KERN_PAGE_DIRECTORY : old_cr3;
             if (return_cr3 != space.page_directory_address)
                 mem::change_pd(return_cr3);
-            if ((table_entry & (PG_PRESENT | PG_4MB)) == PG_PRESENT)
-                active_virtual_memory->release_page_frame_4k(table_entry & 0xFFFFF000);
             memset(reinterpret_cast<void *>(space.page_directory_address), 0,
                    PAGESIZE_4K);
             memset(&space, 0, sizeof(space));

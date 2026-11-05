@@ -296,7 +296,7 @@ if (numbers != nullptr) {
 }
 ```
 
-Her süreçte `0x40100000–0x40400000` adres aralığında 3 MiB'lık heap vardır; fiziksel sayfalar ihtiyaç oldukça ayrılır. Aynı süreçteki thread'ler bu alanı paylaşır, farklı süreçlerin sayfa eşlemeleri ayrıdır. Aynı anda en çok 1024 tahsis tutulur. Varsayılan hizalama 16 bayttır; ikinin kuvveti olan hizalamalar en çok 1 MiB'a kadar kabul edilir. Küçük tahsisler sayfaları paylaşır; bir sayfadaki son tahsis silinince fiziksel sayfa geri verilir. Süreç kapanınca `delete` edilmemiş tahsisler de temizlenir.
+Her süreçte `0x41000000–0x43000000` adres aralığında 32 MiB'a kadar heap vardır; fiziksel sayfalar ihtiyaç oldukça ayrılır. Aynı süreçteki thread'ler bu alanı paylaşır, farklı süreçlerin sayfa eşlemeleri ayrıdır. Aynı anda en çok 1024 tahsis tutulur. Varsayılan hizalama 16 bayttır; ikinin kuvveti olan hizalamalar en çok 1 MiB'a kadar kabul edilir. Küçük tahsisler sayfaları paylaşır; bir sayfadaki son tahsis silinince fiziksel sayfa geri verilir. Süreç kapanınca `delete` edilmemiş tahsisler de temizlenir.
 
 `heap_alloc(size, alignment)` (syscall 42) ham bellek verir, başarısızlıkta `nullptr` döndürür; `heap_free(address)` (syscall 43) belleği geri verir. Tahsis kayıtları çekirdekte saklanır; yalnızca çağıran sürecin geçerli tahsis başlangıcı serbest bırakılabilir. İşlemler mevcut tek çekirdekli sistemde kesmeler kapalı sistem çağrısı içinde tamamlanır. Normal `new` bellek bulamazsa istisnalar kapalı olduğu için günlüğe hata yazıp çağıran süreci `-12` durumuyla sonlandırır. Hatayı uygulamada ele almak için `new (std::nothrow)` kullanın. `get_heap_usage()` hâlâ çekirdek heap kullanımını bildirir.
 

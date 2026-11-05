@@ -33,6 +33,7 @@ USER_APP_CFLAGS=-m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
 USER_RUNTIME_OBJECTS=user/lib/new.user.o user/lib/memory.user.o user/lib/io.user.o
 USER_APP_OBJECTS=\
 $(USER_RUNTIME_OBJECTS) \
+user/lib/image.user.o \
 user/gui/graphics.user.o \
 user/apps/file_manager.user.o \
 user/apps/terminal.user.o \
@@ -141,12 +142,12 @@ user/lib/new.user.o: user/lib/new.cpp include/user/lib/new.hh include/user/sysca
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/lib/memory.user.o: user/lib/memory.cpp include/user/lib/memory.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+	$(CC) $(USER_APP_CFLAGS) -O2 -c $< -o $@
 
 user/gui/graphics.user.o: user/gui/graphics.cpp include/user/gui.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/file_manager.user.o: user/apps/file_manager.cpp include/user/apps/file_manager.hh include/user/apps/app_thread.hh include/user/gui.hh include/user/syscall.hh
+user/apps/file_manager.user.o: user/apps/file_manager.cpp include/user/apps/file_manager.hh include/user/apps/app_thread.hh include/user/gui.hh include/user/lib/image.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/terminal.user.o: user/apps/terminal.cpp include/user/apps/terminal.hh include/user/apps/app_thread.hh include/user/gui.hh include/user/syscall.hh
@@ -155,7 +156,7 @@ user/apps/terminal.user.o: user/apps/terminal.cpp include/user/apps/terminal.hh 
 user/apps/task_manager.user.o: user/apps/task_manager.cpp include/user/apps/task_manager.hh include/user/apps/app_thread.hh include/user/gui.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/desktop.user.o: user/apps/desktop.cpp include/user/apps/file_manager.hh include/user/apps/terminal.hh include/user/apps/task_manager.hh include/user/gui.hh include/user/syscall.hh
+user/apps/desktop.user.o: user/apps/desktop.cpp include/user/apps/file_manager.hh include/user/apps/terminal.hh include/user/apps/task_manager.hh include/user/gui.hh include/user/lib/image.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/desktop.elf: $(USER_APP_OBJECTS) user/apps/linker.ld
@@ -194,8 +195,8 @@ user/apps/memory_hunter_process.user.o: user/apps/memory_hunter_process.cpp incl
 user/apps/terminal_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_process.user.o user/apps/linker.ld
 	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_process.user.o
 
-user/apps/file_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o
+user/apps/file_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/lib/image.user.o user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/lib/image.user.o user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o
 
 user/apps/task_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o user/apps/linker.ld
 	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o
@@ -290,3 +291,6 @@ install-kernel: pckos.bin
 
 user/lib/io.user.o: user/lib/io.cpp include/user/lib/io.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+
+user/lib/image.user.o: user/lib/image.cpp include/user/lib/image.hh include/user/lib/new.hh include/user/lib/memory.hh include/user/syscall.hh user/lib/stb_image.h
+	$(CC) $(USER_APP_CFLAGS) -O2 -c $< -o $@

@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <user/apps/app_thread.hh>
 #include <user/gui.hh>
+#include <user/lib/image.hh>
 #include <user/syscall.hh>
 
 namespace user::apps
@@ -29,6 +30,7 @@ namespace user::apps
         bool matches_search(const char *name) const;
         void activate_selected();
         void load_preview(const user::DirectoryEntry &entry);
+        void clear_preview();
         void go_parent();
         bool enter_directory(const user::DirectoryEntry &entry);
         void draw_row(uint32_t x, uint32_t y, uint32_t width,
@@ -45,6 +47,7 @@ namespace user::apps
         bool search_focused_;
         char preview_[4096];
         uint32_t preview_size_;
+        user::image::Image preview_image_{};
         uint32_t last_click_index_;
         uint32_t last_click_ticks_;
         AppEventQueue<32> events_;

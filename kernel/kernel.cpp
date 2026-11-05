@@ -150,7 +150,7 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
         _kprintf("Zamanlayici: Round Robin, PIT 100 Hz\n");
         _kprintf("Sistem cagrilari: int 0x80 | kullanici yetki seviyesi: 3\n");
         _kprintf("Uygulama girisi: 0x40000000 | ayri surec adres alanlari\n");
-        _kprintf("Kullanici heap: 3 MiB/surec | ana yigin: 128 KiB\n");
+        _kprintf("Kullanici heap: 32 MiB/surec | ana yigin: 128 KiB\n");
         _kprintf("Standart akislar: stdin=0 stdout=1 stderr=2 | terminal baglantisi\n");
         _kprintf("Cekirdek heap kullanimi: %u bayt\n", mem::MemAlloc::get_kernel_heap_used());
         _kprintf("Masaustu baslatiliyor. Sistem konsolu: ESC | gunluk: dmesg\n");

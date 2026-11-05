@@ -14,11 +14,11 @@ namespace device
         constexpr uint8_t STATUS_BSY = 0x80;
         constexpr uint32_t WAIT_LIMIT = 1000000;
 
-        uint16_t inw(uint16_t port)
+        void read_words(uint16_t port, void *buffer, uint32_t count)
         {
-            uint16_t value;
-            asm volatile("inw %1, %0" : "=a"(value) : "Nd"(port));
-            return value;
+            // Tekrarlı port okuması, sanal makinede her sözcük için ayrı çıkışı önler.
+            asm volatile("cld; rep insw"
+                : "+D"(buffer), "+c"(count) : "d"(port) : "memory", "cc");
         }
 
         void outw(uint16_t port, uint16_t value)
@@ -85,8 +85,7 @@ namespace device
             return false;
 
         uint16_t identify[256];
-        for (uint32_t i = 0; i < 256; ++i)
-            identify[i] = inw(io_base_);
+        read_words(io_base_, identify, 256);
 
         sector_count_ = static_cast<uint32_t>(identify[60]) |
                         (static_cast<uint32_t>(identify[61]) << 16);
@@ -111,12 +110,7 @@ namespace device
         if (!wait_ready(true))
             return false;
 
-        for (uint32_t i = 0; i < SECTOR_SIZE / 2; ++i)
-        {
-            const uint16_t word = inw(io_base_);
-            buffer[i * 2] = static_cast<uint8_t>(word);
-            buffer[i * 2 + 1] = static_cast<uint8_t>(word >> 8);
-        }
+        read_words(io_base_, buffer, SECTOR_SIZE / 2);
         io_delay();
         return wait_ready(false);
     }

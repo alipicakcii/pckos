@@ -10,7 +10,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     for (size_t i = 0; i < 50; i++)
     {
         auto id = user::thread_id();
-        print("val=%d id=%d\n",i++, id);
+        print("val=%d id=%d\n",i, id);
         user::thread_sleep(5);
     }
     

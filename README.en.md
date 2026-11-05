@@ -291,7 +291,7 @@ if (numbers != nullptr) {
 }
 ```
 
-Each process has a 3 MiB heap at `0x40100000–0x40400000`; physical pages are allocated on demand. Threads in the same process share this heap, while different processes have separate page mappings. Up to 1024 allocations can be live at once. Default alignment is 16 bytes; power-of-two alignments up to 1 MiB are accepted. Small allocations share pages; freeing the last allocation on a page releases that physical page. Process exit also reclaims allocations that were not deleted.
+Each process has a heap of up to 32 MiB at `0x41000000–0x43000000`; physical pages are allocated on demand. Threads in the same process share this heap, while different processes have separate page mappings. Up to 1024 allocations can be live at once. Default alignment is 16 bytes; power-of-two alignments up to 1 MiB are accepted. Small allocations share pages; freeing the last allocation on a page releases that physical page. Process exit also reclaims allocations that were not deleted.
 
 `heap_alloc(size, alignment)` (syscall 42) returns raw memory or `nullptr` on failure; `heap_free(address)` (syscall 43) releases it. Allocation records are stored in the kernel; only a valid allocation start in the calling process can be freed. Operations complete inside the syscall with interrupts disabled on the current single-core system. If normal `new` cannot allocate memory, it logs an error and terminates the calling process with status `-12`, since exceptions are disabled. Use `new (std::nothrow)` to handle failure in the application. `get_heap_usage()` still reports kernel heap usage.
 

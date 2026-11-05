@@ -4,6 +4,7 @@
 #include <user/apps/task_manager.hh>
 #include <user/apps/terminal.hh>
 #include <user/gui.hh>
+#include <user/lib/image.hh>
 #include <user/syscall.hh>
 
 namespace
@@ -49,6 +50,10 @@ namespace
               clock_taskbar_(false), unit_converter_taskbar_(false),
               memory_hunter_taskbar_(false),
               about_open_(false), menu_open_(false),
+              context_menu_open_(false), settings_open_(false),
+              wallpaper_error_(false), wallpaper_count_(0), wallpaper_selected_(0),
+              wallpaper_first_(0),
+              context_menu_x_(0), context_menu_y_(0),
               console_mode_(false), dragging_(false), drag_window_(0), active_(0),
               mouse_x_(0), mouse_y_(0), last_buttons_(0), drag_offset_x_(0),
               drag_offset_y_(0)
@@ -60,6 +65,7 @@ namespace
             terminal_bounds_ = centered_window(560, 340, 55);
             task_bounds_ = centered_window(720, 470, 75);
             logo_available_ = load_logo();
+            refresh_wallpapers();
         }
 
         [[noreturn]] void run()
@@ -581,6 +587,162 @@ namespace
             user::gui::pop_clip();
         }
 
+        static bool is_png_name(const char *name)
+        {
+            uint32_t size = 0;
+            while (name[size] != '\0') ++size;
+            if (size < 4 || name[size - 4] != '.')
+                return false;
+            char p = name[size - 3];
+            char n = name[size - 2];
+            char g = name[size - 1];
+            if (p >= 'A' && p <= 'Z') p = static_cast<char>(p - 'A' + 'a');
+            if (n >= 'A' && n <= 'Z') n = static_cast<char>(n - 'A' + 'a');
+            if (g >= 'A' && g <= 'Z') g = static_cast<char>(g - 'A' + 'a');
+            return p == 'p' && n == 'n' && g == 'g';
+        }
+
+        void refresh_wallpapers()
+        {
+            wallpaper_count_ = 0;
+            wallpaper_first_ = 0;
+            const int32_t root = user::root_inode();
+            if (root < 0)
+                return;
+            uint32_t home_inode = UINT32_MAX;
+            for (uint32_t index = 0; index < 256; ++index)
+            {
+                user::DirectoryEntry entry{};
+                if (user::read_directory(static_cast<uint32_t>(root), index,
+                                         &entry) != 1)
+                    break;
+                if (entry.type == user::directory_type &&
+                    entry.name[0] == 'h' && entry.name[1] == 'o' &&
+                    entry.name[2] == 'm' && entry.name[3] == 'e' &&
+                    entry.name[4] == '\0')
+                {
+                    home_inode = entry.inode;
+                    break;
+                }
+            }
+            if (home_inode == UINT32_MAX)
+                return;
+            for (uint32_t index = 0; index < 256 &&
+                 wallpaper_count_ < WALLPAPER_CAPACITY; ++index)
+            {
+                user::DirectoryEntry entry{};
+                if (user::read_directory(home_inode, index, &entry) != 1)
+                    break;
+                if (entry.type != user::directory_type && is_png_name(entry.name))
+                    wallpaper_entries_[wallpaper_count_++] = entry;
+            }
+            if (wallpaper_selected_ >= wallpaper_count_)
+                wallpaper_selected_ = wallpaper_count_ == 0 ? 0 : wallpaper_count_ - 1;
+        }
+
+        void settings_bounds(uint32_t *x, uint32_t *y,
+                             uint32_t *width, uint32_t *height) const
+        {
+            *width = min_u32(520, screen_.width > 20 ? screen_.width - 20 : screen_.width);
+            *height = min_u32(420,
+                screen_.height > TASKBAR_HEIGHT + 12
+                    ? screen_.height - TASKBAR_HEIGHT - 12 : screen_.height);
+            *x = (screen_.width - *width) / 2;
+            *y = (screen_.height - TASKBAR_HEIGHT - *height) / 2;
+        }
+
+        void open_screen_settings()
+        {
+            context_menu_open_ = false;
+            menu_open_ = false;
+            settings_open_ = true;
+            wallpaper_error_ = false;
+            refresh_wallpapers();
+            render();
+        }
+
+        void apply_wallpaper()
+        {
+            if (wallpaper_count_ == 0 || wallpaper_selected_ >= wallpaper_count_)
+            {
+                wallpaper_error_ = true;
+                return;
+            }
+            char path[96] = "/home/";
+            uint32_t at = 6;
+            const char *name = wallpaper_entries_[wallpaper_selected_].name;
+            while (*name != '\0' && at + 1 < sizeof(path))
+                path[at++] = *name++;
+            path[at] = '\0';
+            user::image::Image loaded{};
+            if (!user::image::load_png(path, screen_.width, screen_.height,
+                                       &loaded, true))
+            {
+                wallpaper_error_ = true;
+                return;
+            }
+            user::image::release(&wallpaper_image_);
+            wallpaper_image_ = loaded;
+            wallpaper_error_ = false;
+            settings_open_ = false;
+        }
+
+        void draw_context_menu()
+        {
+            const uint32_t width = 176;
+            const uint32_t height = 38;
+            const uint32_t x = context_menu_x_ + width > screen_.width
+                ? screen_.width - width : context_menu_x_;
+            const uint32_t taskbar_y = screen_.height > TASKBAR_HEIGHT
+                ? screen_.height - TASKBAR_HEIGHT : 0;
+            const uint32_t y = context_menu_y_ + height > taskbar_y
+                ? taskbar_y > height ? taskbar_y - height : 0
+                : context_menu_y_;
+            context_menu_x_ = x;
+            context_menu_y_ = y;
+            user::gui::frame(x, y, width, height, user::gui::COLOR_FACE);
+            user::gui::button(x + 3, y + 3, width - 6, height - 6,
+                              "Ekran ayarlari");
+        }
+
+        void draw_screen_settings()
+        {
+            uint32_t x, y, width, height;
+            settings_bounds(&x, &y, &width, &height);
+            user::gui::window(x, y, width, height,
+                              "PCKOS - Ekran ayarlari", true);
+            const uint32_t list_x = x + 14;
+            const uint32_t list_y = y + 42;
+            const uint32_t list_width = width - 28;
+            const uint32_t list_height = height > 100 ? height - 100 : 1;
+            user::gui::frame(list_x, list_y, list_width, list_height,
+                             user::gui::COLOR_WHITE, true);
+            user::gui::push_clip(list_x + 2, list_y + 2,
+                                 list_width - 4, list_height - 4);
+            const uint32_t rows = (list_height - 4) / 24;
+            if (wallpaper_count_ == 0)
+                user::gui::text(list_x + 10, list_y + 10,
+                    "PCKFS /home icinde PNG dosyasi yok", 0xFF606060);
+            for (uint32_t row = 0; row < rows &&
+                 wallpaper_first_ + row < wallpaper_count_; ++row)
+            {
+                const uint32_t row_y = list_y + 2 + row * 24;
+                const bool selected = wallpaper_first_ + row == wallpaper_selected_;
+                if (selected)
+                    user::gui::fill(list_x + 2, row_y, list_width - 4, 24,
+                                    user::gui::COLOR_SELECTION);
+                user::gui::text(list_x + 10, row_y + 4,
+                    wallpaper_entries_[wallpaper_first_ + row].name,
+                    selected ? user::gui::COLOR_WHITE : user::gui::COLOR_TEXT);
+            }
+            user::gui::pop_clip();
+            if (wallpaper_error_)
+                user::gui::text(x + 16, y + height - 48,
+                    "PNG acilamadi veya bellek yetersiz.", 0xFF800000);
+            user::gui::button(x + width - 184, y + height - 34, 82, 24, "Uygula");
+            user::gui::button(x + width - 94, y + height - 34, 78, 24, "Iptal");
+        }
+
         void draw_start_menu()
         {
             const uint32_t y = screen_.height > TASKBAR_HEIGHT + 438
@@ -704,6 +866,9 @@ namespace
                 user::gui::push_clip(static_cast<uint32_t>(damage->x),
                     static_cast<uint32_t>(damage->y), damage->width, damage->height);
             user::graphics_clear(user::gui::COLOR_DESKTOP);
+            if (wallpaper_image_.pixels != nullptr)
+                user::gui::bitmap(0, 0, wallpaper_image_.pixels,
+                                  wallpaper_image_.width, wallpaper_image_.height);
             draw_icon_label(18, 22, 0, "PCKOS");
             draw_icon_label(18, 96, 1, "Dosyalar");
             draw_icon_label(18, 170, 2, "Terminal");
@@ -727,8 +892,12 @@ namespace
             draw_taskbar();
             if (menu_open_)
                 draw_start_menu();
+            if (context_menu_open_)
+                draw_context_menu();
             if (about_open_)
                 draw_about();
+            if (settings_open_)
+                draw_screen_settings();
             if (damage != nullptr) user::gui::pop_clip();
             user::gui::end_frame();
         }
@@ -746,6 +915,10 @@ namespace
             {
                 if (console_mode_)
                     console_mode_ = false;
+                else if (settings_open_)
+                    settings_open_ = false;
+                else if (context_menu_open_)
+                    context_menu_open_ = false;
                 else if (menu_open_)
                     menu_open_ = false;
                 else if (about_open_)
@@ -775,7 +948,36 @@ namespace
                 return;
             }
 
-            if (menu_open_ || about_open_) return;
+            if (settings_open_)
+            {
+                uint32_t settings_x, settings_y, settings_width, settings_height;
+                settings_bounds(&settings_x, &settings_y,
+                                &settings_width, &settings_height);
+                const uint32_t list_height = settings_height > 100
+                    ? settings_height - 100 : 1;
+                const uint32_t rows = (list_height > 4 ? list_height - 4 : 1) / 24;
+                if (key == 0xE2 && wallpaper_count_ != 0)
+                {
+                    if (wallpaper_selected_ != 0)
+                        --wallpaper_selected_;
+                    if (wallpaper_selected_ < wallpaper_first_)
+                        wallpaper_first_ = wallpaper_selected_;
+                    wallpaper_error_ = false;
+                }
+                else if (key == 0xE3 && wallpaper_count_ != 0)
+                {
+                    if (wallpaper_selected_ + 1 < wallpaper_count_)
+                        ++wallpaper_selected_;
+                    if (wallpaper_selected_ >= wallpaper_first_ + rows)
+                        wallpaper_first_ = wallpaper_selected_ - rows + 1;
+                    wallpaper_error_ = false;
+                }
+                else if (key == '\n')
+                    apply_wallpaper();
+                render();
+                return;
+            }
+            if (menu_open_ || context_menu_open_ || about_open_) return;
             if (console_mode_)
             {
                 terminal_.key(key);
@@ -858,6 +1060,73 @@ namespace
                 ? screen_.height - TASKBAR_HEIGHT : 0;
             const int32_t x = mouse_x_;
             const int32_t y = mouse_y_;
+            if (settings_open_)
+            {
+                uint32_t settings_x, settings_y, settings_width, settings_height;
+                settings_bounds(&settings_x, &settings_y,
+                                &settings_width, &settings_height);
+                if (x >= static_cast<int32_t>(settings_x + settings_width - 47) &&
+                    x < static_cast<int32_t>(settings_x + settings_width - 6) &&
+                    y >= static_cast<int32_t>(settings_y + 5) &&
+                    y < static_cast<int32_t>(settings_y + 25))
+                {
+                    settings_open_ = false;
+                    render();
+                    return;
+                }
+                if (x >= static_cast<int32_t>(settings_x) &&
+                    x < static_cast<int32_t>(settings_x + settings_width) &&
+                    y >= static_cast<int32_t>(settings_y) &&
+                    y < static_cast<int32_t>(settings_y + settings_height))
+                {
+                    const uint32_t list_x = settings_x + 14;
+                    const uint32_t list_y = settings_y + 42;
+                    const uint32_t list_width = settings_width - 28;
+                    const uint32_t list_height = settings_height > 100
+                        ? settings_height - 100 : 1;
+                    if (x >= static_cast<int32_t>(list_x + 2) &&
+                        x < static_cast<int32_t>(list_x + list_width - 2) &&
+                        y >= static_cast<int32_t>(list_y + 2) &&
+                        y < static_cast<int32_t>(list_y + list_height - 2))
+                    {
+                        const uint32_t row = static_cast<uint32_t>(
+                            y - static_cast<int32_t>(list_y + 2)) / 24;
+                        const uint32_t rows = (list_height - 4) / 24;
+                        if (row < rows && wallpaper_first_ + row < wallpaper_count_)
+                        {
+                            wallpaper_selected_ = wallpaper_first_ + row;
+                            wallpaper_error_ = false;
+                        }
+                    }
+                    else if (x >= static_cast<int32_t>(settings_x + settings_width - 184) &&
+                             x < static_cast<int32_t>(settings_x + settings_width - 102) &&
+                             y >= static_cast<int32_t>(settings_y + settings_height - 34))
+                        apply_wallpaper();
+                    else if (x >= static_cast<int32_t>(settings_x + settings_width - 94) &&
+                             x < static_cast<int32_t>(settings_x + settings_width - 16) &&
+                             y >= static_cast<int32_t>(settings_y + settings_height - 34))
+                        settings_open_ = false;
+                }
+                else
+                    settings_open_ = false;
+                render();
+                return;
+            }
+            if (context_menu_open_)
+            {
+                const bool selected = x >= static_cast<int32_t>(context_menu_x_) &&
+                    x < static_cast<int32_t>(context_menu_x_ + 176) &&
+                    y >= static_cast<int32_t>(context_menu_y_) &&
+                    y < static_cast<int32_t>(context_menu_y_ + 38);
+                if (selected)
+                    open_screen_settings();
+                else
+                {
+                    context_menu_open_ = false;
+                    render();
+                }
+                return;
+            }
             if (about_open_)
             {
                 about_open_ = false;
@@ -1013,6 +1282,17 @@ namespace
                 last_buttons_ = static_cast<uint8_t>(event.buttons);
                 return;
             }
+            const bool right_pressed = (event.buttons & 2U) != 0 &&
+                (last_buttons_ & 2U) == 0;
+            if (right_pressed && !settings_open_ && !dragging_)
+            {
+                context_menu_x_ = static_cast<uint32_t>(mouse_x_);
+                context_menu_y_ = static_cast<uint32_t>(mouse_y_);
+                context_menu_open_ = true;
+                menu_open_ = false;
+                about_open_ = false;
+                render();
+            }
             const bool pressed = (event.buttons & 1U) != 0 &&
                 ((last_buttons_ & 1U) == 0 || (event.buttons & 0x100U) != 0);
             if (pressed)
@@ -1066,6 +1346,17 @@ namespace
         bool memory_hunter_taskbar_;
         bool about_open_;
         bool menu_open_;
+        bool context_menu_open_;
+        bool settings_open_;
+        bool wallpaper_error_;
+        static constexpr uint32_t WALLPAPER_CAPACITY = 32;
+        user::DirectoryEntry wallpaper_entries_[WALLPAPER_CAPACITY];
+        uint32_t wallpaper_count_;
+        uint32_t wallpaper_selected_;
+        uint32_t wallpaper_first_;
+        uint32_t context_menu_x_;
+        uint32_t context_menu_y_;
+        user::image::Image wallpaper_image_{};
         bool console_mode_;
         bool dragging_;
         uint32_t drag_window_;
