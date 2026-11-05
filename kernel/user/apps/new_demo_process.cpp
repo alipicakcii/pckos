@@ -9,6 +9,12 @@
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 {
 
+
+    // 50.000 döngü tekrarında
+    // göstericileri gösteren bir gösterici dizisinde new ile elde edilen adresleri topluyoruz
+    // her 1024 de temizliyoruz
+    // Kodun amacı ring3 de bir prosessin new/delete performanslarını gözlemlekej için
+
     constexpr size_t BATCH_SIZE = 1023;
 
     int **ptrs = new int *[BATCH_SIZE];
