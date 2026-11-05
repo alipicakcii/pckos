@@ -11,6 +11,8 @@ namespace user
     {
         return call(syscall_pc_speaker, frequency, duration_ms);
     }
+
+    
 }
 
 #endif

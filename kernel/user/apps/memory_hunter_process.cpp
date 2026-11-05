@@ -7,6 +7,7 @@
 #include <user/thread.hh>
 #include <user/gui.hh>
 #include <user/window_drag.hh>
+#include <user/audio.hh>
 
 namespace
 {
@@ -23,6 +24,8 @@ namespace
         int32_t x;
         int32_t y;
     };
+
+    void play_food_sound(void *);
 
     class MemoryHunterGame
     {
@@ -51,10 +54,14 @@ namespace
         void key(int32_t value)
         {
             uint32_t next = direction_;
-            if (value == 0xE5 || value == 'd' || value == 'D') next = DIRECTION_RIGHT;
-            else if (value == 0xE3 || value == 's' || value == 'S') next = DIRECTION_DOWN;
-            else if (value == 0xE4 || value == 'a' || value == 'A') next = DIRECTION_LEFT;
-            else if (value == 0xE2 || value == 'w' || value == 'W') next = DIRECTION_UP;
+            if (value == 0xE5 || value == 'd' || value == 'D')
+                next = DIRECTION_RIGHT;
+            else if (value == 0xE3 || value == 's' || value == 'S')
+                next = DIRECTION_DOWN;
+            else if (value == 0xE4 || value == 'a' || value == 'A')
+                next = DIRECTION_LEFT;
+            else if (value == 0xE2 || value == 'w' || value == 'W')
+                next = DIRECTION_UP;
             else if (value == '\n' || value == ' ')
             {
                 if (!started_ || game_over_)
@@ -86,10 +93,14 @@ namespace
             if (!started_ || paused_ || game_over_)
                 return;
             Point next = body_[0];
-            if (direction_ == DIRECTION_RIGHT) ++next.x;
-            else if (direction_ == DIRECTION_DOWN) ++next.y;
-            else if (direction_ == DIRECTION_LEFT) --next.x;
-            else --next.y;
+            if (direction_ == DIRECTION_RIGHT)
+                ++next.x;
+            else if (direction_ == DIRECTION_DOWN)
+                ++next.y;
+            else if (direction_ == DIRECTION_LEFT)
+                --next.x;
+            else
+                --next.y;
 
             if (next.x < 0 || next.x >= static_cast<int32_t>(BOARD_WIDTH) ||
                 next.y < 0 || next.y >= static_cast<int32_t>(BOARD_HEIGHT))
@@ -99,6 +110,7 @@ namespace
             }
 
             const bool eating = next.x == food_.x && next.y == food_.y;
+
             const uint32_t collision_length = eating ? length_ : length_ - 1;
             for (uint32_t i = 0; i < collision_length; ++i)
                 if (body_[i].x == next.x && body_[i].y == next.y)
@@ -112,8 +124,12 @@ namespace
                 body_[i] = body_[i - 1];
             body_[0] = next;
             length_ = new_length;
+
             if (eating)
+            {
+                (void)user::thread_create(&play_food_sound, nullptr, "Yem sesi");
                 place_food();
+            }
         }
 
     private:
@@ -123,27 +139,39 @@ namespace
             direction_ = initial_direction;
             if (direction_ == DIRECTION_RIGHT)
             {
-                body_[0] = {10, 7}; body_[1] = {9, 7};
-                body_[2] = {8, 7}; body_[3] = {7, 7};
-                body_[4] = {6, 7}; body_[5] = {5, 7};
+                body_[0] = {10, 7};
+                body_[1] = {9, 7};
+                body_[2] = {8, 7};
+                body_[3] = {7, 7};
+                body_[4] = {6, 7};
+                body_[5] = {5, 7};
             }
             else if (direction_ == DIRECTION_LEFT)
             {
-                body_[0] = {9, 7}; body_[1] = {10, 7};
-                body_[2] = {11, 7}; body_[3] = {12, 7};
-                body_[4] = {13, 7}; body_[5] = {14, 7};
+                body_[0] = {9, 7};
+                body_[1] = {10, 7};
+                body_[2] = {11, 7};
+                body_[3] = {12, 7};
+                body_[4] = {13, 7};
+                body_[5] = {14, 7};
             }
             else if (direction_ == DIRECTION_DOWN)
             {
-                body_[0] = {10, 5}; body_[1] = {10, 4};
-                body_[2] = {10, 3}; body_[3] = {10, 2};
-                body_[4] = {10, 1}; body_[5] = {10, 0};
+                body_[0] = {10, 5};
+                body_[1] = {10, 4};
+                body_[2] = {10, 3};
+                body_[3] = {10, 2};
+                body_[4] = {10, 1};
+                body_[5] = {10, 0};
             }
             else
             {
-                body_[0] = {10, 8}; body_[1] = {10, 9};
-                body_[2] = {10, 10}; body_[3] = {10, 11};
-                body_[4] = {10, 12}; body_[5] = {10, 13};
+                body_[0] = {10, 8};
+                body_[1] = {10, 9};
+                body_[2] = {10, 10};
+                body_[3] = {10, 11};
+                body_[4] = {10, 12};
+                body_[5] = {10, 13};
             }
             random_state_ = static_cast<uint32_t>(user::get_ticks()) ^ 0x50434B4FU;
             started_ = true;
@@ -164,7 +192,10 @@ namespace
                 bool occupied = false;
                 for (uint32_t i = 0; i < length_; ++i)
                     if (body_[i].x == candidate.x && body_[i].y == candidate.y)
-                    { occupied = true; break; }
+                    {
+                        occupied = true;
+                        break;
+                    }
                 if (!occupied)
                 {
                     food_ = candidate;
@@ -183,6 +214,11 @@ namespace
         bool paused_;
         bool game_over_;
     };
+
+    void play_food_sound(void *)
+    {
+        user::pc_speaker_play(1000, 30);
+    }
 
     void format_count(char *text, uint32_t capacity, const char *label,
                       uint32_t value)
@@ -231,9 +267,10 @@ namespace
         draw_count(content_x + 14, content_y + 12, "Puan: ", game.score());
         const char *state =
             game.game_over() ? "Oyun bitti" : game.paused() ? "Duraklatildi"
-            : game.started() ? "Oynaniyor" : "Hazir";
+                                          : game.started()  ? "Oynaniyor"
+                                                            : "Hazir";
         user::gui::text(content_x + 150, content_y + 12, state,
-            game.game_over() ? 0xFFFF6464 : 0xFFB8F28B);
+                        game.game_over() ? 0xFFFF6464 : 0xFFB8F28B);
         char memory_count[40];
         format_count(memory_count, sizeof(memory_count),
                      "Bellek hucreleri: ", game.score());
@@ -266,8 +303,7 @@ namespace
         const uint32_t pin_width = chip_size / 4 > 1 ? chip_size / 4 : 2;
         for (uint32_t pin = 0; pin < 3; ++pin)
         {
-            const uint32_t pin_x = chip_x + 2 + pin *
-                (chip_size > 6 ? (chip_size - 6) / 2 : 1);
+            const uint32_t pin_x = chip_x + 2 + pin * (chip_size > 6 ? (chip_size - 6) / 2 : 1);
             user::gui::fill(pin_x, chip_y - 2, pin_width, 2, 0xFFB8F265);
             user::gui::fill(pin_x, chip_y + chip_size, pin_width, 2, 0xFFB8F265);
         }
@@ -292,7 +328,7 @@ namespace
                 if (game.direction() == DIRECTION_RIGHT || game.direction() == DIRECTION_LEFT)
                 {
                     const uint32_t eye_x = segment_x +
-                        (game.direction() == DIRECTION_RIGHT ? cell_size - 8 : 5);
+                                           (game.direction() == DIRECTION_RIGHT ? cell_size - 8 : 5);
                     user::gui::fill(eye_x, segment_y + 7, 3, 3, 0xFF012A11);
                     user::gui::fill(eye_x, segment_y + cell_size - 10,
                                     3, 3, 0xFF012A11);
@@ -300,7 +336,7 @@ namespace
                 else
                 {
                     const uint32_t eye_y = segment_y +
-                        (game.direction() == DIRECTION_DOWN ? cell_size - 8 : 5);
+                                           (game.direction() == DIRECTION_DOWN ? cell_size - 8 : 5);
                     user::gui::fill(segment_x + 7, eye_y, 3, 3, 0xFF012A11);
                     user::gui::fill(segment_x + cell_size - 10, eye_y,
                                     3, 3, 0xFF012A11);
@@ -309,8 +345,8 @@ namespace
         }
 
         const char *hint = game.game_over()
-            ? "Oyun bitti | Yon tusu/Enter: yeniden baslat | Esc: cikis"
-            : "Yon tuslari: hareket | P: duraklat | Enter: baslat | Esc: cikis";
+                               ? "Oyun bitti | Yon tusu/Enter: yeniden baslat | Esc: cikis"
+                               : "Yon tuslari: hareket | P: duraklat | Enter: baslat | Esc: cikis";
         user::gui::text(content_x + 14, y + height - 25, hint,
                         0xFFB8F28B);
         user::gui::pop_clip();
@@ -330,13 +366,18 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     const uint32_t height = usable_height - 10 < 500 ? usable_height - 10 : 500;
     uint32_t x = (screen.width - width) / 2 + 20;
     uint32_t y = (usable_height - height) / 2;
-    if (x + width > screen.width) x = screen.width - width;
-    if (y + height > usable_height) y = usable_height - height;
+    if (x + width > screen.width)
+        x = screen.width - width;
+    if (y + height > usable_height)
+        y = usable_height - height;
     uint32_t cell_size = (width - 40) / BOARD_WIDTH;
     const uint32_t height_cell = (height - 150) / BOARD_HEIGHT;
-    if (height_cell < cell_size) cell_size = height_cell;
-    if (cell_size > 25) cell_size = 25;
-    if (cell_size < 6) cell_size = 6;
+    if (height_cell < cell_size)
+        cell_size = height_cell;
+    if (cell_size > 25)
+        cell_size = 25;
+    if (cell_size < 6)
+        cell_size = 6;
 
     if (user::graphics_register_window(x, y, width, height) < 0)
         user::exit(-1);
@@ -369,30 +410,40 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         (void)user::wait_event(&event, 1);
         if (event.type == 1)
         {
-            if (event.value0 == 0x1B) user::exit(0);
+            if (event.value0 == 0x1B)
+                user::exit(0);
             game.key(event.value0);
         }
         else if (event.type == 2)
         {
             int32_t current_x = mouse_x, current_y = mouse_y;
             if (user::graphics_get_cursor(&current_x, &current_y) == 0)
-            { mouse_x = current_x; mouse_y = current_y; }
+            {
+                mouse_x = current_x;
+                mouse_y = current_y;
+            }
             mouse_x += event.value0;
             mouse_y -= event.value1;
-            if (mouse_x < 0) mouse_x = 0;
-            if (mouse_y < 0) mouse_y = 0;
+            if (mouse_x < 0)
+                mouse_x = 0;
+            if (mouse_y < 0)
+                mouse_y = 0;
             if (mouse_x >= static_cast<int32_t>(screen.width))
                 mouse_x = static_cast<int32_t>(screen.width) - 1;
             if (mouse_y >= static_cast<int32_t>(screen.height))
                 mouse_y = static_cast<int32_t>(screen.height) - 1;
             user::graphics_cursor(mouse_x, mouse_y, true);
             const bool pressed = (event.buttons & 1U) != 0 &&
-                ((last_buttons & 1U) == 0 || (event.buttons & 0x100U) != 0);
+                                 ((last_buttons & 1U) == 0 || (event.buttons & 0x100U) != 0);
             if (pressed && mouse_x >= static_cast<int32_t>(x + width - 47) &&
                 mouse_x < static_cast<int32_t>(x + width - 28) &&
                 mouse_y >= static_cast<int32_t>(y + 5) &&
                 mouse_y < static_cast<int32_t>(y + 25))
-            { (void)user::process_minimize(); last_buttons = event.buttons; continue; }
+            {
+                (void)user::process_minimize();
+                last_buttons = event.buttons;
+                continue;
+            }
             if (pressed && mouse_x >= static_cast<int32_t>(x + width - 27) &&
                 mouse_x < static_cast<int32_t>(x + width - 6) &&
                 mouse_y >= static_cast<int32_t>(y + 5) &&
