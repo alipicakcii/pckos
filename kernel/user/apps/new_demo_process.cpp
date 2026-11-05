@@ -3,16 +3,17 @@
 #include <user/lib/new.hh>
 #include <user/lib/io.hh>
 #include <user/syscall.hh>
+#include <user/gui.hh>
+#include <user/window_drag.hh>
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 {
-    // thread id ve sleep demosu
-    for (size_t i = 0; i < 50; i++)
-    {
-        auto id = user::thread_id();
-        print("val=%d id=%d\n",i, id);
-        user::thread_sleep(5);
-    }
-    
-    user::exit(0);
+
+   
+    int *ptr = new int;
+    *ptr = 0x12345678;
+
+
+    print("value=0x%x addr=%p\n", *ptr, ptr);
+    user::exit(1);
 }

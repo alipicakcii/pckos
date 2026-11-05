@@ -249,11 +249,11 @@ user/apps/memory_hunter_process.bin: user/apps/memory_hunter_process.elf
 arch/i386/user_desktop.o: arch/i386/user_desktop.asm user/apps/desktop.bin
 	nasm -felf32 $< -o $@
 
-user/apps/new_demo_process.user.o: user/apps/new_demo_process.cpp include/user/lib/new.hh include/user/syscall.hh
+user/apps/new_demo_process.user.o: user/apps/new_demo_process.cpp include/user/lib/new.hh include/user/syscall.hh include/user/gui.hh include/user/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/new_demo_process.elf: $(USER_RUNTIME_OBJECTS) user/apps/new_demo_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/apps/new_demo_process.user.o
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/apps/new_demo_process.user.o user/gui/graphics.user.o
 
 user/apps/new_demo_process.bin: user/apps/new_demo_process.elf
 	$(OBJCOPY) -O binary $< $@
