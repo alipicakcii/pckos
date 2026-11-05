@@ -85,6 +85,7 @@ device/input/ps2_mouse.o \
 device/ata_pio.o \
 device/rtc.o \
 device/video/frame_buffer.o \
+device/pc_speaker.o \
 fs/pckfs.o \
 panic.o \
 mem/vmm.o \

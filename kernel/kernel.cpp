@@ -117,6 +117,8 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
              framebuffer->get_width(), framebuffer->get_height(), framebuffer->get_pitch());
     show_boot_console(*framebuffer);
 
+
+
     const uint32_t memory_mb = multiboot_info->mem_upper / 1024 + 1;
     device::AtaPioDisk system_disk;
     const bool disk_ready = system_disk.initialize();
@@ -155,6 +157,9 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
         _kprintf("Cekirdek heap kullanimi: %u bayt\n", mem::MemAlloc::get_kernel_heap_used());
         _kprintf("Masaustu baslatiliyor. Sistem konsolu: ESC | gunluk: dmesg\n");
         show_boot_console(*framebuffer);       
+
+        
+        
         const int32_t desktop_status = kernel::user_mode_run_desktop();
         _kprintf("Kullanici alani masaustu sonlandi: %d\n", desktop_status);
     }

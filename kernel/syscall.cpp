@@ -8,6 +8,7 @@
 #include <device/input/ps2_keyboard.hh>
 #include <device/input/ps2_mouse.hh>
 #include <device/rtc.hh>
+#include <device/pc_speaker.hh>
 #include <device/video/frame_buffer.hh>
 #include <fs/pckfs.hh>
 #include <library/kernel_log.hh>
@@ -589,7 +590,7 @@ namespace kernel
                 case user::syscall_exit:
                     user_mode_exit(registers, static_cast<int32_t>(registers->ebx));
                     return;
-
+            
                 case user::syscall_write:
                 {
                     if (registers->ebx != user::stdout_descriptor &&
@@ -1055,6 +1056,20 @@ namespace kernel
                     }
                     registers->eax = static_cast<uint32_t>(lib::kernel_log_snapshot(
                         reinterpret_cast<char *>(registers->ebx), capacity));
+                    return;
+                }
+                case user::syscall_pc_speaker:
+                {
+                    const uint32_t frequency = registers->ebx;
+                    const uint32_t duration_ms = registers->ecx;
+                    if (frequency < 20 || frequency > 20000 ||
+                        duration_ms == 0 || duration_ms > 2000)
+                    {
+                        registers->eax = static_cast<uint32_t>(ERROR_INVALID_ARGUMENT);
+                        return;
+                    }
+                    device::play_note(frequency, duration_ms);
+                    registers->eax = 0;
                     return;
                 }
 

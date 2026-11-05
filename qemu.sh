@@ -13,7 +13,12 @@ cd "$SCRIPT_DIR"
 AUDIO_BACKEND=none
 if command -v pactl >/dev/null 2>&1 && pactl info >/dev/null 2>&1; then
     AUDIO_BACKEND=pa
+elif [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -S "$XDG_RUNTIME_DIR/pipewire-0" ]; then
+    AUDIO_BACKEND=pipewire
+elif [ -d /dev/snd ]; then
+    AUDIO_BACKEND=alsa
 fi
+echo "QEMU ses arka ucu: $AUDIO_BACKEND"
 
 CPU_ARGS="-cpu qemu32 -accel tcg"
 if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
@@ -39,9 +44,9 @@ $DISPLAY_ARGS \
 -cdrom "$SCRIPT_DIR/pckos.iso" \
 -drive file="$SCRIPT_DIR/pckfs.img",format=raw,if=ide,index=0,media=disk \
 -serial none \
--audiodev "$AUDIO_BACKEND",id=snd0 -machine pcspk-audiodev=snd0 \
+-audiodev "$AUDIO_BACKEND",id=snd0 \
 -monitor stdio \
--machine pc,smbios-entry-point-type=32 \
+-machine pc,pcspk-audiodev=snd0,smbios-entry-point-type=32 \
 -rtc base=localtime
 
 

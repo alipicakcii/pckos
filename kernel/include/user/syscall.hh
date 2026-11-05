@@ -56,7 +56,8 @@ namespace user
         syscall_gfx_begin_frame = 17,
         syscall_gfx_end_frame = 18,
         syscall_gfx_push_clip = 19,
-        syscall_gfx_pop_clip = 20
+        syscall_gfx_pop_clip = 20,
+        syscall_pc_speaker =  48,
     };
 
     enum : uint32_t
@@ -150,6 +151,12 @@ namespace user
             : "b"(first), "c"(second), "d"(third), "S"(fourth), "D"(fifth)
             : "memory", "cc");
         return static_cast<int32_t>(result);
+    }
+
+
+    inline int32_t pc_speaker_play(uint32_t frequency, uint32_t duration_ms)
+    {
+        return call(syscall_pc_speaker, frequency, duration_ms);
     }
 
     inline int32_t write(int descriptor, const void *buffer, uint32_t length)

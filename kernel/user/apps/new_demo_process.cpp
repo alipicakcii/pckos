@@ -8,43 +8,21 @@
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 {
+    static constexpr uint32_t melody[] = {
+        523, 587, 659, 698, 784, 698, 659, 587, 523};
 
-
-    // 50.000 döngü tekrarında
-    // göstericileri gösteren bir gösterici dizisinde new ile elde edilen adresleri topluyoruz
-    // her 1024 de temizliyoruz
-    // Kodun amacı ring3 de bir prosessin new/delete performanslarını gözlemlekej için
-
-    constexpr size_t BATCH_SIZE = 1023;
-
-    int **ptrs = new int *[BATCH_SIZE];
-    size_t used = 0;
-
-    for (size_t i = 0; i < 50000; ++i)
+    for (uint32_t i = 0; i < sizeof(melody) / sizeof(melody[0]); ++i)
     {
-        int *ptr = new int;
-        *ptr = static_cast<int>(i);
-        ptrs[used++] = ptr;
-
-        print("val=%d addr=%p\n", *ptr, ptr);
-
-        if (used == BATCH_SIZE)
+        const int32_t result = user::pc_speaker_play(melody[i], 140);
+        if (result < 0)
         {
-            for (size_t x = 0; x < used; ++x)
-            {
-                delete ptrs[x];
-                ptrs[x] = nullptr;
-            }
-
-            used = 0;
-            print("Bellek grubu temizlendi\n");
-     
+            print("PC speaker cagrisi basarisiz: %d\n", static_cast<int>(result));
+            user::exit(1);
         }
+        user::thread_sleep(2);
     }
 
-    for (size_t x = 0; x < used; ++x)
-        delete ptrs[x];
+    print("PCKOS ses denemesi tamamlandi.\n");
 
-    delete[] ptrs;
     user::exit(0);
 }
