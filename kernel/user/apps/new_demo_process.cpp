@@ -8,6 +8,10 @@
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 {
+
+    // pc_speaker sürücü testi
+    // QEMU'da sorunsuz calısdı
+    // virtualbox da denenmedi 
     static constexpr uint32_t melody[] = {
         523, 587, 659, 698, 784, 698, 659, 587, 523};
 
