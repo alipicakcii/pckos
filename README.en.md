@@ -39,19 +39,19 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 ### Terminal
 
-![Terminal open on the PCKOS desktop](assets/screenshots/qemu-terminal-start.png)
-
-### Calculator
-
-![Calculator open on the PCKOS desktop](assets/screenshots/qemu-calculator.png)
+![Terminal open on the PCKOS desktop](assets/screenshots/qemu-terminal.png)
 
 ### Memory Hunter
 
 ![Memory Hunter game on the PCKOS desktop](assets/screenshots/qemu-memory-hunter.png)
 
-### File Manager and Calculator
+### Task Manager and Calculator
 
-![File Manager and Calculator windows on the PCKOS desktop](assets/screenshots/qemu-file-manager.png)
+![Task Manager and Calculator on the PCKOS desktop](assets/screenshots/qemu-task-manager-calculator.png)
+
+### Task Manager and System Information
+
+![Task Manager and System Information on the PCKOS desktop](assets/screenshots/qemu-task-manager-system-info.png)
 
 ## Run in QEMU
 
