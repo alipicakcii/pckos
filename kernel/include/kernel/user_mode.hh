@@ -24,7 +24,6 @@ namespace kernel
     bool user_mode_has_terminal();
     int32_t user_mode_heap_alloc(uint32_t size, uint32_t alignment);
     int32_t user_mode_heap_free(uint32_t address);
-    int32_t user_mode_run_demo();
     int32_t user_mode_run_desktop();
     bool user_mode_is_active();
     uint32_t user_mode_kernel_stack_top();

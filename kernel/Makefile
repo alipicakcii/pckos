@@ -70,7 +70,6 @@ LIBS:=$(LIBS) $(KERNEL_ARCH_LIBS)
 KERNEL_OBJS=\
 $(KERNEL_ARCH_OBJS) \
 arch/i386/user_mode.o \
-arch/i386/user_demo.o \
 arch/i386/user_desktop.o \
 library/cppabi.o \
 library/kernel_log.o \

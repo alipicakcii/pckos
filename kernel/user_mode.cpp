@@ -19,8 +19,6 @@ extern "C"
     void user_mode_enter(uint32_t entry, uint32_t stack_pointer,
                          uint32_t page_directory);
     void user_mode_exit_trampoline();
-    extern const uint8_t pckos_user_demo_start[];
-    extern const uint8_t pckos_user_demo_end[];
     extern const uint8_t pckos_user_desktop_start[];
     extern const uint8_t pckos_user_desktop_end[];
     uint32_t pckos_user_saved_kernel_esp = 0;
@@ -549,14 +547,6 @@ namespace kernel
             return 0;
         }
         return ERROR_INVALID_ARGUMENT;
-    }
-
-    int32_t user_mode_run_demo()
-    {
-        const uint32_t image_size =
-            static_cast<uint32_t>(reinterpret_cast<uintptr_t>(pckos_user_demo_end) -
-                                  reinterpret_cast<uintptr_t>(pckos_user_demo_start));
-        return user_mode_run_program(pckos_user_demo_start, image_size);
     }
 
     int32_t user_mode_run_desktop()
