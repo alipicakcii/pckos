@@ -128,8 +128,11 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | `kernel/device/rtc.cpp` | CMOS RTC'den gerçek tarih ve saati okuma |
 | `kernel/fs/pckfs.cpp` | PCKFS bağlama, yol çözme, dizin ve dosya okuma |
 | `kernel/user_mode.cpp` | Kullanıcı adres alanları, program yükleme, process ve kullanıcı thread'i oluşturma |
-| `kernel/syscall.cpp` | `int 0x80` çağrı dağıtımı ve kullanıcı belleği doğrulaması |
-| `kernel/include/user/syscall.hh` | Kullanıcı programlarının syscall sarmalayıcıları ve veri yapıları |
+| `kernel/syscall.cpp` | `int 0x80` giriş kontrolü ve çağrı yönlendirmesi |
+| `kernel/syscalls/` | Konuya göre ayrılmış syscall işleyicileri ve kullanıcı belleği doğrulaması |
+| `kernel/include/user/syscall.hh` | Kullanıcı alanındaki `int 0x80` geçiş kodu |
+| `kernel/include/abi/` | Sabit syscall numaraları ve çekirdek/kullanıcı alanının ortak veri yapıları |
+| `kernel/include/user/` | Thread, süreç, dosya, grafik ve diğer kullanıcı API başlıkları |
 | `kernel/include/user/gui.hh`, `kernel/user/gui/graphics.cpp` | Ring 3 ortak çizim API'si |
 | `kernel/device/video/frame_buffer.cpp` | Ekran belleği ve pencerelerin katmanlarla birleştirilmesi |
 | `kernel/user/apps/desktop.cpp` | Masaüstü, simgeler, Başlat, görev çubuğu ve uygulama başlatma |
@@ -171,7 +174,7 @@ sonra: veri bölgesi (blok başına 4096 bayt = 8 sektör)
 
 Süperblok toplam sektör, inode/FAT/veri başlangıçlarını ve kök inode numarasını taşır. Her inode 48 bayt ad, dosya boyutu, ilk veri bloğu, üst dizin inode'u, tür ve kullanım bayrağı içerir. Tür `1` dosya, `2` dizindir; kök inode `0`'dır. FAT benzeri zincirde `0xFFFFFFFF` son blok işaretidir. Veri bloğu numarası **1'den** başlar; blok 1'in ilk sektörü `data_start_sector` konumudur. Dizinler, kendi içerikleri için ayrı blok taşımaz: çocuklar inode tablosunda `parent` alanı karşılaştırılarak bulunur. Dosya/dizin adı en çok 47 UTF-8 bayttır. Sembolik bağlantı yoktur.
 
-Açılışta `AtaPioDisk::initialize()` IDE diski bulur. `pckfs_mount()` süperblok, boyutlar, inode'lar ve FAT'i doğrular. `pckfs_find()` `/a/b` yolunu bileşenlere böler; `pckfs_get_child()` dizini listeler; `pckfs_read_file_range()` blok zincirini izleyip sektörleri okur. Üretici `tools/mkpckfs.py`, okuyucu `kernel/fs/pckfs.cpp` ve kullanıcıya sunulan çağrılar `kernel/syscall.cpp` içindedir. **Disk biçimini değiştirirken bu üçünü birlikte güncelleyin.** Sürüm veya inode yerleşimi değişirse eski imajın bağlanmasını engellemek için doğrulamayı da değiştirin.
+Açılışta `AtaPioDisk::initialize()` IDE diski bulur. `pckfs_mount()` süperblok, boyutlar, inode'lar ve FAT'i doğrular. `pckfs_find()` `/a/b` yolunu bileşenlere böler; `pckfs_get_child()` dizini listeler; `pckfs_read_file_range()` blok zincirini izleyip sektörleri okur. Üretici `tools/mkpckfs.py`, okuyucu `kernel/fs/pckfs.cpp` ve kullanıcıya sunulan dosya çağrıları `kernel/syscalls/filesystem.cpp` içindedir. **Disk biçimini değiştirirken bu üçünü birlikte güncelleyin.** Sürüm veya inode yerleşimi değişirse eski imajın bağlanmasını engellemek için doğrulamayı da değiştirin.
 
 PCKFS v1 şu anda kullanıcı programları için **salt okunur**. ATA sürücüsünde sektör yazma işlevi bulunsa da PCKFS'te genel dosya oluşturma/yazma/silme ve bunlar için syscall henüz yoktur. Host'tan dosya aktarmak için:
 
@@ -186,7 +189,8 @@ Dosya PCKOS'ta `/home/pck/ornek.txt` olur. Dosyalar uygulamasında görünür; T
 Kullanıcı programında okuma örneği:
 
 ```cpp
-#include <user/syscall.hh>
+#include <user/filesystem.hh>
+#include <user/io.hh>
 
 char buffer[128];
 const int32_t fd = user::open("/home/pck/ornek.txt"); // flags=0, okuma
@@ -203,7 +207,23 @@ if (fd >= 0) {
 
 ## 5. SDK ve sistem çağrıları
 
-Kullanıcı API'si `kernel/include/user/syscall.hh`, grafik yardımcıları `kernel/include/user/gui.hh` ve `kernel/user/gui/graphics.cpp` içindedir. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/lib/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
+Kullanıcı API'si `kernel/include/user/` altında konuya göre ayrılmıştır:
+
+| Başlık | İşlev |
+| --- | --- |
+| `user/thread.hh` | Thread oluşturma, bekleme ve thread bilgileri |
+| `user/process.hh` | Süreç başlatma, sonlandırma ve pencere odağı |
+| `user/filesystem.hh` | Dosya okuma ve dizin listeleme |
+| `user/io.hh` | Standart akışlar ve terminal bağlantısı |
+| `user/input.hh` | Klavye ve fare olayları |
+| `user/graphics.hh` | Alt düzey çizim ve pencere çağrıları |
+| `user/heap.hh` | Kullanıcı belleği ayırma ve serbest bırakma |
+| `user/system.hh` | Sistem bilgileri, saat ve çekirdek günlüğü |
+| `user/audio.hh` | PC speaker |
+
+`user/syscall.hh` yalnızca `int 0x80` geçiş kodunu ve çağrı numaralarına erişimi sağlar. `ThreadInfo` gibi ortak veri yapıları `kernel/include/abi/` altında tek kez tanımlanır; ilgili çekirdek ve kullanıcı başlıkları bu tanımı kullanır.
+
+Grafik yardımcıları `kernel/include/user/gui.hh` ve `kernel/user/gui/graphics.cpp` içindedir. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/lib/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
 
 ### Standart giriş, çıktı ve hata akışları
 
@@ -212,6 +232,8 @@ Kullanıcı API'si `kernel/include/user/syscall.hh`, grafik yardımcıları `ker
 Terminal, `run` ile başlattığınız süreç bitene kadar yeni kabuk komutu çalıştırmaz; Enter ile gönderdiğiniz satırları uygulamanın `stdin` kuyruğuna koyar. Boş girişte Ctrl+D EOF gönderir; yazılmış metin varsa önce o metni gönderir. Program bitince `pckos>` geri gelir. Grafik uygulaması pencere kaydettiğinde odağı kendi penceresine alır. Simge durumundaki terminal de çıktıları toplamaya devam eder.
 
 ```cpp
+#include <user/io.hh>
+#include <user/process.hh>
 #include <user/lib/io.hh>
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
@@ -239,7 +261,7 @@ Alt düzey `user::write(fd, buffer, length)` bir çağrıda en çok 4096 bayt ka
 
 Terminal ön yüzü için `terminal_attach()` (44) çağıran süreci terminal sahibi yapar; `terminal_read(buffer, length)` (45) sıradaki çıktıyı tüketir; `terminal_send(pid, buffer, length)` (46) yalnızca bu terminale bağlı sürece giriş yollar. Sıfır uzunluk EOF anlamına gelir. Normal uygulamalar bu çağrıları kullanmaz; `read`/`write` veya `user::io` yardımcılarını kullanın. Dosyaya yönlendirme (`>`), pipe (`|`), `dup2`, sinyaller ve tam iş denetimi henüz yoktur.
 
-`user::call()`, `int 0x80` çalıştırır. `EAX` çağrı numarası, `EBX/ECX/EDX/ESI/EDI` en çok beş argüman, sonuç yine `EAX` içindedir. `kernel/syscall.cpp` çağrıyı dağıtır; kullanıcı işaretçilerini ve uzunlukları doğrular. Hatalar negatif sayı olarak döner. Kodda sayıları elle kullanmak yerine sarmalayıcı fonksiyonları çağırın.
+`user::call()`, `int 0x80` çalıştırır. `EAX` çağrı numarası, `EBX/ECX/EDX/ESI/EDI` en çok beş argüman, sonuç yine `EAX` içindedir. `kernel/syscall.cpp` çağrıyı ilgili `kernel/syscalls/` işleyicisine yönlendirir; işleyici kullanıcı işaretçilerini ve uzunlukları doğrular. Hatalar negatif sayı olarak döner. Kodda sayıları elle kullanmak yerine sarmalayıcı fonksiyonları çağırın.
 
 | Alan | Önemli API'ler |
 | --- | --- |
@@ -262,7 +284,7 @@ if (user::wait_event(&event, 10) > 0 &&
     user::exit(0); // ESC
 ```
 
-Yeni syscall eklerken: numarayı ve kullanıcı sarmalayıcısını `kernel/include/user/syscall.hh` içine; işleyiciyi `kernel/syscall.cpp` içindeki dağıtıcıya ekleyin. Kullanıcıdan gelen adresleri `is_user_range` ile denetleyin. Gerekiyorsa asıl çekirdek işlevini `kernel/` altında ilgili modülde uygulayın. Dönüş kodu ve sınırları burada belgeleyin.
+Yeni syscall eklerken: numarayı `kernel/include/abi/syscall.hh` içine, kullanıcı sarmalayıcısını ilgili `kernel/include/user/` başlığına ekleyin. İşleyiciyi ilgili `kernel/syscalls/` kaynak dosyasına, yönlendirmeyi `kernel/syscall.cpp` içine ekleyin. Kullanıcıdan gelen adresleri `is_user_range` ile denetleyin. Gerekiyorsa asıl çekirdek işlevini `kernel/` altında ilgili modülde uygulayın. Dönüş kodu ve sınırları burada belgeleyin.
 
 **Kullanıcı uygulamalarında bellek ve temel yardımcılar**
 
@@ -320,7 +342,7 @@ if (pid < 0) {
 }
 ```
 
-`process_spawn` sonucu başarılıysa yeni PID'dir. Çağrı uygulamanın bitmesini beklemez. Çekirdekte akış: `kernel/syscall.cpp` kullanıcı yolunu/adını kopyalar → `user_mode_spawn_process()` PCKFS'te dosyayı bulup düz ikiliyi okur → boş adres alanı ayırır ve kod/yığın sayfalarını eşler → `process_create()` PID verir → `thread_create_user()` ana TID'yi oluşturur → giriş odağı yeni process'e geçer. Bunlar sırasıyla `kernel/user_mode.cpp` ve `kernel/thread.cpp` içindedir. Programın `_start` fonksiyonu başlar; `user::exit(status)` veya ana thread'in bitmesi process'i sonlandırır. Kapanınca kaynakları ve pencere katmanı serbest bırakılır.
+`process_spawn` sonucu başarılıysa yeni PID'dir. Çağrı uygulamanın bitmesini beklemez. Çekirdekte akış: `kernel/syscalls/process.cpp` kullanıcı yolunu/adını kopyalar → `user_mode_spawn_process()` PCKFS'te dosyayı bulup düz ikiliyi okur → boş adres alanı ayırır ve kod/yığın sayfalarını eşler → `process_create()` PID verir → `thread_create_user()` ana TID'yi oluşturur → giriş odağı yeni process'e geçer. Bunlar sırasıyla `kernel/user_mode.cpp` ve `kernel/thread.cpp` içindedir. Programın `_start` fonksiyonu başlar; `user::exit(status)` veya ana thread'in bitmesi process'i sonlandırır. Kapanınca kaynakları ve pencere katmanı serbest bırakılır.
 
 Süreçleri listeleme:
 
@@ -340,7 +362,7 @@ Bir process'i öne getirmek için `process_focus(pid)`, kendi penceresini küç�
 **Thread**, aynı process'in PID'sini ve adres alanını paylaşır; ayrı TID, kullanıcı yığını ve çekirdek kesme yığını alır. Tek çekirdekli PCKOS'ta PIT 100 Hz ve Round Robin zamanlayıcı thread'ler arasında geçiş yapar. Aynı anda fiziksel olarak tek thread yürür; birden fazla thread sırayla CPU kullanır.
 
 ```cpp
-#include <user/syscall.hh>
+#include <user/thread.hh>
 
 void worker(void *argument)
 {
@@ -366,8 +388,11 @@ if (tid < 0) {
 Örnek dosya: `kernel/user/apps/merhaba_process.cpp`. PCKOS'un yüklediği düz ikilinin giriş noktası `_start` olmalıdır:
 
 ```cpp
+#include <user/graphics.hh>
+#include <user/input.hh>
+#include <user/process.hh>
+#include <user/thread.hh>
 #include <user/gui.hh>
-#include <user/syscall.hh>
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()

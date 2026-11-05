@@ -3,8 +3,8 @@
 #ifndef PCKOS_USER_WINDOW_DRAG_HH
 #define PCKOS_USER_WINDOW_DRAG_HH
 
+#include <user/graphics.hh>
 #include <stdint.h>
-#include <user/syscall.hh>
 
 namespace user::gui
 {

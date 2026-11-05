@@ -4,11 +4,13 @@
 #define PCKOS_KERNEL_THREAD_HH
 
 #include <stdint.h>
+#include <abi/thread.hh>
+#include <abi/process.hh>
 #include <interrupts/isr.hh>
 
 namespace kernel
 {
-    using ThreadEntry = void (*)(void *argument);
+    using ThreadEntry = abi::ThreadEntry;
 
     enum ThreadState : uint32_t
     {
@@ -25,26 +27,9 @@ namespace kernel
         thread_flag_user = 2
     };
 
-    struct ThreadInfo
-    {
-        uint32_t id;
-        uint32_t process_id;
-        uint32_t state;
-        uint32_t flags;
-        uint32_t cpu_ticks;
-        uint32_t stack_bytes;
-        char name[24];
-    };
+    using ThreadInfo = abi::ThreadInfo;
 
-    struct ProcessInfo
-    {
-        uint32_t id;
-        uint32_t parent_id;
-        uint32_t main_thread_id;
-        uint32_t thread_count;
-        uint32_t cpu_ticks;
-        char name[24];
-    };
+    using ProcessInfo = abi::ProcessInfo;
 
     // Bir tik, bir PIT periyodudur (100 Hz ayarında 10 ms).
     bool thread_system_initialize(uint32_t ring0_stack_top);

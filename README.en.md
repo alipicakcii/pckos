@@ -125,8 +125,11 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | `kernel/device/rtc.cpp` | Date and time from the CMOS RTC |
 | `kernel/fs/pckfs.cpp` | PCKFS mount, path lookup, directory and file reads |
 | `kernel/user_mode.cpp` | User address spaces, program loading, process and user-thread creation |
-| `kernel/syscall.cpp` | `int 0x80` dispatch and user-memory validation |
-| `kernel/include/user/syscall.hh` | User syscall wrappers and data structures |
+| `kernel/syscall.cpp` | `int 0x80` entry checks and call routing |
+| `kernel/syscalls/` | Handlers grouped by subsystem, including user-memory validation |
+| `kernel/include/user/syscall.hh` | User-side `int 0x80` entry helper |
+| `kernel/include/abi/` | Fixed syscall numbers and data structures shared by kernel and user space |
+| `kernel/include/user/` | User APIs for threads, processes, files, graphics, and other subsystems |
 | `kernel/include/user/gui.hh`, `kernel/user/gui/graphics.cpp` | Shared Ring 3 drawing API |
 | `kernel/device/video/frame_buffer.cpp` | Framebuffer and window-layer composition |
 | `kernel/user/apps/desktop.cpp` | Desktop, icons, Start menu, taskbar, application launch |
@@ -168,7 +171,7 @@ then: data area (4096 bytes per block = 8 sectors)
 
 The superblock stores sector count, inode/FAT/data starts, and root inode. Each inode stores a 48-byte name, file size, first data block, parent inode, type, and used flag. Type `1` is a file and `2` a directory; root inode is `0`. `0xFFFFFFFF` marks the end of a FAT-like chain. Data block numbering starts at **1**; block 1 starts at `data_start_sector`. Directories have no content blocks; children are found by comparing the inode `parent` field. Names are limited to 47 UTF-8 bytes. Symbolic links are not supported.
 
-At boot, `AtaPioDisk::initialize()` detects the IDE disk. `pckfs_mount()` validates the superblock, sizes, inodes, and FAT. `pckfs_find()` resolves `/a/b`; `pckfs_get_child()` lists directory children; `pckfs_read_file_range()` follows the block chain and reads sectors. The image builder is `tools/mkpckfs.py`, the reader is `kernel/fs/pckfs.cpp`, and user-facing calls are in `kernel/syscall.cpp`. **Update all three together when changing the disk format.** Update version/layout validation too, so older images are rejected when incompatible.
+At boot, `AtaPioDisk::initialize()` detects the IDE disk. `pckfs_mount()` validates the superblock, sizes, inodes, and FAT. `pckfs_find()` resolves `/a/b`; `pckfs_get_child()` lists directory children; `pckfs_read_file_range()` follows the block chain and reads sectors. The image builder is `tools/mkpckfs.py`, the reader is `kernel/fs/pckfs.cpp`, and user-facing file handlers are in `kernel/syscalls/filesystem.cpp`. **Update all three together when changing the disk format.** Update version/layout validation too, so older images are rejected when incompatible.
 
 PCKFS v1 is currently **read-only** to user applications. The ATA driver has a sector-write function, but PCKFS does not yet provide generic create/write/delete operations or syscalls. To add a host file:
 
@@ -183,7 +186,8 @@ The file appears at `/home/pck/example.txt` in PCKOS. It is visible in Files and
 Read a file from a user application:
 
 ```cpp
-#include <user/syscall.hh>
+#include <user/filesystem.hh>
+#include <user/io.hh>
 
 char buffer[128];
 const int32_t fd = user::open("/home/pck/example.txt"); // flags=0, read-only
@@ -200,7 +204,23 @@ if (fd >= 0) {
 
 ## 5. SDK and system calls
 
-The user API is declared in `kernel/include/user/syscall.hh`; graphics helpers are in `kernel/include/user/gui.hh` and `kernel/user/gui/graphics.cpp`. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/lib/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
+The user API is grouped by subsystem under `kernel/include/user/`:
+
+| Header | Purpose |
+| --- | --- |
+| `user/thread.hh` | Thread creation, sleep, and thread information |
+| `user/process.hh` | Process launch, exit, and window focus |
+| `user/filesystem.hh` | File reading and directory listing |
+| `user/io.hh` | Standard streams and terminal connections |
+| `user/input.hh` | Keyboard and mouse events |
+| `user/graphics.hh` | Low-level drawing and window calls |
+| `user/heap.hh` | User memory allocation and release |
+| `user/system.hh` | System information, time, and the kernel log |
+| `user/audio.hh` | PC speaker |
+
+`user/syscall.hh` provides only the `int 0x80` entry helper and access to syscall numbers. Shared data structures such as `ThreadInfo` are defined once under `kernel/include/abi/` and used by the corresponding kernel and user headers.
+
+Graphics helpers are in `kernel/include/user/gui.hh` and `kernel/user/gui/graphics.cpp`. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/lib/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
 
 ### Standard input, output, and error streams
 
@@ -209,6 +229,8 @@ The user API is declared in `kernel/include/user/syscall.hh`; graphics helpers a
 The terminal waits for the process started by `run` before accepting another shell command. Lines submitted with Enter go to the application's `stdin` queue. Ctrl+D on empty input sends EOF; if text has been entered, it sends that text first. The `pckos>` prompt returns when the process ends. A graphical application takes focus when it registers its window. Minimized terminals continue collecting output.
 
 ```cpp
+#include <user/io.hh>
+#include <user/process.hh>
 #include <user/lib/io.hh>
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
@@ -236,7 +258,7 @@ Low-level `user::write(fd, buffer, length)` accepts at most 4096 bytes per call.
 
 For terminal frontends, `terminal_attach()` (44) makes the caller a terminal owner; `terminal_read(buffer, length)` (45) drains pending output; `terminal_send(pid, buffer, length)` (46) sends input only to processes attached to that terminal. Zero length signals EOF. Normal applications use `read`/`write` or the `user::io` helpers instead. File redirection (`>`), pipes (`|`), `dup2`, signals, and full job control are not implemented yet.
 
-`user::call()` invokes `int 0x80`. `EAX` contains the syscall number; `EBX/ECX/EDX/ESI/EDI` carry up to five arguments; the result is returned in `EAX`. `kernel/syscall.cpp` dispatches calls and validates user pointers and lengths. Errors are negative values. Prefer wrapper functions to hard-coded syscall numbers.
+`user::call()` invokes `int 0x80`. `EAX` contains the syscall number; `EBX/ECX/EDX/ESI/EDI` carry up to five arguments; the result is returned in `EAX`. `kernel/syscall.cpp` routes calls to the appropriate handler under `kernel/syscalls/`, which validates user pointers and lengths. Errors are negative values. Prefer wrapper functions to hard-coded syscall numbers.
 
 | Area | Main APIs |
 | --- | --- |
@@ -259,7 +281,7 @@ if (user::wait_event(&event, 10) > 0 &&
     user::exit(0); // ESC
 ```
 
-To add a syscall, add its number and user wrapper to `kernel/include/user/syscall.hh`, then add its handler to the dispatcher in `kernel/syscall.cpp`. Validate user-provided addresses with `is_user_range`. Implement kernel functionality in the relevant module under `kernel/`. Document return values and limits here.
+To add a syscall, add its number to `kernel/include/abi/syscall.hh` and its user wrapper to the appropriate header under `kernel/include/user/`. Add the handler in the relevant `kernel/syscalls/` source file and route the call in `kernel/syscall.cpp`. Validate user-provided addresses with `is_user_range`. Implement kernel functionality in the relevant module under `kernel/`. Document return values and limits here.
 
 **Memory and basic helpers in user applications**
 
@@ -315,7 +337,7 @@ if (pid < 0) {
 }
 ```
 
-On success, `process_spawn` returns the new PID and does not wait for the application. The kernel copies the user path/name in `kernel/syscall.cpp`; `user_mode_spawn_process()` reads the flat binary from PCKFS, allocates an address space and code/stack pages, `process_create()` assigns a PID, and `thread_create_user()` creates the main TID. The app starts at `_start`; `user::exit(status)` or exit of its main thread terminates the process. Its resources and window layer are then released.
+On success, `process_spawn` returns the new PID and does not wait for the application. The kernel copies the user path/name in `kernel/syscalls/process.cpp`; `user_mode_spawn_process()` reads the flat binary from PCKFS, allocates an address space and code/stack pages, `process_create()` assigns a PID, and `thread_create_user()` creates the main TID. The app starts at `_start`; `user::exit(status)` or exit of its main thread terminates the process. Its resources and window layer are then released.
 
 List processes with `process_count()` and `process_get_info()`. `process_focus(pid)` raises one; `process_minimize()` minimizes the caller. The desktop tracks one PID per application type, so clicking an already-open app raises its existing window.
 
@@ -324,7 +346,7 @@ List processes with `process_count()` and `process_get_info()`. `process_focus(p
 A **thread** shares its process PID and address space, but gets its own TID, user stack, and kernel interrupt stack. PCKOS is single-core: a 100 Hz PIT and Round Robin scheduler switch between threads. Only one thread executes physically at a time; threads take turns on the CPU.
 
 ```cpp
-#include <user/syscall.hh>
+#include <user/thread.hh>
 
 void worker(void *argument)
 {
@@ -350,8 +372,11 @@ if (tid < 0) {
 Example file: `kernel/user/apps/merhaba_process.cpp`. The entry point for a flat binary loaded by PCKOS must be `_start`:
 
 ```cpp
+#include <user/graphics.hh>
+#include <user/input.hh>
+#include <user/process.hh>
+#include <user/thread.hh>
 #include <user/gui.hh>
-#include <user/syscall.hh>
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()

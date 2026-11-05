@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
+#include <user/graphics.hh>
+#include <user/input.hh>
+#include <user/process.hh>
+#include <user/thread.hh>
 #include <user/apps/task_manager.hh>
 #include <user/gui.hh>
-#include <user/syscall.hh>
 #include <user/window_drag.hh>
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()

@@ -3,11 +3,11 @@
 #ifndef PCKOS_USER_FILE_MANAGER_HH
 #define PCKOS_USER_FILE_MANAGER_HH
 
+#include <user/filesystem.hh>
 #include <stdint.h>
 #include <user/apps/app_thread.hh>
 #include <user/gui.hh>
 #include <user/lib/image.hh>
-#include <user/syscall.hh>
 
 namespace user::apps
 {

@@ -26,7 +26,7 @@ LIBS:=$(LIBS) -nostdlib  -lgcc
 
 ARCHDIR=arch/$(HOSTARCH)
 OBJCOPY?=i686-elf-objcopy
-USER_APP_CFLAGS=-m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
+USER_APP_CFLAGS=-MMD -MP -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
 	-fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
 	-msoft-float -Iinclude
@@ -77,6 +77,16 @@ library/pck_rtti.o \
 user_mode.o \
 thread.o \
 syscall.o \
+syscalls/common.o \
+syscalls/io.o \
+syscalls/filesystem.o \
+syscalls/thread.o \
+syscalls/process.o \
+syscalls/system.o \
+syscalls/memory.o \
+syscalls/input.o \
+syscalls/graphics.o \
+syscalls/audio.o \
 interrupts/descriptortables.o \
 interrupts/isr.o \
 device/input/keymap.o \
@@ -133,6 +143,9 @@ device/video/frame_buffer.o: device/video/frame_buffer.cpp
 	$(CC) -MD -O2 -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 syscall.o: syscall.cpp
+	$(CC) -MD -O2 -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
+syscalls/%.o: syscalls/%.cpp
 	$(CC) -MD -O2 -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 .asm.o:
@@ -287,7 +300,7 @@ install-kernel: pckos.bin
 	mkdir -p $(DESTDIR)$(BOOTDIR)
 	cp pckos.bin $(DESTDIR)$(BOOTDIR)
 
--include $(OBJS:.o=.d)
+-include $(OBJS:.o=.d) $(USER_APP_OBJECTS:.o=.d) $(USER_PROCESS_OBJECTS:.o=.d)
 
 user/lib/io.user.o: user/lib/io.cpp include/user/lib/io.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@

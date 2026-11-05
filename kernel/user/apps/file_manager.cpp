@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
+#include <user/filesystem.hh>
+#include <user/io.hh>
+#include <user/system.hh>
+#include <user/thread.hh>
 #include <user/apps/file_manager.hh>
 #include <user/gui.hh>
 

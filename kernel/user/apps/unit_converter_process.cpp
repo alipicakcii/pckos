@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
+#include <user/graphics.hh>
+#include <user/input.hh>
+#include <user/process.hh>
+#include <user/thread.hh>
 #include <user/gui.hh>
-#include <user/syscall.hh>
 #include <user/window_drag.hh>
 
 namespace

@@ -3,8 +3,8 @@
 #ifndef PCKOS_USER_APP_THREAD_HH
 #define PCKOS_USER_APP_THREAD_HH
 
+#include <user/thread.hh>
 #include <stdint.h>
-#include <user/syscall.hh>
 
 namespace user::apps
 {

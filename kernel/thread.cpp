@@ -6,7 +6,7 @@
 #include <interrupts/descriptortables.hh>
 #include <library/mem.hh>
 #include <mem/vmm.hh>
-#include <kernel/syscall.hh>
+#include <kernel/graphics.hh>
 
 namespace kernel
 {

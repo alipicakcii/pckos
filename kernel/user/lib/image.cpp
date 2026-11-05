@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
+#include <user/filesystem.hh>
+#include <user/heap.hh>
+#include <user/io.hh>
 #include <user/lib/image.hh>
 #include <user/lib/new.hh>
 #include <user/lib/memory.hh>
-#include <user/syscall.hh>
 #include <limits.h>
 
 namespace

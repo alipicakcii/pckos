@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
+#include <user/process.hh>
+#include <user/system.hh>
+#include <user/thread.hh>
 #include <user/apps/task_manager.hh>
 #include <user/gui.hh>
 

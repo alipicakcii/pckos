@@ -13,11 +13,6 @@ namespace kernel
     void syscall_initialize(mem::Vmm &virtual_memory,
                             device::FrameBuffer *framebuffer);
     void syscall_reset_process();
-    bool syscall_graphics_frame_active();
-    void syscall_window_set_visible(uint32_t process_id, bool visible);
-    void syscall_window_raise(uint32_t process_id);
-    void syscall_window_remove(uint32_t process_id);
-    uint32_t syscall_window_at(uint32_t x, uint32_t y);
 }
 
 #endif

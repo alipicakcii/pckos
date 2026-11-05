@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
+#include <user/heap.hh>
+#include <user/io.hh>
+#include <user/process.hh>
 #include <user/lib/new.hh>
-#include <user/syscall.hh>
 
 namespace
 {

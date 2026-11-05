@@ -3,9 +3,11 @@
 #ifndef PCKOS_USER_TASK_MANAGER_HH
 #define PCKOS_USER_TASK_MANAGER_HH
 
+#include <user/process.hh>
+#include <user/system.hh>
+#include <user/thread.hh>
 #include <stdint.h>
 #include <user/apps/app_thread.hh>
-#include <user/syscall.hh>
 
 namespace user::apps
 {

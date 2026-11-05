@@ -3,7 +3,8 @@
 #ifndef PCKOS_USER_LIB_IO_HH
 #define PCKOS_USER_LIB_IO_HH
 
-#include <user/syscall.hh>
+#include <user/io.hh>
+#include <user/thread.hh>
 #include <stdarg.h>
 
 namespace user::io

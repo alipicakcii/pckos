@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
+#include <user/io.hh>
 #include <user/lib/io.hh>
 #include <stddef.h>
 #include <limits.h>
