@@ -39,11 +39,11 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 ### Terminal
 
-![Terminal open on the PCKOS desktop](assets/screenshots/qemu-terminal.png)
+![Terminal open on the PCKOS desktop](assets/screenshots/qemu-terminal-2026-11.png)
 
 ### Memory Hunter
 
-![Memory Hunter game on the PCKOS desktop](assets/screenshots/qemu-memory-hunter.png)
+![Memory Hunter game on the PCKOS desktop](assets/screenshots/qemu-memory-hunter-2026-11.png)
 
 ### Task Manager and Calculator
 

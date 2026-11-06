@@ -40,11 +40,11 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ### Terminal
 
-![PCKOS masaüstünde açık Terminal](assets/screenshots/qemu-terminal.png)
+![PCKOS masaüstünde açık Terminal](assets/screenshots/qemu-terminal-2026-11.png)
 
 ### Bellek Avcısı
 
-![PCKOS masaüstünde Bellek Avcısı oyunu](assets/screenshots/qemu-memory-hunter.png)
+![PCKOS masaüstünde Bellek Avcısı oyunu](assets/screenshots/qemu-memory-hunter-2026-11.png)
 
 ### Görev Yöneticisi ve Hesap Makinesi
 
