@@ -70,7 +70,7 @@ namespace
             file_bounds_ = centered_window(650, 430, 25);
             terminal_bounds_ = centered_window(560, 340, 55);
             task_bounds_ = centered_window(720, 470, 75);
-            logo_available_ = load_logo();
+            
             load_default_wallpaper();
             refresh_wallpapers();
         }
@@ -905,9 +905,6 @@ namespace
             draw_icon_label(18, 170, 2, "Terminal");
             draw_icon_label(18, 244, 3, "Gorevler");
             draw_icon_label(18, 318, 4, "Bellek Avcisi");
-            if (logo_available_ && screen_.width > 150)
-                user::gui::bitmap(screen_.width - 148, 68,
-                                  logo_pixels_, 128, 128);
             if (file_visible_ && active_ != WINDOW_FILE)
                 draw_window(WINDOW_FILE);
             if (terminal_visible_ && active_ != WINDOW_TERMINAL)
