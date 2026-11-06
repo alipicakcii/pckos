@@ -45,6 +45,8 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 ![Memory Hunter game on the PCKOS desktop](assets/screenshots/qemu-memory-hunter-2026-11.png)
 
+Each time the snake eats food, the game allocates one `uint32_t` (4 bytes) from the user heap. The window shows the allocation address and the total size of game data allocated; these allocations are released with `delete` when the game closes. Additional memory is used to track the allocations.
+
 ### Task Manager and Calculator
 
 ![Task Manager and Calculator on the PCKOS desktop](assets/screenshots/qemu-task-manager-calculator.png)
