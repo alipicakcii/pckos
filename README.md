@@ -46,7 +46,7 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 ![PCKOS masaüstünde Bellek Avcısı oyunu](assets/screenshots/qemu-memory-hunter-2026-11.png)
 
-Her yem alındığında kullanıcı heap'inden bir `uint32_t` (4 bayt) ayrılır. Tahsis adresi ve ayrılan oyun verisinin toplam boyutu pencerede gösterilir; oyun kapanırken bu tahsisler `delete` ile serbest bırakılır. Tahsisleri izlemek için ek bellek de kullanılır.
+Bellek Avcısı oyununda her yem alındığında kullanıcı heap'inden bir `uint32_t` (4 bayt) ayrılır. Tahsis adresi ve ayrılan oyun verisinin toplam boyutu pencerede gösterilir; oyun kapanırken bu tahsisler `delete` ile serbest bırakılır.
 
 ### Görev Yöneticisi ve Hesap Makinesi
 
