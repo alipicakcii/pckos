@@ -435,10 +435,7 @@ namespace
                              const char *label)
         {
             if (kind == 0)
-            {
-                user::gui::icon(x, y, 0);
-                draw_logo_small(x + 12, y + 6, 20);
-            }
+                draw_logo_small(x + 2, y + 1, 40);
             else
                 user::gui::icon(x, y, kind);
             if (kind == 4)
