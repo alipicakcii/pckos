@@ -71,6 +71,7 @@ namespace
             terminal_bounds_ = centered_window(560, 340, 55);
             task_bounds_ = centered_window(720, 470, 75);
             logo_available_ = load_logo();
+            load_default_wallpaper();
             refresh_wallpapers();
         }
 
@@ -302,6 +303,14 @@ namespace
             return true;
         }
 
+        void load_default_wallpaper()
+        {
+            user::image::Image loaded{};
+            if (user::image::load_png("/home/landscape.png", screen_.width,
+                                      screen_.height, &loaded, true))
+                wallpaper_image_ = loaded;
+        }
+
         WindowBounds centered_window(uint32_t wanted_width, uint32_t wanted_height,
                                      uint32_t x_offset)
         {
@@ -426,7 +435,10 @@ namespace
                              const char *label)
         {
             if (kind == 0)
-                draw_logo_small(x + 2, y + 1, 40);
+            {
+                user::gui::icon(x, y, 0);
+                draw_logo_small(x + 12, y + 6, 20);
+            }
             else
                 user::gui::icon(x, y, kind);
             if (kind == 4)
@@ -463,9 +475,9 @@ namespace
                 ? screen_.height - TASKBAR_HEIGHT : 0;
             user::gui::frame(0, y, screen_.width, TASKBAR_HEIGHT,
                              user::gui::COLOR_FACE);
-            user::gui::frame(5, y + 3, 94, 32, user::gui::COLOR_FACE, menu_open_);
-            draw_logo_small(11, y + 9, 20);
-            user::gui::text(36, y + 11, "Baslat", user::gui::COLOR_TEXT);
+            user::gui::frame(5, y + 3, 98, 32, user::gui::COLOR_FACE, menu_open_);
+            draw_logo_small(11, y + 8, 22);
+            user::gui::text(40, y + 11, "Baslat", user::gui::COLOR_TEXT);
 
             for (uint32_t id = WINDOW_FILE; id <= WINDOW_MEMORY_HUNTER; ++id)
             {
@@ -640,7 +652,18 @@ namespace
                 if (user::read_directory(home_inode, index, &entry) != 1)
                     break;
                 if (entry.type != user::directory_type && is_png_name(entry.name))
+                {
+                    const uint32_t candidate_index = wallpaper_count_;
                     wallpaper_entries_[wallpaper_count_++] = entry;
+                    if (entry.name[0] == 'l' && entry.name[1] == 'a' &&
+                        entry.name[2] == 'n' && entry.name[3] == 'd' &&
+                        entry.name[4] == 's' && entry.name[5] == 'c' &&
+                        entry.name[6] == 'a' && entry.name[7] == 'p' &&
+                        entry.name[8] == 'e' && entry.name[9] == '.' &&
+                        entry.name[10] == 'p' && entry.name[11] == 'n' &&
+                        entry.name[12] == 'g' && entry.name[13] == '\0')
+                        wallpaper_selected_ = candidate_index;
+                }
             }
             if (wallpaper_selected_ >= wallpaper_count_)
                 wallpaper_selected_ = wallpaper_count_ == 0 ? 0 : wallpaper_count_ - 1;

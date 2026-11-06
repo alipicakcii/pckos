@@ -288,33 +288,57 @@ namespace user::gui
     {
         if (size < 12)
             return;
-        const uint32_t ink = 0xFF123050;
-        fill(x, y, size, size, 0xFF45D6B0);
-        // Üst kısmı kapalı kavis ve uzun gövde, 24 pikselde bile P harfini belirgin kılar.
-        fill(x + size * 5 / 24, y + size * 4 / 24,
-             size * 3 / 24, size * 17 / 24, ink);
-        fill(x + size * 5 / 24, y + size * 4 / 24,
-             size * 13 / 24, size * 3 / 24, ink);
-        fill(x + size * 15 / 24, y + size * 4 / 24,
-             size * 3 / 24, size * 10 / 24, ink);
-        fill(x + size * 5 / 24, y + size * 11 / 24,
-             size * 13 / 24, size * 3 / 24, ink);
+        const uint32_t dark = 0xFF11110F;
+        const uint32_t cream = 0xFFF2F0E8;
+        const uint32_t green = 0xFFB8F265;
+        fill(x, y, size, size, dark);
+        frame(x, y, size, size, dark);
+        fill(x + size * 27 / 100, y + size * 20 / 100,
+             size * 17 / 100, size * 61 / 100, cream);
+        fill(x + size * 40 / 100, y + size * 20 / 100,
+             size * 34 / 100, size * 15 / 100, cream);
+        fill(x + size * 63 / 100, y + size * 28 / 100,
+             size * 16 / 100, size * 25 / 100, cream);
+        fill(x + size * 40 / 100, y + size * 44 / 100,
+             size * 34 / 100, size * 15 / 100, cream);
+        fill(x + size * 47 / 100, y + size * 32 / 100,
+             size * 17 / 100, size * 12 / 100, dark);
+        const uint32_t dot = size / 6 > 2 ? size / 6 : 3;
+        fill(x + size * 75 / 100, y + size * 66 / 100,
+             dot, dot, green);
     }
 
     void icon(uint32_t x, uint32_t y, uint32_t kind)
     {
         if (kind == 0)
         {
-            frame(x + 4, y + 3, 36, 36, 0xFF123050);
-            pckos_mark(x + 8, y + 7, 28);
+            fill(x + 6, y + 4, 37, 30, 0xFF151B17);
+            frame(x + 2, y + 1, 39, 31, 0xFFB8BEB9);
+            frame(x + 6, y + 4, 31, 24, 0xFF08170E, true);
+            fill(x + 5, y + 29, 30, 1, 0xFF717871);
+            fill(x + 35, y + 29, 2, 1, 0xFF97F24D);
+            fill(x + 17, y + 32, 11, 4, 0xFF666E68);
+            fill(x + 19, y + 32, 7, 3, 0xFFB8BEB9);
+            frame(x + 9, y + 36, 26, 4, 0xFFB8BEB9);
         }
         else if (kind == 1)
         {
-            fill(x + 5, y + 11, 34, 23, 0xFF805000);
-            fill(x + 7, y + 7, 16, 8, 0xFFFFD040);
-            fill(x + 5, y + 12, 34, 19, 0xFFFFC030);
-            fill(x + 7, y + 15, 30, 13, 0xFFFFE080);
-            fill(x + 7, y + 15, 30, 2, COLOR_WHITE);
+            fill(x + 6, y + 35, 33, 2, 0xFF182319);
+            fill(x + 4, y + 5, 16, 7, 0xFF654319);
+            fill(x + 3, y + 10, 36, 25, 0xFF654319);
+            fill(x + 5, y + 6, 13, 6, 0xFFFFDF87);
+            fill(x + 5, y + 11, 32, 21, 0xFFD79A37);
+            fill(x + 8, y + 12, 27, 5, 0xFFFFF3C7);
+            fill(x + 9, y + 14, 25, 2, 0xFFE1D3AA);
+            for (uint32_t row = 0; row < 20; ++row)
+            {
+                const uint32_t inset = (19 - row) / 7;
+                fill(x + 5 + inset, y + 15 + row, 33 - inset, 1, 0xFF805320);
+                if (row < 18)
+                    fill(x + 6 + inset, y + 15 + row, 30 - inset, 1,
+                         row < 2 ? 0xFFFFEDAC : row < 10 ? 0xFFF9CE6D : 0xFFEAB854);
+            }
+            fill(x + 6, y + 33, 30, 1, 0xFFC58A31);
         }
         else if (kind == 2)
         {
@@ -328,11 +352,19 @@ namespace user::gui
         }
         else if (kind == 3)
         {
-            frame(x + 5, y + 5, 34, 30, COLOR_FACE);
-            fill(x + 10, y + 10, 24, 3, COLOR_TITLE);
-            fill(x + 10, y + 17, 18, 2, COLOR_DARK);
-            fill(x + 10, y + 22, 22, 2, COLOR_DARK);
-            fill(x + 10, y + 27, 14, 2, COLOR_DARK);
+            fill(x + 9, y + 6, 29, 34, 0xFF182319);
+            frame(x + 6, y + 5, 30, 33, 0xFF929D94);
+            fill(x + 9, y + 9, 24, 26, 0xFFF1F0DF);
+            fill(x + 10, y + 10, 22, 1, COLOR_WHITE);
+            fill(x + 14, y + 3, 15, 7, 0xFF303D34);
+            fill(x + 16, y + 2, 11, 7, 0xFFD1D8D1);
+            fill(x + 19, y + 3, 5, 3, 0xFF47574B);
+            fill(x + 16, y + 8, 11, 2, 0xFF79877C);
+            for (uint32_t row = 0; row < 3; ++row)
+            {
+                fill(x + 12, y + 15 + row * 6, 3, 3, 0xFF497A4B);
+                fill(x + 18, y + 15 + row * 6, row == 2 ? 9 : 12, 2, 0xFF515B52);
+            }
         }
         else
         {
