@@ -47,6 +47,7 @@ namespace kernel
 		if (regs == nullptr)
 			return regs;
 
+
 		const uint8_t int_no = regs->interruptNumber & 0xFF;
 		if ((regs->cs & 3U) == 3U && int_no < 32)
 		{

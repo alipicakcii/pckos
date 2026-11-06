@@ -319,13 +319,6 @@ Each process has a heap of up to 32 MiB at `0x41000000–0x43000000`; physical p
 
 `heap_alloc(size, alignment)` (syscall 42) returns raw memory or `nullptr` on failure; `heap_free(address)` (syscall 43) releases it. Allocation records are stored in the kernel; only a valid allocation start in the calling process can be freed. Operations complete inside the syscall with interrupts disabled on the current single-core system. If normal `new` cannot allocate memory, it logs an error and terminates the calling process with status `-12`, since exceptions are disabled. Use `new (std::nothrow)` to handle failure in the application. `get_heap_usage()` still reports kernel heap usage.
 
-The simple example in `kernel/user/apps/new_demo_process.cpp` allocates with `int *ptr = new int;`, writes the address to standard output, and releases it with `delete ptr;`. After booting with `./qemu.sh`, run this in the **PCKOS terminal**:
-
-```text
-run /apps/new_demo.bin
-```
-
-The terminal where you ran the command shows the address and `delete tamamlandi` message directly. The app exits without opening a window.
 
 ## 6. Creating a process
 

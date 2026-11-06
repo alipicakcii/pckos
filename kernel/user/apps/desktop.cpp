@@ -75,6 +75,11 @@ namespace
             refresh_wallpapers();
         }
 
+        void start_terminal()
+        {
+            open_window(WINDOW_TERMINAL);
+        }
+
         [[noreturn]] void run()
         {
             user::thread_set_name("PCKOS masaustu");
@@ -1404,6 +1409,8 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     if (user::graphics_get_info(&screen) < 0 ||
         screen.width < 400 || screen.height < 240)
         user::exit(-1);
+         
     DesktopSession session;
+    session.start_terminal();
     session.run();
 }

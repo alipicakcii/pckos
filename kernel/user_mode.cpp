@@ -324,6 +324,7 @@ namespace kernel
         syscall_reset_process();
         cleanup_process_space(*space, false);
         (void)kernel_cr3;
+
         return user_task_exit_status;
     }
 

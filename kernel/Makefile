@@ -44,7 +44,7 @@ user/apps/terminal_process.user.o \
 user/apps/file_manager_process.user.o \
 user/apps/task_manager_process.user.o
 USER_PROCESS_OBJECTS+=user/apps/calculator_process.user.o user/apps/notepad_process.user.o
-USER_PROCESS_OBJECTS+=user/apps/new_demo_process.user.o
+USER_PROCESS_OBJECTS+=user/apps/demo_process.user.o
 USER_PROCESS_OBJECTS+=user/apps/hello_word.user.o
 USER_PROCESS_OBJECTS+=user/apps/system_info_process.user.o
 USER_PROCESS_OBJECTS+=user/apps/clock_process.user.o user/apps/unit_converter_process.user.o
@@ -54,7 +54,7 @@ user/apps/terminal_process.bin \
 user/apps/file_manager_process.bin \
 user/apps/task_manager_process.bin
 USER_PROCESS_IMAGES+=user/apps/calculator_process.bin user/apps/notepad_process.bin
-USER_PROCESS_IMAGES+=user/apps/new_demo_process.bin
+USER_PROCESS_IMAGES+=user/apps/demo_process.bin
 USER_PROCESS_IMAGES+=user/apps/hello_word.bin
 USER_PROCESS_IMAGES+=user/apps/system_info_process.bin
 USER_PROCESS_IMAGES+=user/apps/clock_process.bin user/apps/unit_converter_process.bin
@@ -262,13 +262,13 @@ user/apps/memory_hunter_process.bin: user/apps/memory_hunter_process.elf
 arch/i386/user_desktop.o: arch/i386/user_desktop.asm user/apps/desktop.bin
 	nasm -felf32 $< -o $@
 
-user/apps/new_demo_process.user.o: user/apps/new_demo_process.cpp include/user/lib/new.hh include/user/syscall.hh include/user/gui.hh include/user/window_drag.hh
+user/apps/demo_process.user.o: user/apps/demo_process.cpp include/user/lib/new.hh include/user/syscall.hh include/user/gui.hh include/user/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/new_demo_process.elf: $(USER_RUNTIME_OBJECTS) user/apps/new_demo_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/apps/new_demo_process.user.o user/gui/graphics.user.o
+user/apps/demo_process.elf: $(USER_RUNTIME_OBJECTS) user/apps/demo_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/apps/demo_process.user.o user/gui/graphics.user.o
 
-user/apps/new_demo_process.bin: user/apps/new_demo_process.elf
+user/apps/demo_process.bin: user/apps/demo_process.elf
 	$(OBJCOPY) -O binary $< $@
 
 user/apps/hello_word.user.o: user/apps/hello_word.cpp include/user/lib/io.hh include/user/syscall.hh
@@ -281,7 +281,7 @@ user/apps/hello_word.bin: user/apps/hello_word.elf
 	$(OBJCOPY) -O binary $< $@
 
 clean:
-	rm -f user/apps/new_demo_process.elf user/apps/hello_word.elf user/apps/system_info_process.elf \
+	rm -f user/apps/demo_process.elf user/apps/hello_word.elf user/apps/system_info_process.elf \
 		user/apps/clock_process.elf user/apps/unit_converter_process.elf user/apps/memory_hunter_process.elf
 	rm -f pckos.bin
 	rm -f $(USER_APP_OBJECTS) $(USER_PROCESS_OBJECTS) user/apps/desktop.elf user/apps/desktop.bin \

@@ -324,13 +324,6 @@ Her süreçte `0x41000000–0x43000000` adres aralığında 32 MiB'a kadar heap 
 
 `heap_alloc(size, alignment)` (syscall 42) ham bellek verir, başarısızlıkta `nullptr` döndürür; `heap_free(address)` (syscall 43) belleği geri verir. Tahsis kayıtları çekirdekte saklanır; yalnızca çağıran sürecin geçerli tahsis başlangıcı serbest bırakılabilir. İşlemler mevcut tek çekirdekli sistemde kesmeler kapalı sistem çağrısı içinde tamamlanır. Normal `new` bellek bulamazsa istisnalar kapalı olduğu için günlüğe hata yazıp çağıran süreci `-12` durumuyla sonlandırır. Hatayı uygulamada ele almak için `new (std::nothrow)` kullanın. `get_heap_usage()` hâlâ çekirdek heap kullanımını bildirir.
 
-Basit örnek `kernel/user/apps/new_demo_process.cpp` içindedir: `int *ptr = new int;` ile bellek alır, adresi standart çıktıya yazar ve `delete ptr;` ile bırakır. `./qemu.sh` ile açtıktan sonra **PCKOS terminalinde** çalıştırın:
-
-```text
-run /apps/new_demo.bin
-```
-
-Adresi ve `delete tamamlandi` mesajını doğrudan komutu çalıştırdığınız terminalde görebilirsiniz. Uygulama pencere açmadan kapanır.
 
 ## 6. Process nasıl oluşturulur?
 
