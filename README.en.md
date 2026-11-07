@@ -104,7 +104,7 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
           → separate application processes from PCKFS
 ```
 
-1. `./qemu.sh` attaches `pckos.iso` as a CD-ROM and `pckfs.img` as an IDE disk. `iso.sh` writes `isodir/boot/grub/grub.cfg`, which tells GRUB to load `pckos.bin` in 1024×768×32 graphics mode.
+1. `./run.sh` attaches `pckos.iso` as a CD-ROM and `pckfs.img` as an IDE disk. `iso.sh` writes `isodir/boot/grub/grub.cfg`, which tells GRUB to load `pckos.bin` in 1024×768×32 graphics mode.
 2. GRUB reads the Multiboot header in `kernel/arch/i386/boot.asm`. `_start` sets up the first 16 KiB kernel stack and passes the Multiboot info address to `kernel_main()`. `kernel/arch/i386/linker.ld` links the kernel at 1 MiB.
 3. `kernel/kernel.cpp` disables interrupts, initializes the processor tables, and starts paging. After the kernel heap is ready, `_init()` runs global C++ constructors.
 4. The keyboard, mouse, framebuffer, ATA PIO disk, and PCKFS are initialized. `_kprintf` writes boot messages to the kernel console log. The PIT is set to 100 Hz. Once the framebuffer is ready, the boot log is displayed on screen: CPU vendor/model, Multiboot information, GDT/IDT/TSS, CR3, physical page counts, display dimensions, disk/PCKFS status, and RTC date/time. Syscall, user heap/stack, and scheduler information is shown before entering the desktop. Press ESC on the desktop to see the system console with boot messages and subsequent kernel output. `dmesg` also reads the log.
@@ -150,11 +150,11 @@ Required tools: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkresc
 | `./build.sh` | Builds the kernel/apps and installs the kernel under `sysroot/boot/`. |
 | `./iso.sh` | Runs `build.sh` and creates `pckos.iso`. |
 | `./share.sh` | Runs `build.sh`; creates `pckfs.img` from `host-share/`, system apps, and the logo. |
-| `./qemu.sh` | Cleans, rebuilds the ISO and disk, and starts QEMU. |
+| `./run.sh` | Cleans, rebuilds the ISO and disk, and starts QEMU. |
 | `./vbox.sh` | Converts the current `pckfs.img` to `pckfs-vbox.vdi`. Build a fresh image first. |
 | `./clean.sh` | Removes build and image outputs; preserves `host-share/`. |
 
-`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. `.elf` is a linker output; the loader receives a flat `.bin` image produced by `objcopy`. `qemu.sh` uses KVM when available and TCG otherwise. The serial port is disabled. View kernel output in the ESC console or with `dmesg`.
+`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. `.elf` is a linker output; the loader receives a flat `.bin` image produced by `objcopy`. `run.sh` uses KVM when available and TCG otherwise. The serial port is disabled. View kernel output in the ESC console or with `dmesg`.
 
 `vbox.sh` removes the previous `pckfs-vbox.vdi` and recreates it with `convertfromraw`. It uses a fixed disk UUID registered with the VM so VirtualBox's disk registration remains stable. It does not change the ISO, kernel, or VM settings. Shut down the VirtualBox VM before regenerating the disk.
 
@@ -180,10 +180,10 @@ PCKFS v1 is currently **read-only** to user applications. The ATA driver has a s
 ```sh
 mkdir -p host-share/home/pck
 cp example.txt host-share/home/pck/example.txt
-./qemu.sh
+./run.sh
 ```
 
-The file appears at `/home/pck/example.txt` in PCKOS. It is visible in Files and can be read in Terminal with `cat /home/pck/example.txt`. `qemu.sh` recreates the disk each time, so keep host files in `host-share/`.
+The file appears at `/home/pck/example.txt` in PCKOS. It is visible in Files and can be read in Terminal with `cat /home/pck/example.txt`. `run.sh` recreates the disk each time, so keep host files in `host-share/`.
 
 Read a file from a user application:
 
@@ -455,7 +455,7 @@ The application is now compiled and included in the disk image. **It does not ne
 
 **6. Launch the app for an initial trial.**
 
-Run `./qemu.sh` from the project root. It performs a clean build, regenerates the ISO and PCKFS images, and starts QEMU. Cleanup preserves `host-share/apps/merhaba.bin`, which is included in the new disk image.
+Run `./run.sh` from the project root. It performs a clean build, regenerates the ISO and PCKFS images, and starts QEMU. Cleanup preserves `host-share/apps/merhaba.bin`, which is included in the new disk image.
 
 Open Terminal on the desktop and enter this in the **PCKOS terminal**:
 
@@ -465,4 +465,4 @@ run /apps/merhaba.bin
 
 The terminal starts a new process from this file. You do not need to edit `desktop.cpp` to launch the app. To launch it from another application, use `user::process_spawn("/apps/merhaba.bin", "Merhaba")`.
 
-**After changing the application's source:** Repeat steps 2, 3, and 4 to update `host-share/apps/merhaba.bin`. Then try it with `./qemu.sh`, which also performs the packaging in step 5. To refresh only the disk image, run `./share.sh`. If cleanup has removed `graphics.user.o`, or if you changed the graphics library, repeat step 1 first.
+**After changing the application's source:** Repeat steps 2, 3, and 4 to update `host-share/apps/merhaba.bin`. Then try it with `./run.sh`, which also performs the packaging in step 5. To refresh only the disk image, run `./share.sh`. If cleanup has removed `graphics.user.o`, or if you changed the graphics library, repeat step 1 first.

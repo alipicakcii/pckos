@@ -107,7 +107,7 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
           → PCKFS'ten ayrı uygulama süreçleri
 ```
 
-1. `./qemu.sh`, `pckos.iso` dosyasını CD-ROM, `pckfs.img` dosyasını IDE disk olarak QEMU'ya bağlar. `iso.sh` tarafından yazılan `isodir/boot/grub/grub.cfg`, GRUB'a `pckos.bin` çekirdeğini ve 1024×768×32 grafik modunu söyler.
+1. `./run.sh`, `pckos.iso` dosyasını CD-ROM, `pckfs.img` dosyasını IDE disk olarak QEMU'ya bağlar. `iso.sh` tarafından yazılan `isodir/boot/grub/grub.cfg`, GRUB'a `pckos.bin` çekirdeğini ve 1024×768×32 grafik modunu söyler.
 2. `kernel/arch/i386/boot.asm` içindeki Multiboot başlığı GRUB tarafından okunur. `_start` ilk 16 KiB çekirdek yığınını kurar, Multiboot bilgi adresini `kernel_main()` fonksiyonuna verir. `kernel/arch/i386/linker.ld` çekirdeği 1 MiB adresine bağlar.
 3. `kernel/kernel.cpp` kesmeleri kapatır; işlemci tablolarını kurar, sayfalamayı başlatır. `_init()`, çekirdek heap'i hazır olduktan sonra global C++ kurucularını çalıştırır.
 4. Klavye, fare, framebuffer, ATA PIO disk ve PCKFS başlatılır. `_kprintf` ile açılış bilgileri çekirdek konsol günlüğüne yazılır. PIT 100 Hz ayarlanır. Framebuffer hazır olduğunda açılış günlüğü ekranda gösterilir; CPU üreticisi/modeli, Multiboot bilgileri, GDT/IDT/TSS, CR3, fiziksel sayfa sayıları, görüntü boyutları, disk/PCKFS durumu ve RTC tarihi yazılır. Masaüstüne geçmeden önce syscall, kullanıcı heap/yığın ve zamanlayıcı bilgileri gösterilir. Masaüstünde ESC tuşuna bastığınızda açılış mesajları ve sonraki çekirdek çıktıları sistem konsolunda görünür. Günlüğü `dmesg` ile de okuyabilirsiniz.
@@ -153,11 +153,11 @@ Gereken araçlar: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkre
 | `./build.sh` | Çekirdeği/uygulamaları derler, çekirdeği `sysroot/boot/` altına kurar. |
 | `./iso.sh` | `build.sh` çalıştırır, `pckos.iso` üretir. |
 | `./share.sh` | `build.sh` çalıştırır; `host-share/`, sistem uygulamaları ve logodan `pckfs.img` üretir. |
-| `./qemu.sh` | Temizler, ISO ve diski yeniden üretir, QEMU'yu açar. |
-| `./vbox.sh` | Mevcut `pckfs.img` dosyasını `pckfs-vbox.vdi` biçimine çevirir. Önce güncel imajı `./qemu.sh` veya `./share.sh` ile üretin. |
+| `./run.sh` | Temizler, ISO ve diski yeniden üretir, QEMU'yu açar. |
+| `./vbox.sh` | Mevcut `pckfs.img` dosyasını `pckfs-vbox.vdi` biçimine çevirir. Önce güncel imajı `./run.sh` veya `./share.sh` ile üretin. |
 | `./clean.sh` | Derleme ve imaj çıktılarını temizler; `host-share/` korunur. |
 
-`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `qemu.sh` erişim varsa KVM, yoksa TCG kullanır. Seri port kapalıdır. Çekirdek çıktılarını ESC konsolunda veya `dmesg` ile görebilirsiniz.
+`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `run.sh` erişim varsa KVM, yoksa TCG kullanır. Seri port kapalıdır. Çekirdek çıktılarını ESC konsolunda veya `dmesg` ile görebilirsiniz.
 
 `vbox.sh` mevcut `pckfs-vbox.vdi` çıktısını kaldırıp `convertfromraw` ile tekrar üretir. Dönüşümde sanal makineye kayıtlı sabit disk UUID'sini kullanır; böylece VirtualBox'ın disk kaydı bozulmaz. ISO'yu, çekirdeği veya VirtualBox makine ayarlarını değiştirmez. Yeniden üretim sırasında VirtualBox makinesi kapalı olsun.
 
@@ -183,10 +183,10 @@ PCKFS v1 şu anda kullanıcı programları için **salt okunur**. ATA sürücüs
 ```sh
 mkdir -p host-share/home/pck
 cp ornek.txt host-share/home/pck/ornek.txt
-./qemu.sh
+./run.sh
 ```
 
-Dosya PCKOS'ta `/home/pck/ornek.txt` olur. Dosyalar uygulamasında görünür; Terminal'de `cat /home/pck/ornek.txt` ile okunabilir. `qemu.sh` diski her seferinde yeniden ürettiği için kaynak dosyayı `host-share/` içinde tutun.
+Dosya PCKOS'ta `/home/pck/ornek.txt` olur. Dosyalar uygulamasında görünür; Terminal'de `cat /home/pck/ornek.txt` ile okunabilir. `run.sh` diski her seferinde yeniden ürettiği için kaynak dosyayı `host-share/` içinde tutun.
 
 Kullanıcı programında okuma örneği:
 
@@ -471,7 +471,7 @@ Bu noktada uygulama derlenmiş ve disk imajına eklenmiştir. **Uygulamayı çek
 
 **6. İlk deneme için uygulamayı başlatın.**
 
-Proje kökünde `./qemu.sh` çalıştırın. Betik temiz derleme yapar, ISO ve PCKFS imajlarını yeniden üretir ve QEMU'yu açar. `host-share/apps/merhaba.bin` temizleme sırasında korunup yeni disk imajına eklenir.
+Proje kökünde `./run.sh` çalıştırın. Betik temiz derleme yapar, ISO ve PCKFS imajlarını yeniden üretir ve QEMU'yu açar. `host-share/apps/merhaba.bin` temizleme sırasında korunup yeni disk imajına eklenir.
 
 Masaüstündeki Terminal'i açıp **PCKOS terminaline** şu komutu yazın:
 
@@ -481,4 +481,4 @@ run /apps/merhaba.bin
 
 Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `desktop.cpp` dosyasını değiştirmeniz gerekmez.  Başka bir uygulamanın kodundan başlatmak için `user::process_spawn("/apps/merhaba.bin", "Merhaba")` kullanın.
 
-**Uygulamanın kodunu değiştirdiğinizde:** 2, 3 ve 4. adımları tekrar çalıştırarak `host-share/apps/merhaba.bin` dosyasını güncelleyin. Ardından `./qemu.sh` ile deneyin; bu betik 5. adımdaki paketlemeyi de kendisi yapar. Yalnızca disk imajını yenilemek isterseniz `./share.sh` çalıştırın. Temizleme sonrasında `graphics.user.o` bulunmuyorsa veya grafik kitaplığını değiştirdiyseniz önce 1. adımı da uygulayın.
+**Uygulamanın kodunu değiştirdiğinizde:** 2, 3 ve 4. adımları tekrar çalıştırarak `host-share/apps/merhaba.bin` dosyasını güncelleyin. Ardından `./run.sh` ile deneyin; bu betik 5. adımdaki paketlemeyi de kendisi yapar. Yalnızca disk imajını yenilemek isterseniz `./share.sh` çalıştırın. Temizleme sonrasında `graphics.user.o` bulunmuyorsa veya grafik kitaplığını değiştirdiyseniz önce 1. adımı da uygulayın.
