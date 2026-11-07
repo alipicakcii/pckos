@@ -28,10 +28,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 
     auto id =user::thread_create(&work, nullptr, "Test Thread");
 
-    user::thread_sleep(50);
-
-
-    
+    user::thread_sleep(50);    
     
     user::exit(0);
 }
