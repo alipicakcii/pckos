@@ -53,6 +53,8 @@ These commands create the ISO and PCKFS disk image; `vbox.sh` converts `pckfs.im
 Whichever method you use, create a new **Linux / Other Linux (32-bit)** virtual machine. Choose a memory size that suits your setup. Select **VBoxVGA** as the graphics controller, and turn off 3D acceleration. Do not create a blank hard disk. In Storage, attach `pckos.iso` to the optical drive and `pckfs-vbox.vdi` as the IDE **Primary Master**. Set the boot order to start from the optical drive. The ISO boots the system; the VDI provides its root filesystem.
 
 
+## After starting PCKOS
+
 PCKOS is currently a minimal system under development. The kernel currently provides:
 
 - i386 boot, paging, and separation between kernel and user mode.
