@@ -16,7 +16,7 @@ Güncel derlemeyi denemek için ISO ile birlikte QEMU için IMG, VirtualBox içi
 - [VirtualBox için PCKFS disk imajı — pckfs-vbox.vdi](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 doğrulama değerleri](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
-ISO, IMG ve VDI dosyaları PCKOS'un güncel derlemesinden üretilir. Kaynak koddan üçünü de yeniden hazırlamak için `./downloads.sh` çalıştırın; betik ISO ve PCKFS imajlarını üretir, PCKFS imajını VirtualBox VDI biçimine dönüştürür, dosyaları `downloads/` dizinine kopyalar ve SHA-256 değerlerini günceller. `clean.sh` bu indirme kopyalarını korur. VDI dosyası indirme sayfasında bulunmuyorsa `VirtualBox’ta çalıştırma` bölümündeki dönüştürme adımlarını izleyin.
+VDI dosyası indirme bağlantısında bulunmuyorsa, `VirtualBox'ta çalıştırma` bölümündeki adımlarla `pckfs.img` dosyasından oluşturun.
 
 PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çekirdeğin başlıca yetenekleri:
 

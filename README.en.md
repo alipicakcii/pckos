@@ -16,7 +16,7 @@ To try the current build, download the ISO plus the IMG disk image for QEMU or t
 - [PCKFS disk image for VirtualBox — pckfs-vbox.vdi](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
-The ISO, IMG, and VDI files are built from the latest PCKOS sources. Run `./downloads.sh` to rebuild all three: it creates the ISO and PCKFS image, converts the PCKFS image to VirtualBox VDI format, copies the files into `downloads/`, and updates their SHA-256 checksums. `clean.sh` preserves these download copies. If the VDI is unavailable on the download page, follow the conversion steps in the “Run in VirtualBox” section.
+If the VDI download link is unavailable, follow the steps in “Run in VirtualBox” to create one from `pckfs.img`.
 
 PCKOS is currently a minimal system under development. The kernel currently provides:
 
