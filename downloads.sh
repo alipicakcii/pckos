@@ -9,4 +9,14 @@ cd "$SCRIPT_DIR"
 mkdir -p downloads
 cp pckos.iso downloads/pckos.iso
 cp pckfs.img downloads/pckfs.img
-(cd downloads && sha256sum pckos.iso pckfs.img > SHA256SUMS)
+if [ -f pckfs-vbox.vdi ]; then
+    cp pckfs-vbox.vdi downloads/pckfs-vbox.vdi
+fi
+(
+    cd downloads
+    set -- pckos.iso pckfs.img
+    if [ -f pckfs-vbox.vdi ]; then
+        set -- "$@" pckfs-vbox.vdi
+    fi
+    sha256sum "$@" > SHA256SUMS
+)

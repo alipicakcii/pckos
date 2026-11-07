@@ -9,13 +9,14 @@ Artık PCKOS'u açık kaynak olarak paylaşmaya karar verdim. Amacım, projeye i
 
 Daha fazla bilgi için blog: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
-Güncel derlemeyi denemek için iki dosyayı da indirin:
+Güncel derlemeyi denemek için ISO ile birlikte QEMU için IMG, VirtualBox için VDI disk imajını indirin:
 
 - [PCKOS ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
 - [PCKFS kök disk imajı — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
+- [VirtualBox için PCKFS disk imajı — pckfs-vbox.vdi](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 doğrulama değerleri](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
-ISO ve disk imajı, PCKOS'un en güncel hâlinin derlenmiş çıktılarıdır. Kaynak koddan yeniden derlemek için `./downloads.sh` çalıştırın; betik iki imajı derleyip `downloads/` dizinine kopyalar ve doğrulama değerlerini günceller. `clean.sh` bu indirme kopyalarını korur.
+ISO ve disk imajı, PCKOS'un en güncel hâlinin derlenmiş çıktılarıdır. Kaynak koddan yeniden derlemek için `./downloads.sh` çalıştırın; betik iki imajı derleyip `downloads/` dizinine kopyalar ve doğrulama değerlerini günceller. Proje kökünde `pckfs-vbox.vdi` varsa onu da `downloads/` dizinine kopyalar ve SHA-256 listesine ekler. VDI dosyasını güncellemek için önce `./iso.sh`, `./share.sh` ve `./vbox.sh`, ardından `./downloads.sh` çalıştırın; indirme betiği mevcut VDI dosyasını kopyalar, yeniden dönüştürmez. `clean.sh` bu indirme kopyalarını korur.
 
 PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çekirdeğin başlıca yetenekleri:
 
@@ -70,7 +71,9 @@ ISO çekirdeği başlatır; `pckfs.img` PCKOS kök dosya sistemidir. İkisi de g
 
 ## VirtualBox'ta çalıştırma
 
-`pckos.iso` ve `pckfs.img` dosyalarını indirin. `pckfs.img` dosyasını VirtualBox diskine dönüştürün bu komut `pckfs.img` dosyasını bir VirtualBox diskine dönüştürür:
+`pckos.iso` ve `pckfs-vbox.vdi` dosyalarını yukarıdaki bağlantılardan indirin. Hazır VDI dosyasını doğrudan VirtualBox’a ekleyebilirsiniz; dönüştürme gerekmez.
+
+Elinizde yalnızca `pckfs.img` varsa aşağıdaki komutla VDI dosyasını oluşturabilirsiniz:
 
 ```sh
 VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI

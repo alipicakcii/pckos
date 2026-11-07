@@ -26,6 +26,7 @@ __pycache__/
 # README üzerinden indirilen güncel imajlar
 !/downloads/pckos.iso
 !/downloads/pckfs.img
+!/downloads/pckfs-vbox.vdi
 
 /tools/tests/
 
