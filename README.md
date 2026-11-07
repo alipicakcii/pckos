@@ -16,7 +16,44 @@ Güncel derlemeyi denemek için ISO ile birlikte QEMU için IMG, VirtualBox içi
 - [VirtualBox için PCKFS disk imajı — pckfs-vbox.vdi](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 doğrulama değerleri](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
-VDI dosyası indirme bağlantısında bulunmuyorsa, `VirtualBox'ta çalıştırma` bölümündeki adımlarla `pckfs.img` dosyasından oluşturun.
+VDI dosyası sorun çıkarırsa yeniden oluşturmak için `VirtualBox'ta çalıştırma` bölümüne bakın.
+
+## QEMU'da çalıştırma
+
+`pckos.iso` ve `pckfs.img` dosyalarını indirdikten sonra bu iki dosyayı aynı dizine koyup şu komutla başlatın:
+
+```sh
+qemu-system-i386 -m 2G \
+  -cdrom pckos.iso \
+  -drive file=pckfs.img,format=raw,if=ide,index=0,media=disk
+```
+
+ISO çekirdeği başlatır; `pckfs.img` PCKOS kök dosya sistemidir. İkisi de gereklidir.
+
+## VirtualBox'ta çalıştırma
+
+`pckos.iso` ve `pckfs-vbox.vdi` dosyalarını yukarıdaki bağlantılardan indirin. Hazır VDI dosyasını doğrudan VirtualBox’a ekleyebilirsiniz; dönüştürme gerekmez.
+
+Elinizde yalnızca `pckfs.img` varsa aşağıdaki komutla VDI dosyasını oluşturabilirsiniz:
+
+```sh
+VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI
+```
+
+Kaynak koddan imajları hazırlıyorsaınız proje dizininde aşağıdaki komutları çalıştırın:
+
+```sh
+./iso.sh
+./share.sh
+./vbox.sh
+```
+
+Bu komutlarda ISO'yu ve PCKFS disk imajını üretir; `vbox.sh`, `pckfs.img` dosyasını VirtualBox'ın kullanacağı `pckfs-vbox.vdi` biçimine dönüştürür.
+
+İki yöntemden hangisiyle hazırlanırsa hazırlansın aşağıdakı adımları izleyelerek VirtualBox'ta PCKOS'u çalıştırabilirsiniz:
+
+VirtualBox'ta yeni bir **Linux / Other Linux (32-bit)** sanal makinesi oluşturun. Belleği ihtiyacınıza göre ayarlayın. Grafik denetleyicisini **VBoxVGA** seçin ve 3D hızlandırmayı kapalı tutun. Boş bir sabit disk oluşturmayın. Depolama ayarlarında `pckos.iso` dosyasını optik sürücüye, `pckfs-vbox.vdi` dosyasını IDE **Primary Master** olarak ekleyin. Açılış sırasını optik sürücüden başlatacak şekilde ayarlayın. ISO sistemi başlatır; VDI kök dosya sistemini sağlar.
+
 
 PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çekirdeğin başlıca yetenekleri:
 
@@ -56,42 +93,6 @@ Bellek Avcısı oyununda her yem alındığında kullanıcı heap'inden bir `uin
 ### Görev Yöneticisi ve Sistem Bilgisi
 
 ![PCKOS masaüstünde Görev Yöneticisi ve Sistem Bilgisi](assets/screenshots/qemu-task-manager-system-info.png)
-
-## QEMU'da çalıştırma
-
-`pckos.iso` ve `pckfs.img` dosyalarını indirdikten sonra bu iki dosyayı aynı dizine koyup şu komutla başlatın:
-
-```sh
-qemu-system-i386 -m 2G \
-  -cdrom pckos.iso \
-  -drive file=pckfs.img,format=raw,if=ide,index=0,media=disk
-```
-
-ISO çekirdeği başlatır; `pckfs.img` PCKOS kök dosya sistemidir. İkisi de gereklidir.
-
-## VirtualBox'ta çalıştırma
-
-`pckos.iso` ve `pckfs-vbox.vdi` dosyalarını yukarıdaki bağlantılardan indirin. Hazır VDI dosyasını doğrudan VirtualBox’a ekleyebilirsiniz; dönüştürme gerekmez.
-
-Elinizde yalnızca `pckfs.img` varsa aşağıdaki komutla VDI dosyasını oluşturabilirsiniz:
-
-```sh
-VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI
-```
-
-Kaynak koddan imajları hazırlıyorsaınız proje dizininde aşağıdaki komutları çalıştırın:
-
-```sh
-./iso.sh
-./share.sh
-./vbox.sh
-```
-
-Bu komutlarda ISO'yu ve PCKFS disk imajını üretir; `vbox.sh`, `pckfs.img` dosyasını VirtualBox'ın kullanacağı `pckfs-vbox.vdi` biçimine dönüştürür.
-
-İki yöntemden hangisiyle hazırlanırsa hazırlansın aşağıdakı adımları izleyelerek VirtualBox'ta PCKOS'u çalıştırabilirsiniz:
-
-VirtualBox'ta yeni bir **Linux / Other Linux (32-bit)** sanal makinesi oluşturun. Belleği ihtiyacınıza göre ayarlayın. Grafik denetleyicisini **VBoxVGA** seçin ve 3D hızlandırmayı kapalı tutun. Boş bir sabit disk oluşturmayın. Depolama ayarlarında `pckos.iso` dosyasını optik sürücüye, `pckfs-vbox.vdi` dosyasını IDE **Primary Master** olarak ekleyin. Açılış sırasını optik sürücüden başlatacak şekilde ayarlayın. ISO sistemi başlatır; VDI kök dosya sistemini sağlar.
 
 ## Geliştirme ortamı
 

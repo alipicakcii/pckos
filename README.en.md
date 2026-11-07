@@ -16,7 +16,42 @@ To try the current build, download the ISO plus the IMG disk image for QEMU or t
 - [PCKFS disk image for VirtualBox — pckfs-vbox.vdi](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
-If the VDI download link is unavailable, follow the steps in “Run in VirtualBox” to create one from `pckfs.img`.
+If the VDI causes problems, see “Run in VirtualBox” for instructions on recreating it.
+
+## Run in QEMU
+
+After downloading `pckos.iso` and `pckfs.img`, place both files in the same directory and start PCKOS with:
+
+```sh
+qemu-system-i386 -m 2G \
+  -cdrom pckos.iso \
+  -drive file=pckfs.img,format=raw,if=ide,index=0,media=disk
+```
+
+The ISO boots the kernel; `pckfs.img` provides the PCKOS root filesystem. Both are required.
+
+## Run in VirtualBox
+
+Download `pckos.iso` and `pckfs-vbox.vdi` using the links above. You can attach the ready-made VDI directly to VirtualBox; no conversion is needed.
+
+If you only have `pckfs.img`, create a VDI with this command:
+
+```sh
+VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI
+```
+
+When building the images from source, run these commands in the project directory:
+
+```sh
+./iso.sh
+./share.sh
+./vbox.sh
+```
+
+These commands create the ISO and PCKFS disk image; `vbox.sh` converts `pckfs.img` to the `pckfs-vbox.vdi` format used by VirtualBox.
+
+Whichever method you use, create a new **Linux / Other Linux (32-bit)** virtual machine. Choose a memory size that suits your setup. Select **VBoxVGA** as the graphics controller, and turn off 3D acceleration. Do not create a blank hard disk. In Storage, attach `pckos.iso` to the optical drive and `pckfs-vbox.vdi` as the IDE **Primary Master**. Set the boot order to start from the optical drive. The ISO boots the system; the VDI provides its root filesystem.
+
 
 PCKOS is currently a minimal system under development. The kernel currently provides:
 
@@ -55,40 +90,6 @@ In Memory Hunter, each time food is eaten, the game allocates one `uint32_t` (4 
 ### Task Manager and System Information
 
 ![Task Manager and System Information on the PCKOS desktop](assets/screenshots/qemu-task-manager-system-info.png)
-
-## Run in QEMU
-
-After downloading `pckos.iso` and `pckfs.img`, place both files in the same directory and start PCKOS with:
-
-```sh
-qemu-system-i386 -m 2G \
-  -cdrom pckos.iso \
-  -drive file=pckfs.img,format=raw,if=ide,index=0,media=disk
-```
-
-The ISO boots the kernel; `pckfs.img` provides the PCKOS root filesystem. Both are required.
-
-## Run in VirtualBox
-
-Download `pckos.iso` and `pckfs-vbox.vdi` using the links above. You can attach the ready-made VDI directly to VirtualBox; no conversion is needed.
-
-If you only have `pckfs.img`, create a VDI with this command:
-
-```sh
-VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI
-```
-
-When building the images from source, run these commands in the project directory:
-
-```sh
-./iso.sh
-./share.sh
-./vbox.sh
-```
-
-These commands create the ISO and PCKFS disk image; `vbox.sh` converts `pckfs.img` to the `pckfs-vbox.vdi` format used by VirtualBox.
-
-Whichever method you use, create a new **Linux / Other Linux (32-bit)** virtual machine. Choose a memory size that suits your setup. Select **VBoxVGA** as the graphics controller, and turn off 3D acceleration. Do not create a blank hard disk. In Storage, attach `pckos.iso` to the optical drive and `pckfs-vbox.vdi` as the IDE **Primary Master**. Set the boot order to start from the optical drive. The ISO boots the system; the VDI provides its root filesystem.
 
 ## Development environment
 
