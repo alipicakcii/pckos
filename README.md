@@ -33,7 +33,7 @@ ISO çekirdeği başlatır; `pckfs.img` PCKOS kök dosya sistemidir. İkisi de g
 
 `pckos.iso` ve `pckfs-vbox.vdi` dosyalarını yukarıdaki bağlantılardan indirin. Hazır VDI dosyasını doğrudan VirtualBox’a ekleyebilirsiniz; dönüştürme gerekmez.
 
-Kendi VDI dosyanızı yeniden oluşturmak için `pckfs.img` dosyasını şu komutla dönüştürün:
+İsterseniz kendi VDI dosyanızı yeniden oluşturmak için `pckfs.img` dosyasını şu komutla dönüştürebilirsiniz:
 
 ```sh
 VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI
@@ -54,7 +54,7 @@ Bu komutlarda ISO'yu ve PCKFS disk imajını üretir; `vbox.sh`, `pckfs.img` dos
 VirtualBox'ta yeni bir **Linux / Other Linux (32-bit)** sanal makinesi oluşturun. Belleği ihtiyacınıza göre ayarlayın. Grafik denetleyicisini **VBoxVGA** seçin ve 3D hızlandırmayı kapalı tutun. Boş bir sabit disk oluşturmayın. Depolama ayarlarında `pckos.iso` dosyasını optik sürücüye, `pckfs-vbox.vdi` dosyasını IDE **Primary Master** olarak ekleyin. Açılış sırasını optik sürücüden başlatacak şekilde ayarlayın. ISO sistemi başlatır; VDI kök dosya sistemini sağlar.
 
 
-## PCKOS’u başlattıktan sonra
+## PCKOS'un şu anki özellikleri
 
 PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çekirdeğin başlıca yetenekleri:
 
