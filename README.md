@@ -33,7 +33,7 @@ ISO çekirdeği başlatır; `pckfs.img` PCKOS kök dosya sistemidir. İkisi de g
 
 `pckos.iso` ve `pckfs-vbox.vdi` dosyalarını yukarıdaki bağlantılardan indirin. Hazır VDI dosyasını doğrudan VirtualBox’a ekleyebilirsiniz; dönüştürme gerekmez.
 
-Elinizde yalnızca `pckfs.img` varsa aşağıdaki komutla VDI dosyasını oluşturabilirsiniz:
+Kendi VDI dosyanızı yeniden oluşturmak için `pckfs.img` dosyasını şu komutla dönüştürün:
 
 ```sh
 VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI

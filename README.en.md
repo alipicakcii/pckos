@@ -33,7 +33,7 @@ The ISO boots the kernel; `pckfs.img` provides the PCKOS root filesystem. Both a
 
 Download `pckos.iso` and `pckfs-vbox.vdi` using the links above. You can attach the ready-made VDI directly to VirtualBox; no conversion is needed.
 
-If you only have `pckfs.img`, create a VDI with this command:
+To recreate the VDI yourself, convert `pckfs.img` with this command:
 
 ```sh
 VBoxManage convertfromraw pckfs.img pckfs-vbox.vdi --format VDI
