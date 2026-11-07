@@ -20,6 +20,8 @@ void work(void *)
   
 }
 
+int bss =5;
+
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 {
 
@@ -28,7 +30,11 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 
     auto id =user::thread_create(&work, nullptr, "Test Thread");
 
-    user::thread_sleep(50);    
-    
+    user::thread_sleep(50);   
+
+    int s = 5;
+
+    print("stack_addr=%p\n", &s);
+     print("bsss_addr=%p\n", &bss);
     user::exit(0);
 }

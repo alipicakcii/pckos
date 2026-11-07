@@ -13,7 +13,7 @@ rm -rf isodir
 rm -f pckos.iso
 rm -f pckfs.img
 rm -f serial
-rm -rf pckfs-vbox.vdi
+
 # Generated regression captures and Python bytecode.
 rm -rf tools/tests/gui-output
 rm -rf tools/tests/heap-output tools/tests/stdio-output
