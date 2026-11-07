@@ -9,11 +9,10 @@ I have now decided to share PCKOS as an open-source project. My goal is to build
 
 More information: [PCKOS on my blog](https://pckblog.com/pckos.html)
 
-To try the current build, download the ISO plus the IMG disk image for QEMU or the VDI disk image for VirtualBox:
+To try the latest PCKOS build, download the files for your virtualization software:
 
-- [PCKOS ISO — pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
-- [PCKFS root disk — pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
-- [PCKFS disk image for VirtualBox — pckfs-vbox.vdi](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
+- **QEMU:** [PCKOS ISO](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso) and [PCKFS disk image (IMG)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
+- **VirtualBox:** [PCKOS ISO](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso) and [PCKFS disk image (VDI)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
 If the VDI causes problems, see “Run in VirtualBox” for instructions on recreating it.
