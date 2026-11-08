@@ -9,11 +9,11 @@ Artık PCKOS'u açık kaynak olarak paylaşmaya karar verdim. Amacım, projeye i
 
 Daha fazla bilgi için blog: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
-QEMU ve VirtualBox için aynı `pckos.iso` dosyasını kullanın. PCKFS kök dosya sistemi iki imajda da aynıdır; `pckfs.img` ham disk biçimidir, `pckfs-vbox.vdi` ise VirtualBox biçimine dönüştürülmüş halidir:
+PCKOS'un güncel derlenmiş sürümünü denemek için:
 
 - **PCKOS ISO:** [pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
-- **PCKFS disk imajı (ham IMG):** [pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
-- **PCKFS disk imajı (VirtualBox VDI):** [pckfs-vbox.vdi](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
+- **PCKFS dosya sistemi:** [pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
+- **VirtualBox için PCKFS imajı:** [pckfs-vbox.vdi](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 doğrulama değerleri](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
 VDI dosyası sorun çıkarırsa yeniden oluşturmak için `VirtualBox'ta çalıştırma` bölümüne bakın.
