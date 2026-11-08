@@ -9,10 +9,11 @@ Artık PCKOS'u açık kaynak olarak paylaşmaya karar verdim. Amacım, projeye i
 
 Daha fazla bilgi için blog: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
-PCKOS'un güncel derlemesini denemek için kullandığınız sanallaştırma aracına göre gerekli dosyaları indirin:
+PCKOS'un güncel derlemesini denemek için her iki sanallaştırıcıda da kullanılan ortak ISO'yu ve kullanacağınız araca uygun disk imajını indirin:
 
-- **QEMU:** [PCKOS ISO](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso) ve [PCKFS disk imajı (IMG)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
-- **VirtualBox:** [PCKOS ISO](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso) ve [PCKFS disk imajı (VDI)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
+- **Ortak önyükleme ISO'su:** [pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
+- **QEMU kök disk imajı:** [pckfs.img (IMG)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
+- **VirtualBox kök disk imajı:** [pckfs-vbox.vdi (VDI)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 doğrulama değerleri](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
 VDI dosyası sorun çıkarırsa yeniden oluşturmak için `VirtualBox'ta çalıştırma` bölümüne bakın.
@@ -71,10 +72,6 @@ PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çek
 
 Yapay zekâ kullanımına karşı değilim; projeye yapılacak katkılarda yapay zekâ araçlarından yararlanılabilir. Tek beklentim, katkıyı gönderen kişinin yaptığı değişiklikleri anlaması ve açıklayabilmesidir.
 
-
-## Lisans
-
-Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3. sürümü veya (tercihinize bağlı olarak) daha sonraki sürümleri altında lisanslanır. Tam metin için [`LICENSE`](LICENSE) dosyasına bakın. Üçüncü taraf varlıkların kendi lisans bildirimleri geçerlidir.
 
 ## Ekran görüntüleri
 

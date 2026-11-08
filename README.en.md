@@ -9,10 +9,11 @@ I have now decided to share PCKOS as an open-source project. My goal is to build
 
 More information: [PCKOS on my blog](https://pckblog.com/pckos.html)
 
-To try the latest PCKOS build, download the files for your virtualization software:
+To try the latest PCKOS build, download the shared ISO used by both virtualization programs and the disk image for your chosen emulator:
 
-- **QEMU:** [PCKOS ISO](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso) and [PCKFS disk image (IMG)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
-- **VirtualBox:** [PCKOS ISO](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso) and [PCKFS disk image (VDI)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
+- **Shared boot ISO:** [pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
+- **QEMU root disk image:** [pckfs.img (IMG)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
+- **VirtualBox root disk image:** [pckfs-vbox.vdi (VDI)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
 If the VDI causes problems, see “Run in VirtualBox” for instructions on recreating it.
@@ -68,10 +69,6 @@ PCKOS is currently a minimal system under development. The kernel currently prov
 ## Contributing and reporting issues
 
 I am not opposed to using AI. Contributions to the project may use AI tools; my only expectation is that contributors understand and can explain the changes they submit.
-
-## License
-
-Unless a file says otherwise, PCKOS code is licensed under the GNU General Public License, version 3 or (at your option) any later version. See [`LICENSE`](LICENSE). Third-party assets retain their own license notices.
 
 ## Screenshots
 
