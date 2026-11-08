@@ -6,7 +6,7 @@
 #include <user/system.hh>
 #include <user/thread.hh>
 #include <user/gui.hh>
-#include <user/window_drag.hh>
+#include <user/lib/window.hh>
 #include <user/audio.hh>
 #include <user/lib/new.hh>
 
@@ -360,10 +360,11 @@ namespace
                         0xFFB8F265);
     }
 
-    void draw_game(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+    void draw_game(user::gui::Window &window, uint32_t x, uint32_t y,
+                   uint32_t width, uint32_t height,
                    uint32_t cell_size, const MemoryHunterGame &game)
     {
-        user::gui::window(x, y, width, height, "PCKOS - Bellek Avcisi", true);
+        window.draw();
         const uint32_t content_x = x + 7;
         const uint32_t content_y = y + 32;
         const uint32_t board_width = BOARD_WIDTH * cell_size;
@@ -505,6 +506,11 @@ namespace
         user::gui::button(left + (panel_width - 96) / 2,
                           top + panel_height - 34, 96, 24, "Tamam");
     }
+
+    void release_game_memory(void *context)
+    {
+        static_cast<MemoryHunterGame *>(context)->release_memory();
+    }
 }
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
@@ -539,10 +545,11 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     if (cell_size < 6)
         cell_size = 6;
 
-    if (user::graphics_register_window(x, y, width, height) < 0)
+    user::gui::Window window(x, y, width, height, "PCKOS - Bellek Avcisi");
+    if (!window.valid())
         user::exit(-1);
-    user::gui::WindowDrag drag(x, y);
     MemoryHunterGame game;
+    window.set_close_callback(release_game_memory, &game);
     bool info_open = false;
     int32_t mouse_x = static_cast<int32_t>(screen.width / 2);
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
@@ -563,8 +570,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         }
 
         user::gui::begin_frame();
-        drag.restore_old_position(x, y);
-        draw_game(x, y, width, height, cell_size, game);
+        x = window.x();
+        y = window.y();
+        draw_game(window, x, y, width, height, cell_size, game);
         if (info_open)
             draw_game_info(x, y, width, height);
         user::gui::end_frame();
@@ -616,23 +624,6 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             user::graphics_cursor(mouse_x, mouse_y, true);
             const bool pressed = (event.buttons & 1U) != 0 &&
                                  ((last_buttons & 1U) == 0 || (event.buttons & 0x100U) != 0);
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 47) &&
-                mouse_x < static_cast<int32_t>(x + width - 28) &&
-                mouse_y >= static_cast<int32_t>(y + 5) &&
-                mouse_y < static_cast<int32_t>(y + 25))
-            {
-                (void)user::process_minimize();
-                last_buttons = event.buttons;
-                continue;
-            }
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 27) &&
-                mouse_x < static_cast<int32_t>(x + width - 6) &&
-                mouse_y >= static_cast<int32_t>(y + 5) &&
-                mouse_y < static_cast<int32_t>(y + 25))
-            {
-                game.release_memory();
-                user::exit(0);
-            }
             if (pressed && !info_open &&
                 mouse_x >= static_cast<int32_t>(x + width - 130) &&
                 mouse_x < static_cast<int32_t>(x + width - 14) &&
@@ -651,8 +642,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
                     mouse_y < static_cast<int32_t>(button_y + 24))
                     info_open = false;
             }
-            drag.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
-                              &x, &y, width, height, screen.width, usable_height);
+            if (window.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
+                                    screen.width, usable_height))
+            { last_buttons = event.buttons; continue; }
             last_buttons = event.buttons;
         }
 

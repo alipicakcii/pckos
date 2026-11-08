@@ -30,7 +30,8 @@ USER_APP_CFLAGS=-MMD -MP -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-
 	-fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
 	-msoft-float -Iinclude
-USER_RUNTIME_OBJECTS=user/lib/new.user.o user/lib/memory.user.o user/lib/io.user.o
+USER_RUNTIME_OBJECTS=user/lib/new.user.o user/lib/memory.user.o user/lib/io.user.o \
+	user/lib/window.user.o user/lib/widgets.user.o
 USER_APP_OBJECTS=\
 $(USER_RUNTIME_OBJECTS) \
 user/lib/image.user.o \
@@ -154,6 +155,12 @@ syscalls/%.o: syscalls/%.cpp
 user/lib/new.user.o: user/lib/new.cpp include/user/lib/new.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
+user/lib/window.user.o: user/lib/window.cpp include/user/lib/window.hh include/user/graphics.hh include/user/gui.hh include/user/process.hh
+	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+
+user/lib/widgets.user.o: user/lib/widgets.cpp include/user/lib/widgets.hh include/user/lib/window.hh include/user/gui.hh
+	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+
 user/lib/memory.user.o: user/lib/memory.cpp include/user/lib/memory.hh
 	$(CC) $(USER_APP_CFLAGS) -O2 -c $< -o $@
 
@@ -169,7 +176,7 @@ user/apps/terminal.user.o: user/apps/terminal.cpp include/user/apps/terminal.hh 
 user/apps/task_manager.user.o: user/apps/task_manager.cpp include/user/apps/task_manager.hh include/user/apps/app_thread.hh include/user/gui.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/desktop.user.o: user/apps/desktop.cpp include/user/apps/file_manager.hh include/user/apps/terminal.hh include/user/apps/task_manager.hh include/user/gui.hh include/user/lib/image.hh include/user/syscall.hh
+user/apps/desktop.user.o: user/apps/desktop.cpp include/user/apps/file_manager.hh include/user/apps/terminal.hh include/user/apps/task_manager.hh include/user/gui.hh include/user/lib/image.hh include/user/lib/widgets.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/desktop.elf: $(USER_APP_OBJECTS) user/apps/linker.ld
@@ -187,7 +194,7 @@ user/apps/file_manager_process.user.o: user/apps/file_manager_process.cpp includ
 user/apps/task_manager_process.user.o: user/apps/task_manager_process.cpp include/user/apps/task_manager.hh include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/calculator_process.user.o: user/apps/calculator_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/calculator_process.user.o: user/apps/calculator_process.cpp include/user/gui.hh include/user/lib/widgets.hh include/user/lib/window.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/notepad_process.user.o: user/apps/notepad_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
@@ -274,8 +281,8 @@ user/apps/demo_process.bin: user/apps/demo_process.elf
 user/apps/hello_word.user.o: user/apps/hello_word.cpp include/user/lib/io.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/hello_word.elf: $(USER_RUNTIME_OBJECTS) user/apps/hello_word.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/apps/hello_word.user.o
+user/apps/hello_word.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/hello_word.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/hello_word.user.o
 
 user/apps/hello_word.bin: user/apps/hello_word.elf
 	$(OBJCOPY) -O binary $< $@

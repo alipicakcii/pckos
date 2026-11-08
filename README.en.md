@@ -60,6 +60,7 @@ PCKOS is currently a minimal system under development. The kernel currently prov
 - User applications that access kernel services through system calls.
 - Single-core Round Robin thread scheduling and processes with separate address spaces.
 - A framebuffer desktop with keyboard, mouse, windows, and a taskbar.
+- Shared user interface APIs for `Window`, `Widget`, `Button`, and `ClickListener`; PNG application icons appear on the desktop, Start menu, and taskbar.
 - The PCKFS root filesystem and an IDE ATA PIO disk driver. User applications can currently read files; general file writing is not implemented yet.
 - Desktop applications: Terminal, Files, Task Manager, Calculator, and a read-only Notepad.
 - RTC date/time; memory, processor, and thread information in Task Manager.
@@ -84,13 +85,17 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 In Memory Hunter, each time food is eaten, the game allocates one `uint32_t` (4 bytes) from the user heap. The window shows the allocation address and the total size of game data allocated. The last allocation address is the starting address of the most recently allocated 4-byte block. The allocations are released with `delete` when the game closes. A real memory hunter! 🙂
 
-### Task Manager and Calculator
+### Task Manager
 
-![Task Manager and Calculator on the PCKOS desktop](assets/screenshots/qemu-task-manager-calculator.png)
+![Task Manager on the PCKOS desktop](assets/screenshots/qemu-task-manager-2026-11.png)
 
-### Task Manager and System Information
+### Desktop
 
-![Task Manager and System Information on the PCKOS desktop](assets/screenshots/qemu-task-manager-system-info.png)
+![PCKOS desktop](assets/screenshots/qemu-desktop-2026-11.png)
+
+### Start menu
+
+![Task Manager open with the PCKOS Start menu](assets/screenshots/qemu-start-menu-2026-11.png)
 
 ## Development environment
 
@@ -138,10 +143,13 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | `kernel/include/abi/` | Fixed syscall numbers and data structures shared by kernel and user space |
 | `kernel/include/user/` | User APIs for threads, processes, files, graphics, and other subsystems |
 | `kernel/include/user/gui.hh`, `kernel/user/gui/graphics.cpp` | Shared Ring 3 drawing API |
+| `kernel/include/user/lib/window.hh`, `kernel/user/lib/window.cpp` | Application window, title bar, dragging, minimize, and close |
+| `kernel/include/user/lib/widgets.hh`, `kernel/user/lib/widgets.cpp` | Reusable widgets, buttons, and `ClickListener` |
 | `kernel/device/video/frame_buffer.cpp` | Framebuffer and window-layer composition |
 | `kernel/user/apps/desktop.cpp` | Desktop, icons, Start menu, taskbar, application launch |
 | `kernel/user/apps/*_process.cpp` | Application `_start` and event loop |
 | `kernel/user/apps/terminal.cpp`, `file_manager.cpp`, `task_manager.cpp` | Application behavior |
+| `assets/app-icons/` | Source PNG application icons copied by `share.sh` into `/system/icons/` on PCKFS |
 | `tools/mkpckfs.py`, `host-share/` | Disk-image generation and optional host files |
 
 When the kernel heap grows, new pages are first mapped in the master kernel page directory (`KERN_PAGE_DIRECTORY`). `Vmm::sync_all_from_kernel()` propagates these mappings to active user processes. A `[PageFault]` entry in the kernel console log reports the faulting address (`CR2`), instruction pointer (`EIP`), error code, and active page directory (`CR3`).
@@ -165,7 +173,7 @@ Required tools: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkresc
 
 ## 4. PCKFS v1: a brief technical description
 
-`tools/mkpckfs.py` creates a 32 MiB raw disk image by default. `share.sh` copies `host-share/` into `sysroot/pckfs-source/` and adds compiled applications under `/apps/`. `assets/logo.bmp` is copied to `/system/logo.bmp`. Default directories are `/boot`, `/dev`, `/etc`, `/home`, `/mnt`, `/tmp`, and `/var`; `/apps` contains system applications. These are named directories only; for example, `/dev` has no Unix device-node semantics.
+`tools/mkpckfs.py` creates a 32 MiB raw disk image by default. `share.sh` copies `host-share/` into `sysroot/pckfs-source/`, adds compiled applications under `/apps/`, and copies PNG files from `assets/app-icons/` to `/system/icons/`. `assets/logo.bmp` is copied to `/system/logo.bmp`. Default directories are `/boot`, `/dev`, `/etc`, `/home`, `/mnt`, `/tmp`, and `/var`; `/apps` contains system applications. These are named directories only; for example, `/dev` has no Unix device-node semantics.
 
 Physical disk layout:
 
@@ -227,11 +235,43 @@ The user API is grouped by subsystem under `kernel/include/user/`:
 
 `user/syscall.hh` provides only the `int 0x80` entry helper and access to syscall numbers. Shared data structures such as `ThreadInfo` are defined once under `kernel/include/abi/` and used by the corresponding kernel and user headers.
 
-Graphics helpers are in `kernel/include/user/gui.hh` and `kernel/user/gui/graphics.cpp`. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/lib/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
+Graphics helpers are in `kernel/include/user/gui.hh` and `kernel/user/gui/graphics.cpp`. The shared window and widget API is declared under `kernel/include/user/lib/` and implemented in `kernel/user/lib/window.cpp` and `widgets.cpp`. `Window` handles registration, its frame, title-bar controls, dragging, minimizing, and closing. `Button`, `Label`, and `TextInputWidget` attach to their parent window when constructed. `Window::draw()` draws attached widgets inside the client area, and `Window::handle_mouse()` routes clicks to them. `Button` calls its `ClickListener`; `TextInputWidget` places the text cursor at the clicked position. The Makefile links these library sources into user applications. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/lib/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
+
+### Window and button widgets
+
+Each application creates a `Window` object. The window API handles registration, title bar drawing, dragging, minimizing, and closing. Place application content using `content_x()`, `content_y()`, `content_width()`, and `content_height()`. Widgets attached to a window use coordinates relative to its client area. Call `Window::draw()` each frame to draw the window and its attached widgets. Pass mouse events to `Window::handle_mouse()`; it handles title-bar controls and routes clicks to attached widgets.
+
+`ClickListener` takes a callback and a context pointer instead of a capturing C++ lambda. The context lets the callback access application state:
+
+```cpp
+#include <user/lib/widgets.hh>
+#include <user/lib/window.hh>
+
+void on_button_click(void *context, uint32_t id)
+{
+    auto *click_count = static_cast<uint32_t *>(context);
+    if (id == 1)
+        ++*click_count;
+}
+
+uint32_t clicks = 0;
+user::gui::Window window(120, 90, 420, 280, "PCKOS - Example");
+user::gui::ClickListener listener(on_button_click, &clicks);
+user::gui::Button button(window, 1, 16, 16, 140, 36, "Click", &listener);
+
+user::gui::begin_frame();
+window.draw();
+user::gui::end_frame();
+
+window.handle_mouse(mouse_x, mouse_y, mouse_buttons, pressed,
+                    screen_width, usable_height);
+```
+
+The coordinates in the `Button` constructor are relative to the window's client area. Calculator and Unit Converter use the shared window/button API; other windowed applications use `Window` for their frame, movement, and title-bar controls.
 
 ### Standard input, output, and error streams
 
-`run /apps/merhaba.bin` starts a separate process and passes on the terminal connection. `stdin` (0) receives terminal input; `stdout` (1) carries normal output and `stderr` (2) carries errors. Both output streams appear in the same terminal in syscall order; attached application output is not added to the kernel log. Child processes inherit the terminal connection. Output from applications without a terminal connection goes to the system console log. Nothing is written to the serial port.
+`run /apps/newapp.bin` starts a separate process and passes on the terminal connection. `stdin` (0) receives terminal input; `stdout` (1) carries normal output and `stderr` (2) carries errors. Both output streams appear in the same terminal in syscall order; attached application output is not added to the kernel log. Child processes inherit the terminal connection. Output from applications without a terminal connection goes to the system console log. Nothing is written to the serial port.
 
 The terminal waits for the process started by `run` before accepting another shell command. Lines submitted with Enter go to the application's `stdin` queue. Ctrl+D on empty input sends EOF; if text has been entered, it sends that text first. The `pckos>` prompt returns when the process ends. A graphical application takes focus when it registers its window. Minimized terminals continue collecting output.
 
@@ -277,7 +317,7 @@ For terminal frontends, `terminal_attach()` (44) makes the caller a terminal own
 | System | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
 | Graphics | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
-`wait_event(&event, ticks)`: `type=1` is keyboard (`value0` character), `type=2` is mouse (`value0` X delta, `value1` Y delta), and `type=3` is timeout. `buttons & 1` means left button; `buttons & 0x100` marks a new press edge. 100 PIT ticks are approximately one second. Drawing uses screen coordinates. A windowed app first calls `graphics_register_window(x,y,w,h)`, then draws a frame between `user::gui::begin_frame()` and `end_frame()`. Helpers include `window`, `fill`, `text`, `button`, `icon`, and `push_clip`.
+`wait_event(&event, ticks)`: `type=1` is keyboard (`value0` character), `type=2` is mouse (`value0` X delta, `value1` Y delta), and `type=3` is timeout. `buttons & 1` means left button; `buttons & 0x100` marks a new press edge. 100 PIT ticks are approximately one second. Drawing uses screen coordinates. A windowed app creates a `Window`, draws each frame between `user::gui::begin_frame()` and `end_frame()`, and calls `Window::draw()`. Route mouse events through `Window::handle_mouse()`. Low-level helpers include `fill`, `text`, `button`, `icon`, and `push_clip`.
 
 `get_datetime(&date)` fills `user::DateTime` from the RTC. The taskbar clock displays the VM's RTC time, not elapsed uptime; QEMU sets the RTC to host local time. Calculator and Notepad launch from the Start menu and each get a separate PID and main thread. Calculator supports integer `+`, `-`, `*`, and `/`. Notepad displays the first 8191 bytes of any PCKFS text file as **read-only**. For example, `host-share/home/notlar.txt` appears at `/home/notlar.txt`; the file name has no special meaning in code.
 
@@ -369,7 +409,7 @@ if (tid < 0) {
 
 ## 8. Writing, building, and launching an application
 
-Example file: `kernel/user/apps/merhaba_process.cpp`. The entry point for a flat binary loaded by PCKOS must be `_start`:
+Example file: `kernel/user/apps/newapp_process.cpp`. The entry point for a flat binary loaded by PCKOS must be `_start`:
 
 ```cpp
 #include <user/graphics.hh>
@@ -377,33 +417,46 @@ Example file: `kernel/user/apps/merhaba_process.cpp`. The entry point for a flat
 #include <user/process.hh>
 #include <user/thread.hh>
 #include <user/gui.hh>
+#include <user/lib/window.hh>
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
-    constexpr uint32_t x = 260, y = 180, width = 360, height = 180;
-    if (user::graphics_register_window(x, y, width, height) < 0)
+    constexpr uint32_t width = 360, height = 180;
+    user::GraphicsInfo screen{};
+    if (user::graphics_get_info(&screen) < 0)
         user::exit(1);
-    user::thread_set_name("Merhaba");
+    user::gui::Window window((screen.width - width) / 2,
+                             (screen.height - height) / 2,
+                             width, height, "PCKOS - NewApp");
+    if (!window.valid())
+        user::exit(1);
+    user::thread_set_name("NewApp");
 
     for (;;) {
         user::gui::begin_frame();
-        user::gui::window(x, y, width, height, "PCKOS - Merhaba", true);
-        user::gui::text(x + 22, y + 60, "Merhaba PCKOS!",
-                        user::gui::COLOR_TEXT);
-        user::gui::text(x + 22, y + 92, "ESC ile kapat",
+        window.draw();
+        user::gui::text(window.content_x() + 16, window.content_y() + 24, "Merhaba PCKOS!",
                         user::gui::COLOR_TEXT);
         user::gui::end_frame();
 
         user::InputEvent event{};
-        if (user::wait_event(&event, 10) > 0 &&
-            event.type == 1 && event.value0 == 0x1B)
-            user::exit(0);
+        if (user::wait_event(&event, 10) > 0) {
+            if (event.type == 2) {
+                int32_t mouse_x = 0, mouse_y = 0;
+                (void)user::graphics_get_cursor(&mouse_x, &mouse_y);
+                mouse_x += event.value0;
+                mouse_y -= event.value1;
+                const bool pressed = (event.buttons & 1U) != 0;
+                (void)window.handle_mouse(mouse_x, mouse_y, event.buttons,
+                                          pressed, screen.width, screen.height - 48);
+            }
+        }
     }
 }
 ```
 
-Save the example above as `kernel/user/apps/merhaba_process.cpp`. The following steps compile the new app and run it in PCKOS. Run all terminal commands from the project root, where `build.sh` is located.
+Save the example above as `kernel/user/apps/newapp_process.cpp`. The following steps compile the new app and run it in PCKOS. Run all terminal commands from the project root, where `build.sh` is located.
 
 This example builds the app manually. The existing Makefile builds only the applications registered in it; creating a new `.cpp` file does not automatically add it to the build. Follow the steps below in order.
 
@@ -413,7 +466,7 @@ This example builds the app manually. The existing Makefile builds only the appl
 ./build.sh
 ```
 
-This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, `kernel/user/lib/new.user.o`, `kernel/user/lib/memory.user.o`, and `kernel/user/lib/io.user.o`, which our example links. It does not yet compile our new `merhaba_process.cpp`; we will do that in the next step.
+This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, `kernel/user/lib/window.user.o`, `kernel/user/lib/widgets.user.o`, `kernel/user/lib/new.user.o`, `kernel/user/lib/memory.user.o`, and `kernel/user/lib/io.user.o`, which our example links. It does not yet compile our new `newapp_process.cpp`; we will do that in the next step.
 
 **2. Compile the application's C++ source.**
 
@@ -422,31 +475,32 @@ i686-elf-g++ -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
   -fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
   -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
   -msoft-float -Ikernel/include \
-  -c kernel/user/apps/merhaba_process.cpp -o kernel/user/apps/merhaba_process.user.o
+  -c kernel/user/apps/newapp_process.cpp -o kernel/user/apps/newapp_process.user.o
 ```
 
-The input is your `merhaba_process.cpp` file. The `-c` option compiles it into the `merhaba_process.user.o` object file without linking. This file cannot run on its own yet; it needs to be linked with the graphics functions it uses. `-Ikernel/include` specifies the location of the SDK headers. The other flags are the current build settings for PCKOS user applications.
+The input is your `newapp_process.cpp` file. The `-c` option compiles it into the `newapp_process.user.o` object file without linking. This file cannot run on its own yet; it needs to be linked with the graphics functions it uses. `-Ikernel/include` specifies the location of the SDK headers. The other flags are the current build settings for PCKOS user applications.
 
 **3. Link the object file with the graphics library.**
 
 ```sh
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
-  -o kernel/user/apps/merhaba_process.elf \
+  -o kernel/user/apps/newapp_process.elf \
   kernel/user/lib/new.user.o kernel/user/lib/memory.user.o kernel/user/lib/io.user.o \
-  kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
+  kernel/user/lib/window.user.o kernel/user/lib/widgets.user.o \
+  kernel/user/gui/graphics.user.o kernel/user/apps/newapp_process.user.o
 ```
 
-This links your app with the graphics, memory, and `new`/`delete` runtime objects. `linker.ld` defines the application's memory layout and `_start` entry point. The result is `merhaba_process.elf`. This ELF file is a linker intermediate; the current PCKOS loader expects a flat binary.
+This links your app with the graphics, memory, and `new`/`delete` runtime objects. `linker.ld` defines the application's memory layout and `_start` entry point. The result is `newapp_process.elf`. This ELF file is a linker intermediate; the current PCKOS loader expects a flat binary.
 
 **4. Convert the ELF file into the format PCKOS loads.**
 
 ```sh
-i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
-  host-share/apps/merhaba.bin
+i686-elf-objcopy -O binary kernel/user/apps/newapp_process.elf \
+  host-share/apps/newapp.bin
 ```
 
-`objcopy -O binary` converts the loadable contents of the ELF into a flat binary. The result is `host-share/apps/merhaba.bin`. `host-share` is the host directory used to transfer files into PCKFS. The `host-share/apps` directory is already included in the project.
+`objcopy -O binary` converts the loadable contents of the ELF into a flat binary. The result is `host-share/apps/newapp.bin`. `host-share` is the host directory used to transfer files into PCKFS. The `host-share/apps` directory is already included in the project.
 
 **5. Package the app in the PCKFS disk image.**
 
@@ -454,20 +508,20 @@ i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
 ./share.sh
 ```
 
-`share.sh` first calls `build.sh`, then rebuilds `pckfs.img` using the contents of `host-share` and the built-in applications. It takes your manually compiled `merhaba.bin` as it is; it does not recompile its source. The host file `host-share/apps/merhaba.bin` appears inside PCKOS at `/apps/merhaba.bin`.
+`share.sh` first calls `build.sh`, then rebuilds `pckfs.img` using the contents of `host-share` and the built-in applications. It takes your manually compiled `newapp.bin` as it is; it does not recompile its source. The host file `host-share/apps/newapp.bin` appears inside PCKOS at `/apps/newapp.bin`.
 
 The application is now compiled and included in the disk image. **It does not need to be linked into the kernel.**
 
 **6. Launch the app for an initial trial.**
 
-Run `./run.sh` from the project root. It performs a clean build, regenerates the ISO and PCKFS images, and starts QEMU. Cleanup preserves `host-share/apps/merhaba.bin`, which is included in the new disk image.
+Run `./run.sh` from the project root. It performs a clean build, regenerates the ISO and PCKFS images, and starts QEMU. Cleanup preserves `host-share/apps/newapp.bin`, which is included in the new disk image.
 
 Open Terminal on the desktop and enter this in the **PCKOS terminal**:
 
 ```text
-run /apps/merhaba.bin
+run /apps/newapp.bin
 ```
 
-The terminal starts a new process from this file. You do not need to edit `desktop.cpp` to launch the app. To launch it from another application, use `user::process_spawn("/apps/merhaba.bin", "Merhaba")`.
+The terminal starts a new process from this file. You do not need to edit `desktop.cpp` to launch the app. To launch it from another application, use `user::process_spawn("/apps/newapp.bin", "NewApp")`.
 
-**After changing the application's source:** Repeat steps 2, 3, and 4 to update `host-share/apps/merhaba.bin`. Then try it with `./run.sh`, which also performs the packaging in step 5. To refresh only the disk image, run `./share.sh`. If cleanup has removed `graphics.user.o`, or if you changed the graphics library, repeat step 1 first.
+**After changing the application's source:** Repeat steps 2, 3, and 4 to update `host-share/apps/newapp.bin`. Then try it with `./run.sh`, which also performs the packaging in step 5. To refresh only the disk image, run `./share.sh`. If cleanup has removed `graphics.user.o`, or if you changed the graphics library, repeat step 1 first.

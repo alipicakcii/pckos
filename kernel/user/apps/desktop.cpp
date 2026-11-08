@@ -12,6 +12,7 @@
 #include <user/apps/terminal.hh>
 #include <user/gui.hh>
 #include <user/lib/image.hh>
+#include <user/lib/widgets.hh>
 
 namespace
 {
@@ -28,6 +29,38 @@ namespace
     constexpr uint32_t WINDOW_CLOCK = 7;
     constexpr uint32_t WINDOW_UNIT_CONVERTER = 8;
     constexpr uint32_t WINDOW_MEMORY_HUNTER = 9;
+    constexpr uint32_t START_ABOUT = 10;
+    constexpr uint32_t START_CONSOLE = 11;
+
+    struct ApplicationInfo
+    {
+        uint32_t id;
+        const char *path;
+        const char *name;
+        const char *menu_label;
+        const char *taskbar_label;
+        const char *icon_path;
+    };
+
+    constexpr ApplicationInfo APPLICATIONS[] = {
+        {WINDOW_FILE, "/apps/file_manager.bin", "Dosya Yoneticisi", "Dosyalar", "Dosyalar", "/system/icons/files.png"},
+        {WINDOW_TERMINAL, "/apps/terminal.bin", "Terminal", "Terminal", "Terminal", "/system/icons/terminal.png"},
+        {WINDOW_TASK_MANAGER, "/apps/task_manager.bin", "Gorev Yoneticisi", "Gorevler", "Gorevler", "/system/icons/tasks.png"},
+        {WINDOW_CALCULATOR, "/apps/calculator.bin", "Hesap Makinesi", "Hesap Makinesi", "Hesap", "/system/icons/calculator.png"},
+        {WINDOW_NOTEPAD, "/apps/notepad.bin", "Metin Goruntuleyici", "Metin", "Metin", "/system/icons/notepad.png"},
+        {WINDOW_SYSTEM_INFO, "/apps/system_info.bin", "Sistem Bilgisi", "Sistem", "Sistem", "/system/icons/system.png"},
+        {WINDOW_CLOCK, "/apps/clock.bin", "Saat ve Takvim", "Saat", "Saat", "/system/icons/clock.png"},
+        {WINDOW_UNIT_CONVERTER, "/apps/unit_converter.bin", "Birim Donusturucu", "Donusturucu", "Donustur", "/system/icons/converter.png"},
+        {WINDOW_MEMORY_HUNTER, "/apps/memory_hunter.bin", "Bellek Avcisi", "Bellek Avcisi", "Bellek Avcisi", "/system/icons/memory_hunter.png"}
+    };
+
+    const ApplicationInfo *application_info(uint32_t id)
+    {
+        for (const ApplicationInfo &app : APPLICATIONS)
+            if (app.id == id)
+                return &app;
+        return nullptr;
+    }
 
     struct WindowBounds
     {
@@ -49,12 +82,7 @@ namespace
             : screen_{}, file_manager_{}, terminal_{}, task_manager_{},
               app_process_ids_{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, foreground_window_(0),
               logo_available_(false), file_visible_(false),
-              terminal_visible_(false), file_taskbar_(false),
-              terminal_taskbar_(false), task_visible_(false), task_taskbar_(false),
-              calculator_taskbar_(false), notepad_taskbar_(false),
-              system_info_taskbar_(false),
-              clock_taskbar_(false), unit_converter_taskbar_(false),
-              memory_hunter_taskbar_(false),
+              terminal_visible_(false), task_visible_(false), app_taskbar_{},
               about_open_(false), menu_open_(false),
               context_menu_open_(false), settings_open_(false),
               wallpaper_error_(false), wallpaper_count_(0), wallpaper_selected_(0),
@@ -71,6 +99,7 @@ namespace
             terminal_bounds_ = centered_window(560, 340, 55);
             task_bounds_ = centered_window(720, 470, 75);
             
+            load_application_icons();
             load_default_wallpaper();
             refresh_wallpapers();
         }
@@ -101,15 +130,7 @@ namespace
                         process_is_running(app_process_ids_[id]))
                         continue;
                     app_process_ids_[id] = 0;
-                    if (id == WINDOW_FILE) file_taskbar_ = false;
-                    else if (id == WINDOW_TERMINAL) terminal_taskbar_ = false;
-                    else if (id == WINDOW_TASK_MANAGER) task_taskbar_ = false;
-                    else if (id == WINDOW_CALCULATOR) calculator_taskbar_ = false;
-                    else if (id == WINDOW_NOTEPAD) notepad_taskbar_ = false;
-                    else if (id == WINDOW_SYSTEM_INFO) system_info_taskbar_ = false;
-                    else if (id == WINDOW_CLOCK) clock_taskbar_ = false;
-                    else if (id == WINDOW_UNIT_CONVERTER) unit_converter_taskbar_ = false;
-                    else memory_hunter_taskbar_ = false;
+                    app_taskbar_[id] = false;
                     desktop_changed = true;
                 }
                 if (foreground_window_ != 0)
@@ -316,6 +337,17 @@ namespace
                 wallpaper_image_ = loaded;
         }
 
+        void load_application_icons()
+        {
+            for (const ApplicationInfo &app : APPLICATIONS)
+            {
+                (void)user::image::load_png(app.icon_path, 40, 40,
+                                             &app_icons_[app.id]);
+                (void)user::image::load_png(app.icon_path, 24, 24,
+                                             &small_app_icons_[app.id]);
+            }
+        }
+
         WindowBounds centered_window(uint32_t wanted_width, uint32_t wanted_height,
                                      uint32_t x_offset)
         {
@@ -383,53 +415,22 @@ namespace
                 }
                 app_process_ids_[id] = 0;
             }
-            const char *path = id == WINDOW_FILE ? "/apps/file_manager.bin"
-                : id == WINDOW_TERMINAL ? "/apps/terminal.bin"
-                : id == WINDOW_TASK_MANAGER ? "/apps/task_manager.bin"
-                : id == WINDOW_CALCULATOR ? "/apps/calculator.bin"
-                : id == WINDOW_NOTEPAD ? "/apps/notepad.bin"
-                : id == WINDOW_SYSTEM_INFO ? "/apps/system_info.bin"
-                : id == WINDOW_CLOCK ? "/apps/clock.bin"
-                : id == WINDOW_UNIT_CONVERTER ? "/apps/unit_converter.bin"
-                : "/apps/memory_hunter.bin";
-            const char *name = id == WINDOW_FILE ? "Dosya Yoneticisi"
-                : id == WINDOW_TERMINAL ? "Terminal"
-                : id == WINDOW_TASK_MANAGER ? "Gorev Yoneticisi"
-                : id == WINDOW_CALCULATOR ? "Hesap Makinesi"
-                : id == WINDOW_NOTEPAD ? "Metin Goruntuleyici"
-                : id == WINDOW_SYSTEM_INFO ? "Sistem Bilgisi"
-                : id == WINDOW_CLOCK ? "Saat ve Takvim"
-                : id == WINDOW_UNIT_CONVERTER ? "Birim Donusturucu"
-                : "Bellek Avcisi";
+            const ApplicationInfo *app = application_info(id);
+            if (app == nullptr)
+                return;
             file_visible_ = terminal_visible_ = task_visible_ = false;
-            if (id == WINDOW_FILE) file_taskbar_ = true;
-            else if (id == WINDOW_TERMINAL) terminal_taskbar_ = true;
-            else if (id == WINDOW_TASK_MANAGER) task_taskbar_ = true;
-            else if (id == WINDOW_CALCULATOR) calculator_taskbar_ = true;
-            else if (id == WINDOW_NOTEPAD) notepad_taskbar_ = true;
-            else if (id == WINDOW_SYSTEM_INFO) system_info_taskbar_ = true;
-            else if (id == WINDOW_CLOCK) clock_taskbar_ = true;
-            else if (id == WINDOW_UNIT_CONVERTER) unit_converter_taskbar_ = true;
-            else memory_hunter_taskbar_ = true;
+            app_taskbar_[id] = true;
             active_ = id;
             foreground_window_ = id;
             menu_open_ = false;
             about_open_ = false;
             render();
-            const int32_t process_id = user::process_spawn(path, name);
+            const int32_t process_id = user::process_spawn(app->path, app->name);
             if (process_id < 0)
             {
                 foreground_window_ = 0;
                 active_ = 0;
-                if (id == WINDOW_FILE) file_taskbar_ = false;
-                else if (id == WINDOW_TERMINAL) terminal_taskbar_ = false;
-                else if (id == WINDOW_TASK_MANAGER) task_taskbar_ = false;
-                else if (id == WINDOW_CALCULATOR) calculator_taskbar_ = false;
-                else if (id == WINDOW_NOTEPAD) notepad_taskbar_ = false;
-                else if (id == WINDOW_SYSTEM_INFO) system_info_taskbar_ = false;
-                else if (id == WINDOW_CLOCK) clock_taskbar_ = false;
-                else if (id == WINDOW_UNIT_CONVERTER) unit_converter_taskbar_ = false;
-                else memory_hunter_taskbar_ = false;
+                app_taskbar_[id] = false;
                 render();
                 return;
             }
@@ -442,7 +443,15 @@ namespace
             if (kind == 0)
                 draw_logo_small(x + 2, y + 1, 40);
             else
-                user::gui::icon(x, y, kind);
+            {
+                const uint32_t app_id = kind == 4 ? WINDOW_MEMORY_HUNTER : kind;
+                const user::image::Image &image = app_icons_[app_id];
+                if (image.pixels != nullptr)
+                    user::gui::bitmap(x + 2, y + 1, image.pixels,
+                                      image.width, image.height);
+                else
+                    user::gui::icon(x, y, kind);
+            }
             if (kind == 4)
             {
                 user::gui::text(x - 1, y + 43, "Bellek", user::gui::COLOR_BLACK);
@@ -481,13 +490,17 @@ namespace
             draw_logo_small(11, y + 8, 22);
             user::gui::text(40, y + 11, "Baslat", user::gui::COLOR_TEXT);
 
-            for (uint32_t id = WINDOW_FILE; id <= WINDOW_MEMORY_HUNTER; ++id)
+            user::gui::ClickListener listener(&DesktopSession::taskbar_click, this);
+            for (const ApplicationInfo &app : APPLICATIONS)
             {
+                const uint32_t id = app.id;
                 if (!taskbar_visible(id))
                     continue;
-                user::gui::button(taskbar_app_x(id), y + 3,
-                                  task_button_width(), 32, taskbar_label(id),
-                                  focused_process == app_process_ids_[id]);
+                const user::image::Image &icon = small_app_icons_[id];
+                user::gui::Button task_button(id, taskbar_app_x(id), y + 3,
+                    task_button_width(), 32, app.taskbar_label, &listener,
+                    icon.pixels, icon.width, icon.height);
+                task_button.draw(focused_process == app_process_ids_[id]);
             }
 
             draw_clock();
@@ -496,9 +509,12 @@ namespace
         uint32_t task_button_width() const
         {
             uint32_t count = 0;
-            for (uint32_t id = WINDOW_FILE; id <= WINDOW_MEMORY_HUNTER; ++id)
+            for (const ApplicationInfo &app : APPLICATIONS)
+            {
+                const uint32_t id = app.id;
                 if (taskbar_visible(id))
                     ++count;
+            }
             if (count == 0)
                 return 0;
             const uint32_t reserved = TASKBAR_APP_START_X + TASKBAR_CLOCK_WIDTH + 12;
@@ -510,37 +526,45 @@ namespace
 
         bool taskbar_visible(uint32_t id) const
         {
-            if (id == WINDOW_FILE) return file_taskbar_;
-            if (id == WINDOW_TERMINAL) return terminal_taskbar_;
-            if (id == WINDOW_TASK_MANAGER) return task_taskbar_;
-            if (id == WINDOW_CALCULATOR) return calculator_taskbar_;
-            if (id == WINDOW_NOTEPAD) return notepad_taskbar_;
-            if (id == WINDOW_SYSTEM_INFO) return system_info_taskbar_;
-            if (id == WINDOW_CLOCK) return clock_taskbar_;
-            if (id == WINDOW_UNIT_CONVERTER) return unit_converter_taskbar_;
-            return id == WINDOW_MEMORY_HUNTER && memory_hunter_taskbar_;
-        }
-
-        const char *taskbar_label(uint32_t id) const
-        {
-            if (id == WINDOW_FILE) return "Dosyalar";
-            if (id == WINDOW_TERMINAL) return "Terminal";
-            if (id == WINDOW_TASK_MANAGER) return "Gorevler";
-            if (id == WINDOW_CALCULATOR) return "Hesap";
-            if (id == WINDOW_NOTEPAD) return "Metin";
-            if (id == WINDOW_SYSTEM_INFO) return "Sistem";
-            if (id == WINDOW_CLOCK) return "Saat";
-            if (id == WINDOW_UNIT_CONVERTER) return "Donustur";
-            return "Bellek Avcisi";
+            return id <= WINDOW_MEMORY_HUNTER && app_taskbar_[id];
         }
 
         uint32_t taskbar_app_x(uint32_t app_id) const
         {
             uint32_t x = TASKBAR_APP_START_X;
-            for (uint32_t id = WINDOW_FILE; id < app_id; ++id)
+            for (const ApplicationInfo &app : APPLICATIONS)
+            {
+                const uint32_t id = app.id;
+                if (id >= app_id)
+                    break;
                 if (taskbar_visible(id))
                     x += task_button_width() + TASKBAR_APP_GAP;
+            }
             return x;
+        }
+
+        static void taskbar_click(void *context, uint32_t id)
+        {
+            (void)static_cast<DesktopSession *>(context)->restore_app(id);
+        }
+
+        static void start_menu_click(void *context, uint32_t id)
+        {
+            DesktopSession *desktop = static_cast<DesktopSession *>(context);
+            if (id <= WINDOW_MEMORY_HUNTER)
+                desktop->open_window(id);
+            else if (id == START_ABOUT)
+            {
+                desktop->menu_open_ = false;
+                desktop->about_open_ = true;
+                desktop->render();
+            }
+            else if (id == START_CONSOLE)
+            {
+                desktop->menu_open_ = false;
+                desktop->console_mode_ = true;
+                desktop->render();
+            }
         }
 
         void draw_clock()
@@ -781,17 +805,22 @@ namespace
             user::gui::frame(7, y, 214, 430, user::gui::COLOR_FACE);
             user::gui::fill(11, y + 4, 34, 422, user::gui::COLOR_TITLE);
             user::gui::text(24, y + 15, "P\nC\nK\nO\nS", user::gui::COLOR_WHITE);
-            user::gui::button(51, y + 8, 162, 34, "PCKFS Gezgini");
-            user::gui::button(51, y + 46, 162, 34, "Terminal");
-            user::gui::button(51, y + 84, 162, 34, "Gorev Yoneticisi");
-            user::gui::button(51, y + 122, 162, 34, "Hesap Makinesi");
-            user::gui::button(51, y + 160, 162, 34, "Metin Goruntuleyici");
-            user::gui::button(51, y + 198, 162, 34, "Sistem Bilgisi");
-            user::gui::button(51, y + 236, 162, 34, "Saat ve Takvim");
-            user::gui::button(51, y + 274, 162, 34, "Birim Donusturucu");
-            user::gui::button(51, y + 312, 162, 34, "Bellek Avcisi");
-            user::gui::button(51, y + 350, 162, 34, "PCKOS Hakkinda");
-            user::gui::button(51, y + 388, 162, 34, "Konsol");
+            user::gui::ClickListener listener(&DesktopSession::start_menu_click, this);
+            for (uint32_t index = 0; index < sizeof(APPLICATIONS) / sizeof(APPLICATIONS[0]); ++index)
+            {
+                const ApplicationInfo &app = APPLICATIONS[index];
+                const user::image::Image &icon = small_app_icons_[app.id];
+                user::gui::Button item(app.id, 51, y + 8 + index * 38,
+                    162, 34, app.menu_label, &listener, icon.pixels,
+                    icon.width, icon.height);
+                item.draw();
+            }
+            user::gui::Button about(START_ABOUT, 51, y + 350, 162, 34,
+                                    "PCKOS Hakkinda", &listener);
+            user::gui::Button console(START_CONSOLE, 51, y + 388, 162, 34,
+                                      "Konsol", &listener);
+            about.draw();
+            console.draw();
         }
 
         void draw_about()
@@ -954,19 +983,19 @@ namespace
                 else if (active_ == WINDOW_FILE && file_visible_)
                 {
                     file_visible_ = false;
-                    file_taskbar_ = false;
+                    app_taskbar_[WINDOW_FILE] = false;
                     active_ = terminal_visible_ ? WINDOW_TERMINAL : 0;
                 }
                 else if (active_ == WINDOW_TERMINAL && terminal_visible_)
                 {
                     terminal_visible_ = false;
-                    terminal_taskbar_ = false;
+                    app_taskbar_[WINDOW_TERMINAL] = false;
                     active_ = fallback_window();
                 }
                 else if (active_ == WINDOW_TASK_MANAGER && task_visible_)
                 {
                     task_visible_ = false;
-                    task_taskbar_ = false;
+                    app_taskbar_[WINDOW_TASK_MANAGER] = false;
                     active_ = fallback_window();
                 }
                 else
@@ -1037,17 +1066,17 @@ namespace
                 if (id == WINDOW_FILE)
                 {
                     file_visible_ = false;
-                    file_taskbar_ = false;
+                    app_taskbar_[WINDOW_FILE] = false;
                 }
                 else if (id == WINDOW_TERMINAL)
                 {
                     terminal_visible_ = false;
-                    terminal_taskbar_ = false;
+                    app_taskbar_[WINDOW_TERMINAL] = false;
                 }
                 else
                 {
                     task_visible_ = false;
-                    task_taskbar_ = false;
+                    app_taskbar_[WINDOW_TASK_MANAGER] = false;
                 }
                 active_ = fallback_window();
                 render();
@@ -1165,62 +1194,24 @@ namespace
             {
                 const uint32_t menu_y = screen_.height > TASKBAR_HEIGHT + 438
                     ? screen_.height - TASKBAR_HEIGHT - 438 : 0;
-                if (x >= 51 && x < 213 && y >= static_cast<int32_t>(menu_y + 8) &&
-                    y < static_cast<int32_t>(menu_y + 42))
-                    open_window(WINDOW_FILE);
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 46) &&
-                         y < static_cast<int32_t>(menu_y + 80))
-                    open_window(WINDOW_TERMINAL);
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 84) &&
-                         y < static_cast<int32_t>(menu_y + 118))
-                    open_window(WINDOW_TASK_MANAGER);
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 122) &&
-                         y < static_cast<int32_t>(menu_y + 156))
-                    open_window(WINDOW_CALCULATOR);
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 160) &&
-                         y < static_cast<int32_t>(menu_y + 194))
-                    open_window(WINDOW_NOTEPAD);
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 198) &&
-                         y < static_cast<int32_t>(menu_y + 232))
-                    open_window(WINDOW_SYSTEM_INFO);
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 236) &&
-                         y < static_cast<int32_t>(menu_y + 270))
-                    open_window(WINDOW_CLOCK);
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 274) &&
-                         y < static_cast<int32_t>(menu_y + 308))
-                    open_window(WINDOW_UNIT_CONVERTER);
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 312) &&
-                         y < static_cast<int32_t>(menu_y + 346))
-                    open_window(WINDOW_MEMORY_HUNTER);
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 350) &&
-                         y < static_cast<int32_t>(menu_y + 384))
+                user::gui::ClickListener listener(&DesktopSession::start_menu_click, this);
+                for (uint32_t index = 0; index < sizeof(APPLICATIONS) / sizeof(APPLICATIONS[0]); ++index)
                 {
-                    menu_open_ = false;
-                    about_open_ = true;
-                    render();
+                    const ApplicationInfo &app = APPLICATIONS[index];
+                    const user::image::Image &icon = small_app_icons_[app.id];
+                    user::gui::Button item(app.id, 51, menu_y + 8 + index * 38,
+                        162, 34, app.menu_label, &listener, icon.pixels,
+                        icon.width, icon.height);
+                    if (item.handle_click(x, y)) return;
                 }
-                else if (x >= 51 && x < 213 &&
-                         y >= static_cast<int32_t>(menu_y + 388) &&
-                         y < static_cast<int32_t>(menu_y + 422))
-                {
-                    menu_open_ = false;
-                    console_mode_ = true;
-                    render();
-                }
-                else
-                {
-                    menu_open_ = false;
-                    render();
-                }
+                user::gui::Button about(START_ABOUT, 51, menu_y + 350, 162, 34,
+                                        "PCKOS Hakkinda", &listener);
+                if (about.handle_click(x, y)) return;
+                user::gui::Button console(START_CONSOLE, 51, menu_y + 388, 162, 34,
+                                          "Konsol", &listener);
+                if (console.handle_click(x, y)) return;
+                menu_open_ = false;
+                render();
                 return;
             }
 
@@ -1233,13 +1224,17 @@ namespace
                 }
                 else
                 {
-                    for (uint32_t id = WINDOW_FILE; id <= WINDOW_MEMORY_HUNTER; ++id)
+                    user::gui::ClickListener listener(&DesktopSession::taskbar_click, this);
+                    for (const ApplicationInfo &app : APPLICATIONS)
                     {
+                        const uint32_t id = app.id;
                         if (taskbar_visible(id) &&
-                            x >= static_cast<int32_t>(taskbar_app_x(id)) &&
-                            x < static_cast<int32_t>(taskbar_app_x(id) + task_button_width()))
+                            user::gui::Button(id, taskbar_app_x(id), taskbar_y + 3,
+                                task_button_width(), 32, app.taskbar_label, &listener,
+                                small_app_icons_[id].pixels,
+                                small_app_icons_[id].width,
+                                small_app_icons_[id].height).handle_click(x, y))
                         {
-                            (void)restore_app(id);
                             break;
                         }
                     }
@@ -1360,18 +1355,12 @@ namespace
         uint32_t foreground_window_;
         bool logo_available_;
         uint32_t logo_pixels_[128 * 128];
+        user::image::Image app_icons_[10]{};
+        user::image::Image small_app_icons_[10]{};
         bool file_visible_;
         bool terminal_visible_;
-        bool file_taskbar_;
-        bool terminal_taskbar_;
         bool task_visible_;
-        bool task_taskbar_;
-        bool calculator_taskbar_;
-        bool notepad_taskbar_;
-        bool system_info_taskbar_;
-        bool clock_taskbar_;
-        bool unit_converter_taskbar_;
-        bool memory_hunter_taskbar_;
+        bool app_taskbar_[10];
         bool about_open_;
         bool menu_open_;
         bool context_menu_open_;

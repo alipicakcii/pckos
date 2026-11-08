@@ -5,7 +5,8 @@
 #include <user/process.hh>
 #include <user/thread.hh>
 #include <user/gui.hh>
-#include <user/window_drag.hh>
+#include <user/lib/widgets.hh>
+#include <user/lib/window.hh>
 
 namespace
 {
@@ -134,6 +135,11 @@ namespace
         char operation_;
         bool entering_, error_;
     };
+
+    void calculator_button_click(void *context, uint32_t id)
+    {
+        static_cast<Calculator *>(context)->key(static_cast<int32_t>(id));
+    }
 }
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
@@ -148,14 +154,32 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     uint32_t y = (usable_height - height) / 2 + 20;
     if (x + width > screen.width) x = screen.width - width;
     if (y + height > usable_height) y = usable_height - height;
-    if (user::graphics_register_window(x, y, width, height) < 0) user::exit(-1);
-    user::gui::WindowDrag drag(x, y);
+    user::gui::Window window(x, y, width, height, "PCKOS - Hesap Makinesi");
+    if (!window.valid()) user::exit(-1);
     Calculator calculator;
+    user::gui::ClickListener button_listener(&calculator_button_click, &calculator);
+    user::gui::Button key_7(window, '7', 11, 84, 70, 54, "7", &button_listener);
+    user::gui::Button key_8(window, '8', 89, 84, 70, 54, "8", &button_listener);
+    user::gui::Button key_9(window, '9', 167, 84, 70, 54, "9", &button_listener);
+    user::gui::Button key_divide(window, '/', 245, 84, 70, 54, "/", &button_listener);
+    user::gui::Button key_4(window, '4', 11, 146, 70, 54, "4", &button_listener);
+    user::gui::Button key_5(window, '5', 89, 146, 70, 54, "5", &button_listener);
+    user::gui::Button key_6(window, '6', 167, 146, 70, 54, "6", &button_listener);
+    user::gui::Button key_multiply(window, '*', 245, 146, 70, 54, "*", &button_listener);
+    user::gui::Button key_1(window, '1', 11, 208, 70, 54, "1", &button_listener);
+    user::gui::Button key_2(window, '2', 89, 208, 70, 54, "2", &button_listener);
+    user::gui::Button key_3(window, '3', 167, 208, 70, 54, "3", &button_listener);
+    user::gui::Button key_subtract(window, '-', 245, 208, 70, 54, "-", &button_listener);
+    user::gui::Button key_clear(window, 'C', 11, 270, 70, 54, "C", &button_listener);
+    user::gui::Button key_0(window, '0', 89, 270, 70, 54, "0", &button_listener);
+    user::gui::Button key_equals(window, '=', 167, 270, 70, 54, "=", &button_listener);
+    user::gui::Button key_add(window, '+', 245, 270, 70, 54, "+", &button_listener);
+    user::gui::TextInputWidget display_input(
+        window, 11, 13, 304, 56, calculator.input());
     int32_t mouse_x = static_cast<int32_t>(screen.width / 2);
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
     (void)user::graphics_get_cursor(&mouse_x, &mouse_y);
     uint32_t last_buttons = 0;
-    const char keys[4][5] = {"789/", "456*", "123-", "C0=+"};
     for (;;)
     {
         if (user::process_is_minimized())
@@ -166,8 +190,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             continue;
         }
         user::gui::begin_frame();
-        drag.restore_old_position(x, y);
-        user::gui::window(x, y, width, height, "PCKOS - Hesap Makinesi", true);
+        x = window.x();
+        y = window.y();
+        window.draw();
         if (calculator.display()[0] == 'H')
         {
             user::gui::frame(x + 18, y + 45, width - 36, 56,
@@ -175,15 +200,6 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             user::gui::text(x + width - 28 - user::gui::text_width("Hata"),
                             y + 63, "Hata", user::gui::COLOR_TEXT);
         }
-        else
-            calculator.input().draw(x + 18, y + 45, width - 36, 56);
-        for (uint32_t row = 0; row < 4; ++row)
-            for (uint32_t column = 0; column < 4; ++column)
-            {
-                char label[2] = {keys[row][column], '\0'};
-                user::gui::button(x + 18 + column * 78, y + 116 + row * 62,
-                                  70, 54, label);
-            }
         user::gui::end_frame();
 
         user::InputEvent event{};
@@ -207,33 +223,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             user::graphics_cursor(mouse_x, mouse_y, true);
             const bool pressed = (event.buttons & 1U) &&
                 (!(last_buttons & 1U) || (event.buttons & 0x100U));
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 47) &&
-                mouse_x < static_cast<int32_t>(x + width - 28) &&
-                mouse_y >= static_cast<int32_t>(y + 5) && mouse_y < static_cast<int32_t>(y + 25))
-            { (void)user::process_minimize(); last_buttons = event.buttons; continue; }
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 27) &&
-                mouse_x < static_cast<int32_t>(x + width - 6) &&
-                mouse_y >= static_cast<int32_t>(y + 5) && mouse_y < static_cast<int32_t>(y + 25))
-                user::exit(0);
-            if (pressed && mouse_x >= static_cast<int32_t>(x + 18) &&
-                mouse_x < static_cast<int32_t>(x + width - 18) &&
-                mouse_y >= static_cast<int32_t>(y + 45) &&
-                mouse_y < static_cast<int32_t>(y + 101))
-                calculator.input().place_cursor_from_x(
-                    static_cast<uint32_t>(mouse_x), x + 23, width - 46);
-            if (pressed && mouse_x >= static_cast<int32_t>(x + 18) &&
-                mouse_x < static_cast<int32_t>(x + 18 + 4 * 78) &&
-                mouse_y >= static_cast<int32_t>(y + 116) &&
-                mouse_y < static_cast<int32_t>(y + 116 + 4 * 62))
-            {
-                const uint32_t column = (mouse_x - static_cast<int32_t>(x + 18)) / 78;
-                const uint32_t row = (mouse_y - static_cast<int32_t>(y + 116)) / 62;
-                if ((mouse_x - static_cast<int32_t>(x + 18)) % 78 < 70 &&
-                    (mouse_y - static_cast<int32_t>(y + 116)) % 62 < 54)
-                    calculator.key(keys[row][column]);
-            }
-            drag.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
-                              &x, &y, width, height, screen.width, usable_height);
+            if (window.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
+                                    screen.width, usable_height))
+            { last_buttons = event.buttons; continue; }
             last_buttons = event.buttons;
         }
     }

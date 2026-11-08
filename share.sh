@@ -14,6 +14,8 @@ if [ -d "$SCRIPT_DIR/host-share" ]; then
     cp -R "$SCRIPT_DIR/host-share/." "$STAGING"/
 fi
 mkdir -p "$STAGING/apps"
+mkdir -p "$STAGING/system/icons"
+cp "$SCRIPT_DIR"/assets/app-icons/*.png "$STAGING/system/icons/"
 cp kernel/user/apps/terminal_process.bin "$STAGING/apps/terminal.bin"
 cp kernel/user/apps/file_manager_process.bin "$STAGING/apps/file_manager.bin"
 cp kernel/user/apps/task_manager_process.bin "$STAGING/apps/task_manager.bin"

@@ -7,7 +7,7 @@
 #include <user/process.hh>
 #include <user/thread.hh>
 #include <user/gui.hh>
-#include <user/window_drag.hh>
+#include <user/lib/window.hh>
 
 namespace
 {
@@ -150,8 +150,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     uint32_t y = (usable_height - height) / 2 + 15;
     if (x + width > screen.width) x = screen.width - width;
     if (y + height > usable_height) y = usable_height - height;
-    if (user::graphics_register_window(x, y, width, height) < 0) user::exit(-1);
-    user::gui::WindowDrag drag(x, y);
+    user::gui::Window window(x, y, width, height, "PCKOS - Metin Goruntuleyici");
+    if (!window.valid())
+        user::exit(-1);
     Notepad notepad;
     int32_t mouse_x = static_cast<int32_t>(screen.width / 2);
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
@@ -167,8 +168,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             continue;
         }
         user::gui::begin_frame();
-        drag.restore_old_position(x, y);
-        user::gui::window(x, y, width, height, "PCKOS - Metin Goruntuleyici", true);
+        x = window.x();
+        y = window.y();
+        window.draw();
         const uint32_t content_x = x + 7, content_y = y + 32;
         user::gui::push_clip(content_x, content_y, width - 14, height - 40);
         notepad.draw(content_x, content_y, width - 14, height - 40);
@@ -196,22 +198,15 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             user::graphics_cursor(mouse_x, mouse_y, true);
             const bool pressed = (event.buttons & 1U) &&
                 (!(last_buttons & 1U) || (event.buttons & 0x100U));
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 47) &&
-                mouse_x < static_cast<int32_t>(x + width - 28) &&
-                mouse_y >= static_cast<int32_t>(y + 5) && mouse_y < static_cast<int32_t>(y + 25))
-            { (void)user::process_minimize(); last_buttons = event.buttons; continue; }
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 27) &&
-                mouse_x < static_cast<int32_t>(x + width - 6) &&
-                mouse_y >= static_cast<int32_t>(y + 5) && mouse_y < static_cast<int32_t>(y + 25))
-                user::exit(0);
+            if (window.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
+                                    screen.width, usable_height))
+            { last_buttons = event.buttons; continue; }
             if (pressed && mouse_x >= static_cast<int32_t>(content_x) &&
                 mouse_x < static_cast<int32_t>(content_x + width - 14) &&
                 mouse_y >= static_cast<int32_t>(content_y) &&
                 mouse_y < static_cast<int32_t>(content_y + height - 40))
                 notepad.click(mouse_x - static_cast<int32_t>(content_x),
                               mouse_y - static_cast<int32_t>(content_y), width - 14);
-            drag.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
-                              &x, &y, width, height, screen.width, usable_height);
             last_buttons = event.buttons;
         }
     }

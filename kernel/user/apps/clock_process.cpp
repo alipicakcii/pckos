@@ -6,7 +6,7 @@
 #include <user/system.hh>
 #include <user/thread.hh>
 #include <user/gui.hh>
-#include <user/window_drag.hh>
+#include <user/lib/window.hh>
 
 namespace
 {
@@ -36,10 +36,11 @@ namespace
         return static_cast<uint32_t>((zeller + 5) % 7);
     }
 
-    void draw_clock(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+    void draw_clock(user::gui::Window &window, uint32_t x, uint32_t y,
+                    uint32_t width, uint32_t height,
                     const user::DateTime &now, bool valid)
     {
-        user::gui::window(x, y, width, height, "PCKOS - Saat ve Takvim", true);
+        window.draw();
         const uint32_t left = x + 7, top = y + 32;
         user::gui::push_clip(left, top, width - 14, height - 40);
         user::gui::text(left + 18, top + 14, "SAAT", user::gui::COLOR_TITLE);
@@ -122,8 +123,8 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     const uint32_t height = usable_height - 10 < 350 ? usable_height - 10 : 350;
     uint32_t x = (screen.width - width) / 2;
     uint32_t y = (usable_height - height) / 2;
-    user::gui::WindowDrag drag(x, y);
-    if (user::graphics_register_window(x, y, width, height) < 0)
+    user::gui::Window window(x, y, width, height, "PCKOS - Saat ve Takvim");
+    if (!window.valid())
         user::exit(-1);
     int32_t mouse_x = static_cast<int32_t>(screen.width / 2);
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
@@ -142,8 +143,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         user::DateTime now{};
         const bool valid = user::get_datetime(&now) == 0;
         user::gui::begin_frame();
-        drag.restore_old_position(x, y);
-        draw_clock(x, y, width, height, now, valid);
+        x = window.x();
+        y = window.y();
+        draw_clock(window, x, y, width, height, now, valid);
         user::gui::end_frame();
 
         user::InputEvent event{};
@@ -165,18 +167,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             user::graphics_cursor(mouse_x, mouse_y, true);
             const bool pressed = (event.buttons & 1U) != 0 &&
                 ((last_buttons & 1U) == 0 || (event.buttons & 0x100U) != 0);
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 47) &&
-                mouse_x < static_cast<int32_t>(x + width - 28) &&
-                mouse_y >= static_cast<int32_t>(y + 5) &&
-                mouse_y < static_cast<int32_t>(y + 25))
-            { (void)user::process_minimize(); last_buttons = event.buttons; continue; }
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 27) &&
-                mouse_x < static_cast<int32_t>(x + width - 6) &&
-                mouse_y >= static_cast<int32_t>(y + 5) &&
-                mouse_y < static_cast<int32_t>(y + 25))
-                user::exit(0);
-            drag.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
-                              &x, &y, width, height, screen.width, usable_height);
+            if (window.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
+                                    screen.width, usable_height))
+            { last_buttons = event.buttons; continue; }
             last_buttons = event.buttons;
         }
     }

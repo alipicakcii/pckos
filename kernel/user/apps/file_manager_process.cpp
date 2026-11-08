@@ -6,7 +6,7 @@
 #include <user/thread.hh>
 #include <user/apps/file_manager.hh>
 #include <user/gui.hh>
-#include <user/window_drag.hh>
+#include <user/lib/window.hh>
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 {
@@ -31,8 +31,8 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
     (void)user::graphics_get_cursor(&mouse_x, &mouse_y);
     uint32_t last_buttons = 0;
-    user::gui::WindowDrag drag(x, y);
-    if (user::graphics_register_window(x, y, width, height) < 0)
+    user::gui::Window window(x, y, width, height, "PCKOS - Dosya Yonetimi");
+    if (!window.valid())
         user::exit(-1);
     user::graphics_cursor(mouse_x, mouse_y, true);
 
@@ -46,8 +46,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             continue;
         }
         user::gui::begin_frame();
-        drag.restore_old_position(x, y);
-        user::gui::window(x, y, width, height, "PCKOS - Dosya Yonetimi", true);
+        x = window.x();
+        y = window.y();
+        window.draw();
         const uint32_t content_x = x + 7, content_y = y + 32;
         const uint32_t content_width = width - 14, content_height = height - 40;
         user::gui::push_clip(content_x, content_y, content_width, content_height);
@@ -84,20 +85,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             user::graphics_cursor(mouse_x, mouse_y, true);
             const bool pressed = (event.buttons & 1U) != 0 &&
                 ((last_buttons & 1U) == 0 || (event.buttons & 0x100U) != 0);
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 47) &&
-                mouse_x < static_cast<int32_t>(x + width - 28) &&
-                mouse_y >= static_cast<int32_t>(y + 5) &&
-                mouse_y < static_cast<int32_t>(y + 25))
-            {
-                (void)user::process_minimize();
-                last_buttons = event.buttons;
-                continue;
-            }
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 27) &&
-                mouse_x < static_cast<int32_t>(x + width - 6) &&
-                mouse_y >= static_cast<int32_t>(y + 5) &&
-                mouse_y < static_cast<int32_t>(y + 25))
-                user::exit(0);
+            if (window.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
+                                    screen.width, usable_height))
+            { last_buttons = event.buttons; continue; }
             if (pressed && mouse_x >= static_cast<int32_t>(content_x) &&
                 mouse_x < static_cast<int32_t>(content_x + content_width) &&
                 mouse_y >= static_cast<int32_t>(content_y) &&
@@ -105,8 +95,6 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
                 manager.click(mouse_x - static_cast<int32_t>(content_x),
                               mouse_y - static_cast<int32_t>(content_y),
                               content_width, content_height);
-            drag.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
-                              &x, &y, width, height, screen.width, usable_height);
             last_buttons = event.buttons;
         }
     }

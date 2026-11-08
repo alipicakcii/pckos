@@ -5,7 +5,8 @@
 #include <user/process.hh>
 #include <user/thread.hh>
 #include <user/gui.hh>
-#include <user/window_drag.hh>
+#include <user/lib/window.hh>
+#include <user/lib/widgets.hh>
 
 namespace
 {
@@ -65,19 +66,16 @@ namespace
         text[at] = '\0';
     }
 
-    void draw_converter(uint32_t x, uint32_t y, uint32_t width,
+    void draw_converter(user::gui::Window &window, uint32_t x, uint32_t y,
+                        uint32_t width,
                         user::gui::TextInput &input, uint32_t unit,
                         bool overflow)
     {
-        user::gui::window(x, y, width, 330, "PCKOS - Birim Donusturucu", true);
+        window.draw();
         const uint32_t left = x + 7, top = y + 32;
         user::gui::push_clip(left, top, width - 14, 290);
         user::gui::text(left + 16, top + 14, "Bellek miktarini girin",
                         user::gui::COLOR_TITLE);
-        input.draw(left + 16, top + 42, width - 46, 34);
-        user::gui::button(left + 16, top + 88, 86, 32, "Bayt", unit == 0);
-        user::gui::button(left + 112, top + 88, 86, 32, "KiB", unit == 1);
-        user::gui::button(left + 208, top + 88, 86, 32, "MiB", unit == 2);
         user::gui::text(left + 16, top + 134,
                         "Sonuc (ikilik birimler)", user::gui::COLOR_TITLE);
 
@@ -110,6 +108,11 @@ namespace
                         user::gui::COLOR_DARK);
         user::gui::pop_clip();
     }
+
+    void unit_button_click(void *context, uint32_t id)
+    {
+        *static_cast<uint32_t *>(context) = id;
+    }
 }
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
@@ -124,13 +127,22 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     const uint32_t usable_height = screen.height - 48;
     uint32_t x = (screen.width - width) / 2;
     uint32_t y = (usable_height - height) / 2;
-    if (user::graphics_register_window(x, y, width, height) < 0)
+    user::gui::Window window(x, y, width, height, "PCKOS - Birim Donusturucu");
+    if (!window.valid())
         user::exit(-1);
-    user::gui::WindowDrag drag(x, y);
     char input_buffer[11] = {};
     user::gui::TextInput input(input_buffer, sizeof(input_buffer));
     input.set_text("0");
     uint32_t unit = 0;
+    user::gui::ClickListener unit_listener(unit_button_click, &unit);
+    user::gui::Button byte_button(window, 0, 16, 88, 86, 32,
+                                  "Bayt", &unit_listener);
+    user::gui::Button kib_button(window, 1, 112, 88, 86, 32,
+                                 "KiB", &unit_listener);
+    user::gui::Button mib_button(window, 2, 208, 88, 86, 32,
+                                 "MiB", &unit_listener);
+    user::gui::TextInputWidget amount_input(
+        window, 16, 42, width - 46, 34, input);
     int32_t mouse_x = static_cast<int32_t>(screen.width / 2);
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
     (void)user::graphics_get_cursor(&mouse_x, &mouse_y);
@@ -150,9 +162,13 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             : unit == 1 ? 1024 : 1024 * 1024;
         const bool overflow = input_overflow(input.value()) ||
                               value > UINT32_MAX / multiplier;
+        byte_button.set_pressed(unit == 0);
+        kib_button.set_pressed(unit == 1);
+        mib_button.set_pressed(unit == 2);
         user::gui::begin_frame();
-        drag.restore_old_position(x, y);
-        draw_converter(x, y, width, input, unit, overflow);
+        x = window.x();
+        y = window.y();
+        draw_converter(window, x, y, width, input, unit, overflow);
         user::gui::end_frame();
 
         user::InputEvent event{};
@@ -191,30 +207,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             user::graphics_cursor(mouse_x, mouse_y, true);
             const bool pressed = (event.buttons & 1U) != 0 &&
                 ((last_buttons & 1U) == 0 || (event.buttons & 0x100U) != 0);
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 47) &&
-                mouse_x < static_cast<int32_t>(x + width - 28) &&
-                mouse_y >= static_cast<int32_t>(y + 5) && mouse_y < static_cast<int32_t>(y + 25))
-            { (void)user::process_minimize(); last_buttons = event.buttons; continue; }
-            if (pressed && mouse_x >= static_cast<int32_t>(x + width - 27) &&
-                mouse_x < static_cast<int32_t>(x + width - 6) &&
-                mouse_y >= static_cast<int32_t>(y + 5) && mouse_y < static_cast<int32_t>(y + 25))
-                user::exit(0);
-            if (pressed && mouse_x >= static_cast<int32_t>(x + 23) &&
-                mouse_x < static_cast<int32_t>(x + width - 23) &&
-                mouse_y >= static_cast<int32_t>(y + 74) &&
-                mouse_y < static_cast<int32_t>(y + 108))
-                input.place_cursor_from_x(static_cast<uint32_t>(mouse_x),
-                                          x + 23, width - 46);
-            if (pressed && mouse_y >= static_cast<int32_t>(y + 120) &&
-                mouse_y < static_cast<int32_t>(y + 152))
-            {
-                const int32_t relative_x = mouse_x - static_cast<int32_t>(x + 23);
-                if (relative_x >= 0 && relative_x < 86) unit = 0;
-                else if (relative_x >= 96 && relative_x < 182) unit = 1;
-                else if (relative_x >= 192 && relative_x < 278) unit = 2;
-            }
-            drag.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
-                              &x, &y, width, height, screen.width, usable_height);
+            if (window.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
+                                    screen.width, usable_height))
+            { last_buttons = event.buttons; continue; }
             last_buttons = event.buttons;
         }
     }

@@ -62,6 +62,7 @@ PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çek
 - Sistem çağrıları üzerinden çekirdek hizmetlerine erişen kullanıcı uygulamaları.
 - Tek çekirdekte çalışan, Round Robin zamanlamalı thread'ler ve ayrı adres alanları olan process'ler.
 - Framebuffer tabanlı masaüstü; klavye, fare, pencereler ve görev çubuğu.
+- Ortak `Window`, `Widget`, `Button` ve `ClickListener` kullanıcı arayüzü API'si; uygulama simgeleri masaüstü, Başlat menüsü ve görev çubuğunda PNG olarak gösterilir.
 - PCKFS kök dosya sistemi ve IDE ATA PIO disk sürücüsü. Kullanıcı uygulamaları şu an dosyaları okuyabilir; genel dosya yazma desteği henüz yoktur.
 - Masaüstünden açılan Terminal, Dosyalar, Görev Yöneticisi, Hesap Makinesi ve salt okunur Not Defteri.
 - RTC'den tarih/saat okuma; Görev Yöneticisi'nde bellek, işlemci ve thread bilgileri.
@@ -87,13 +88,17 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 Bellek Avcısı oyununda her yem alındığında kullanıcı heap'inden bir `uint32_t` (4 bayt) ayrılır. Pencerede tahsis adresi ve ayrılan oyun verisinin toplam boyutu gösterilir. Son tahsis adresi, ayrılan son 4 baytlık bloğun başlangıç adresidir. Oyun kapanırken tahsisler `delete` ile serbest bırakılır. Gerçek bir Bellek Avcısı! 🙂
 
-### Görev Yöneticisi ve Hesap Makinesi
+### Görev Yöneticisi
 
-![PCKOS masaüstünde Görev Yöneticisi ve Hesap Makinesi](assets/screenshots/qemu-task-manager-calculator.png)
+![PCKOS masaüstünde Görev Yöneticisi](assets/screenshots/qemu-task-manager-2026-11.png)
 
-### Görev Yöneticisi ve Sistem Bilgisi
+### Masaüstü
 
-![PCKOS masaüstünde Görev Yöneticisi ve Sistem Bilgisi](assets/screenshots/qemu-task-manager-system-info.png)
+![PCKOS masaüstü](assets/screenshots/qemu-desktop-2026-11.png)
+
+### Başlat menüsü
+
+![PCKOS masaüstünde Başlat menüsü açıkken Görev Yöneticisi](assets/screenshots/qemu-start-menu-2026-11.png)
 
 ## Geliştirme ortamı
 
@@ -141,10 +146,13 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | `kernel/include/abi/` | Sabit syscall numaraları ve çekirdek/kullanıcı alanının ortak veri yapıları |
 | `kernel/include/user/` | Thread, süreç, dosya, grafik ve diğer kullanıcı API başlıkları |
 | `kernel/include/user/gui.hh`, `kernel/user/gui/graphics.cpp` | Ring 3 ortak çizim API'si |
+| `kernel/include/user/lib/window.hh`, `kernel/user/lib/window.cpp` | Uygulama penceresi, başlık çubuğu, sürükleme, küçültme ve kapatma |
+| `kernel/include/user/lib/widgets.hh`, `kernel/user/lib/widgets.cpp` | Yeniden kullanılabilir widget, buton ve `ClickListener` |
 | `kernel/device/video/frame_buffer.cpp` | Ekran belleği ve pencerelerin katmanlarla birleştirilmesi |
 | `kernel/user/apps/desktop.cpp` | Masaüstü, simgeler, Başlat, görev çubuğu ve uygulama başlatma |
 | `kernel/user/apps/*_process.cpp` | Her uygulamanın `_start` ve olay döngüsü |
 | `kernel/user/apps/terminal.cpp`, `file_manager.cpp`, `task_manager.cpp` | Uygulama içeriği/iş mantığı |
+| `assets/app-icons/` | Kaynak PNG uygulama simgeleri; `share.sh` bunları PCKFS içindeki `/system/icons/` dizinine kopyalar |
 | `tools/mkpckfs.py`, `host-share/` | Disk imajı üretimi ve host'tan aktarılacak dosyalar |
 
 Çekirdek heap'i büyürken yeni sayfalar önce ana çekirdek sayfa dizinine (`KERN_PAGE_DIRECTORY`) eşlenir. `Vmm::sync_all_from_kernel()` bu eşlemeleri açık kullanıcı süreçlerine yayar. Sayfa hatasında çekirdek konsol günlüğündeki `[PageFault]` satırı hatalı adresi (`CR2`), komut adresini (`EIP`), hata kodunu ve etkin sayfa dizinini (`CR3`) gösterir.
@@ -168,7 +176,7 @@ Gereken araçlar: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkre
 
 ## 4. PCKFS v1: basit teknik açıklama
 
-`tools/mkpckfs.py` varsayılan olarak 32 MiB ham disk imajı üretir. `share.sh` önce `host-share/` ağacını `sysroot/pckfs-source/` içine kopyalar; derlenmiş uygulamaları `/apps/` altına ekler. `assets/logo.bmp` otomatik olarak `/system/logo.bmp` olur. Varsayılan dizinler `/boot`, `/dev`, `/etc`, `/home`, `/mnt`, `/tmp`, `/var`; `/apps` sistem uygulamalarından oluşur. Bunlar şu an adlandırılmış dizinlerdir; `/dev` için aygıt düğümü semantiği gibi Unix özellikleri yoktur.
+`tools/mkpckfs.py` varsayılan olarak 32 MiB ham disk imajı üretir. `share.sh` önce `host-share/` ağacını `sysroot/pckfs-source/` içine kopyalar; derlenmiş uygulamaları `/apps/` altına, `assets/app-icons/` PNG dosyalarını `/system/icons/` altına ekler. `assets/logo.bmp` otomatik olarak `/system/logo.bmp` olur. Varsayılan dizinler `/boot`, `/dev`, `/etc`, `/home`, `/mnt`, `/tmp`, `/var`; `/apps` sistem uygulamalarından oluşur. Bunlar şu an adlandırılmış dizinlerdir; `/dev` için aygıt düğümü semantiği gibi Unix özellikleri yoktur.
 
 Diskin fiziksel düzeni:
 
@@ -230,11 +238,43 @@ Kullanıcı API'si `kernel/include/user/` altında konuya göre ayrılmıştır:
 
 `user/syscall.hh` yalnızca `int 0x80` geçiş kodunu ve çağrı numaralarına erişimi sağlar. `ThreadInfo` gibi ortak veri yapıları `kernel/include/abi/` altında tek kez tanımlanır; ilgili çekirdek ve kullanıcı başlıkları bu tanımı kullanır.
 
-Grafik yardımcıları `kernel/include/user/gui.hh` ve `kernel/user/gui/graphics.cpp` içindedir. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/lib/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
+Grafik yardımcıları `kernel/include/user/gui.hh` ve `kernel/user/gui/graphics.cpp` içindedir. Ortak pencere ve widget API'si `kernel/include/user/lib/` altında, uygulamaları ise `kernel/user/lib/window.cpp` ve `widgets.cpp` içindedir. `Window` pencere kaydını, çerçeveyi, başlık çubuğu düğmelerini, sürüklemeyi, küçültmeyi ve kapatmayı yönetir. `Button`, `Label` ve `TextInputWidget` oluşturulduklarında ebeveyn pencereye eklenir. `Window::draw()` pencere içeriği alanındaki widget'ları çizer; `Window::handle_mouse()` tıklamaları widget'lara yollar. `Button` tıklamaları `ClickListener` callback'ini çağırır; `TextInputWidget` tıklanan konumda yazı imlecini ayarlar. Makefile bu kütüphane kaynaklarını kullanıcı uygulamalarına bağlar. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/lib/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
+
+### Pencere ve buton widget'ı
+
+Her uygulama kendi `Window` nesnesini oluşturur. Pencere API'si kaydetme, başlık çubuğunu çizme, sürükleme, küçültme ve kapatma işlemlerini üstlenir. Uygulama içeriğini pencerenin `content_x()`, `content_y()`, `content_width()` ve `content_height()` değerlerine göre yerleştirir. Pencereye bağlı widget'lar içerik alanına göre yerel koordinat kullanır. Her çizim karesinde `Window::draw()` çağrısı pencereyi ve ekli widget'ları çizer. Fare olayını `Window::handle_mouse()` metoduna verin; pencere düğmeleri ve ekli widget'lar olayı kendileri işler.
+
+`ClickListener`, yakalamasız C++ lambda yerine callback ve bağlam işaretçisi alır. Böylece uygulama durumunu callback'e iletebilirsiniz:
+
+```cpp
+#include <user/lib/widgets.hh>
+#include <user/lib/window.hh>
+
+void on_button_click(void *context, uint32_t id)
+{
+    auto *click_count = static_cast<uint32_t *>(context);
+    if (id == 1)
+        ++*click_count;
+}
+
+uint32_t clicks = 0;
+user::gui::Window window(120, 90, 420, 280, "PCKOS - Ornek");
+user::gui::ClickListener listener(on_button_click, &clicks);
+user::gui::Button button(window, 1, 16, 16, 140, 36, "Tikla", &listener);
+
+user::gui::begin_frame();
+window.draw();
+user::gui::end_frame();
+
+window.handle_mouse(mouse_x, mouse_y, mouse_buttons, pressed,
+                    screen_width, usable_height);
+```
+
+`Button` oluşturucusundaki konum pencerenin içerik alanına göredir. Hesap Makinesi ve birim dönüştürücü ortak pencere/buton API'sini kullanır; diğer pencereli uygulamalar da çerçeve, taşıma ve başlık düğmelerini `Window` üzerinden yönetir.
 
 ### Standart giriş, çıktı ve hata akışları
 
-Örneğin `/apps/merhaba.bin` olarak bir PCKOS için uygulama yazdınız; `run /apps/merhaba.bin` uygulamayı ayrı süreçte başlatır ve terminal bağlantısını aktarır. `stdin` (0) terminalden giriş alır; `stdout` (1) normal çıktı, `stderr` (2) hata çıktısıdır. İki çıktı akışı aynı terminalde çağrı sırasıyla gösterilir; uygulama çıktısı bu durumda çekirdek günlüğüne eklenmez. Alt süreçler de terminal bağlantısını devralır. Terminal bağlantısı olmayan uygulamalarda çıktı sistem konsol günlüğüne gider. Seri porta yazılmaz.
+Örneğin `/apps/newapp.bin` olarak bir PCKOS için uygulama yazdınız; `run /apps/newapp.bin` uygulamayı ayrı süreçte başlatır ve terminal bağlantısını aktarır. `stdin` (0) terminalden giriş alır; `stdout` (1) normal çıktı, `stderr` (2) hata çıktısıdır. İki çıktı akışı aynı terminalde çağrı sırasıyla gösterilir; uygulama çıktısı bu durumda çekirdek günlüğüne eklenmez. Alt süreçler de terminal bağlantısını devralır. Terminal bağlantısı olmayan uygulamalarda çıktı sistem konsol günlüğüne gider. Seri porta yazılmaz.
 
 Terminal, `run` ile başlattığınız süreç bitene kadar yeni kabuk komutu çalıştırmaz; Enter ile gönderdiğiniz satırları uygulamanın `stdin` kuyruğuna koyar. Boş girişte Ctrl+D EOF gönderir; yazılmış metin varsa önce o metni gönderir. Program bitince `pckos>` geri gelir. Grafik uygulaması pencere kaydettiğinde odağı kendi penceresine alır. Simge durumundaki terminal de çıktıları toplamaya devam eder.
 
@@ -280,7 +320,7 @@ Terminal ön yüzü için `terminal_attach()` (44) çağıran süreci terminal s
 | Sistem | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
 | Grafik | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
-`wait_event(&event, ticks)`: `type=1` klavye (`value0` karakter), `type=2` fare (`value0` X farkı, `value1` Y farkı), `type=3` zaman aşımıdır. `buttons & 1` sol tuş; `buttons & 0x100` yeni basma kenarıdır. 100 PIT tik'i yaklaşık bir saniyedir. Çizim ekran koordinatlarıyla yapılır. Pencereli bir uygulama önce `graphics_register_window(x,y,w,h)` çağırır; sonra bir kareyi `user::gui::begin_frame()` ve `end_frame()` arasında çizer. `user::gui::window`, `fill`, `text`, `button`, `icon` ve `push_clip` hazır yardımcılarıdır.
+`wait_event(&event, ticks)`: `type=1` klavye (`value0` karakter), `type=2` fare (`value0` X farkı, `value1` Y farkı), `type=3` zaman aşımıdır. `buttons & 1` sol tuş; `buttons & 0x100` yeni basma kenarıdır. 100 PIT tik'i yaklaşık bir saniyedir. Çizim ekran koordinatlarıyla yapılır. Pencereli uygulamalar `Window` oluşturucusuyla pencereyi kaydeder; kareyi `user::gui::begin_frame()` ve `end_frame()` arasında çizer, `Window::draw()` ile pencereyi gösterir ve fare olaylarını `Window::handle_mouse()` metoduna verir. Düşük seviyeli özel çizimler için `user::gui::fill`, `text`, `button`, `icon` ve `push_clip` yardımcıları kullanılabilir.
 
 `get_datetime(&date)` RTC'deki yıl, ay, gün, saat, dakika ve saniyeyi `user::DateTime` yapısına doldurur. Görev çubuğundaki saat açılıştan beri geçen süreyi değil sanal makinenin RTC saatini gösterir; QEMU betiği RTC'yi host yerel saatiyle başlatır. Hesap Makinesi ve Not Defteri Başlat menüsünden açılır; ikisi de ayrı PID ve ana thread alır. Hesap Makinesi tam sayı işlemleri (`+`, `-`, `*`, `/`) yapar. Not Defteri, yol alanına yazılan herhangi bir PCKFS metin dosyasının ilk 8191 baytını **salt okunur** gösterir. Örneğin `host-share/home/notlar.txt` konursa yol `/home/notlar.txt` olur; dosya adının kodda özel bir anlamı yoktur.
 
@@ -385,7 +425,7 @@ if (tid < 0) {
 
 ## 8. Yeni uygulama yazma, derleme ve başlatma
 
-Örnek dosya: `kernel/user/apps/merhaba_process.cpp`. PCKOS'un yüklediği düz ikilinin giriş noktası `_start` olmalıdır:
+Örnek dosya: `kernel/user/apps/newapp_process.cpp`. PCKOS'un yüklediği düz ikilinin giriş noktası `_start` olmalıdır:
 
 ```cpp
 #include <user/graphics.hh>
@@ -393,33 +433,47 @@ if (tid < 0) {
 #include <user/process.hh>
 #include <user/thread.hh>
 #include <user/gui.hh>
+#include <user/lib/window.hh>
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
-    constexpr uint32_t x = 260, y = 180, width = 360, height = 180;
-    if (user::graphics_register_window(x, y, width, height) < 0)
+    constexpr uint32_t width = 360, height = 180;
+    user::GraphicsInfo screen{};
+    if (user::graphics_get_info(&screen) < 0)
         user::exit(1);
-    user::thread_set_name("Merhaba");
+    user::gui::Window window((screen.width - width) / 2,
+                             (screen.height - height) / 2,
+                             width, height, "PCKOS - NewApp");
+    if (!window.valid())
+        user::exit(1);
+    user::thread_set_name("NewApp");
 
     for (;;) {
         user::gui::begin_frame();
-        user::gui::window(x, y, width, height, "PCKOS - Merhaba", true);
-        user::gui::text(x + 22, y + 60, "Merhaba PCKOS!",
-                        user::gui::COLOR_TEXT);
-        user::gui::text(x + 22, y + 92, "ESC ile kapat",
+        window.draw();
+        user::gui::text(window.content_x() + 16, window.content_y() + 24,
+                        "Merhaba PCKOS!",
                         user::gui::COLOR_TEXT);
         user::gui::end_frame();
 
         user::InputEvent event{};
-        if (user::wait_event(&event, 10) > 0 &&
-            event.type == 1 && event.value0 == 0x1B)
-            user::exit(0);
+        if (user::wait_event(&event, 10) > 0) {
+            if (event.type == 2) {
+                int32_t mouse_x = 0, mouse_y = 0;
+                (void)user::graphics_get_cursor(&mouse_x, &mouse_y);
+                mouse_x += event.value0;
+                mouse_y -= event.value1;
+                const bool pressed = (event.buttons & 1U) != 0;
+                (void)window.handle_mouse(mouse_x, mouse_y, event.buttons,
+                                          pressed, screen.width, screen.height - 48);
+            }
+        }
     }
 }
 ```
 
-Yukarıdaki örneği `kernel/user/apps/merhaba_process.cpp` olarak kaydedin. Aşağıda yeni uygulamayı adım adım derleyip PCKOS'ta çalıştırıyoruz. Bütün terminal komutlarını projenin kök dizininde, `build.sh` dosyasının bulunduğu yerde çalıştırın.
+Yukarıdaki örneği `kernel/user/apps/newapp_process.cpp` olarak kaydedin. Aşağıda yeni uygulamayı adım adım derleyip PCKOS'ta çalıştırıyoruz. Bütün terminal komutlarını projenin kök dizininde, `build.sh` dosyasının bulunduğu yerde çalıştırın.
 
 Bu örnekte uygulamayı elle derliyoruz. Mevcut Makefile yalnızca içinde tanımlı uygulamaları derler; yeni bir `.cpp` dosyası oluşturduğunuzda onu kendiliğinden derlemeye eklemez. Bu nedenle aşağıdaki adımları sırayla uygulayın.
 
@@ -429,7 +483,7 @@ Bu örnekte uygulamayı elle derliyoruz. Mevcut Makefile yalnızca içinde tanı
 ./build.sh
 ```
 
-Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o`, `kernel/user/lib/new.user.o`, `kernel/user/lib/memory.user.o` ve `kernel/user/lib/io.user.o` dosyalarını üretir. Henüz yeni `merhaba_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
+Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o`, `kernel/user/lib/window.user.o`, `kernel/user/lib/widgets.user.o`, `kernel/user/lib/new.user.o`, `kernel/user/lib/memory.user.o` ve `kernel/user/lib/io.user.o` dosyalarını üretir. Henüz yeni `newapp_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
 
 **2. Uygulamanın C++ kodunu derleyin.**
 
@@ -438,31 +492,32 @@ i686-elf-g++ -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
   -fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
   -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
   -msoft-float -Ikernel/include \
-  -c kernel/user/apps/merhaba_process.cpp -o kernel/user/apps/merhaba_process.user.o
+  -c kernel/user/apps/newapp_process.cpp -o kernel/user/apps/newapp_process.user.o
 ```
 
-Girdi, yazdığınız `merhaba_process.cpp` dosyasıdır. `-c` seçeneği yalnızca derleme yapar ve sonuç olarak `merhaba_process.user.o` nesne dosyasını oluşturur. Bu dosya henüz tek başına çalıştırılabilir değildir; kullandığı grafik fonksiyonlarıyla bağlanması gerekir. `-Ikernel/include` SDK başlık dosyalarının yerini belirtir. Diğer bayraklar PCKOS kullanıcı uygulamalarının mevcut derleme ayarlarıdır.
+Girdi, yazdığınız `newapp_process.cpp` dosyasıdır. `-c` seçeneği yalnızca derleme yapar ve sonuç olarak `newapp_process.user.o` nesne dosyasını oluşturur. Bu dosya henüz tek başına çalıştırılabilir değildir; kullandığı grafik fonksiyonlarıyla bağlanması gerekir. `-Ikernel/include` SDK başlık dosyalarının yerini belirtir. Diğer bayraklar PCKOS kullanıcı uygulamalarının mevcut derleme ayarlarıdır.
 
 **3. Nesne dosyasını grafik kitaplığıyla bağlayın.**
 
 ```sh
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
-  -o kernel/user/apps/merhaba_process.elf \
+  -o kernel/user/apps/newapp_process.elf \
   kernel/user/lib/new.user.o kernel/user/lib/memory.user.o kernel/user/lib/io.user.o \
-  kernel/user/gui/graphics.user.o kernel/user/apps/merhaba_process.user.o
+  kernel/user/lib/window.user.o kernel/user/lib/widgets.user.o \
+  kernel/user/gui/graphics.user.o kernel/user/apps/newapp_process.user.o
 ```
 
-Bu adım uygulama nesnesini grafik, bellek ve `new`/`delete` runtime nesneleriyle birleştirir. `linker.ld`, uygulamanın bellek yerleşimini ve `_start` girişini tanımlar. Sonuç `merhaba_process.elf` dosyasıdır. Bu ELF, bağlantı ara çıktısıdır; mevcut PCKOS yükleyicisi düz ikili dosya bekler.
+Bu adım uygulama nesnesini grafik, bellek ve `new`/`delete` runtime nesneleriyle birleştirir. `linker.ld`, uygulamanın bellek yerleşimini ve `_start` girişini tanımlar. Sonuç `newapp_process.elf` dosyasıdır. Bu ELF, bağlantı ara çıktısıdır; mevcut PCKOS yükleyicisi düz ikili dosya bekler.
 
 **4. ELF dosyasını PCKOS'un yükleyebileceği biçime çevirin.**
 
 ```sh
-i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
-  host-share/apps/merhaba.bin
+i686-elf-objcopy -O binary kernel/user/apps/newapp_process.elf \
+  host-share/apps/newapp.bin
 ```
 
-`objcopy -O binary`, ELF içindeki yüklenebilir içeriği düz ikili dosyaya dönüştürür. Sonuç `host-share/apps/merhaba.bin` olur. `host-share`, host makinenizdeki dosyaların PCKFS'e aktarılması için kullanılan dizindir. `host-share/apps` proje içinde zaten bulunur.
+`objcopy -O binary`, ELF içindeki yüklenebilir içeriği düz ikili dosyaya dönüştürür. Sonuç `host-share/apps/newapp.bin` olur. `host-share`, host makinenizdeki dosyaların PCKFS'e aktarılması için kullanılan dizindir. `host-share/apps` proje içinde zaten bulunur.
 
 **5. Uygulamayı PCKFS disk imajına aktarın.**
 
@@ -470,20 +525,20 @@ i686-elf-objcopy -O binary kernel/user/apps/merhaba_process.elf \
 ./share.sh
 ```
 
-`share.sh`, önce `build.sh` komutunu çağırır, ardından `host-share` içeriğini ve yerleşik uygulamaları paketleyerek `pckfs.img` dosyasını yeniden üretir. Elle derlediğiniz `merhaba.bin` dosyasını olduğu gibi alır; uygulamanın kaynak kodunu yeniden derlemez. Host üzerindeki `host-share/apps/merhaba.bin`, PCKOS içinde `/apps/merhaba.bin` olarak görünür.
+`share.sh`, önce `build.sh` komutunu çağırır, ardından `host-share` içeriğini ve yerleşik uygulamaları paketleyerek `pckfs.img` dosyasını yeniden üretir. Elle derlediğiniz `newapp.bin` dosyasını olduğu gibi alır; uygulamanın kaynak kodunu yeniden derlemez. Host üzerindeki `host-share/apps/newapp.bin`, PCKOS içinde `/apps/newapp.bin` olarak görünür.
 
 Bu noktada uygulama derlenmiş ve disk imajına eklenmiştir. **Uygulamayı çekirdeğe linklemek gerekmez.**
 
 **6. İlk deneme için uygulamayı başlatın.**
 
-Proje kökünde `./run.sh` çalıştırın. Betik temiz derleme yapar, ISO ve PCKFS imajlarını yeniden üretir ve QEMU'yu açar. `host-share/apps/merhaba.bin` temizleme sırasında korunup yeni disk imajına eklenir.
+Proje kökünde `./run.sh` çalıştırın. Betik temiz derleme yapar, ISO ve PCKFS imajlarını yeniden üretir ve QEMU'yu açar. `host-share/apps/newapp.bin` temizleme sırasında korunup yeni disk imajına eklenir.
 
 Masaüstündeki Terminal'i açıp **PCKOS terminaline** şu komutu yazın:
 
 ```text
-run /apps/merhaba.bin
+run /apps/newapp.bin
 ```
 
-Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `desktop.cpp` dosyasını değiştirmeniz gerekmez.  Başka bir uygulamanın kodundan başlatmak için `user::process_spawn("/apps/merhaba.bin", "Merhaba")` kullanın.
+Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `desktop.cpp` dosyasını değiştirmeniz gerekmez.  Başka bir uygulamanın kodundan başlatmak için `user::process_spawn("/apps/newapp.bin", "NewApp")` kullanın.
 
-**Uygulamanın kodunu değiştirdiğinizde:** 2, 3 ve 4. adımları tekrar çalıştırarak `host-share/apps/merhaba.bin` dosyasını güncelleyin. Ardından `./run.sh` ile deneyin; bu betik 5. adımdaki paketlemeyi de kendisi yapar. Yalnızca disk imajını yenilemek isterseniz `./share.sh` çalıştırın. Temizleme sonrasında `graphics.user.o` bulunmuyorsa veya grafik kitaplığını değiştirdiyseniz önce 1. adımı da uygulayın.
+**Uygulamanın kodunu değiştirdiğinizde:** 2, 3 ve 4. adımları tekrar çalıştırarak `host-share/apps/newapp.bin` dosyasını güncelleyin. Ardından `./run.sh` ile deneyin; bu betik 5. adımdaki paketlemeyi de kendisi yapar. Yalnızca disk imajını yenilemek isterseniz `./share.sh` çalıştırın. Temizleme sonrasında `graphics.user.o` bulunmuyorsa veya grafik kitaplığını değiştirdiyseniz önce 1. adımı da uygulayın.
