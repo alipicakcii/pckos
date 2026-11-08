@@ -9,11 +9,11 @@ I have now decided to share PCKOS as an open-source project. My goal is to build
 
 More information: [PCKOS on my blog](https://pckblog.com/pckos.html)
 
-To try the latest PCKOS build, download the shared ISO used by both virtualization programs and the disk image for your chosen emulator:
+Use the same `pckos.iso` with QEMU and VirtualBox. The PCKFS root filesystem is the same in both disk images: `pckfs.img` is the raw disk image, and `pckfs-vbox.vdi` is converted to VirtualBox's VDI format:
 
-- **Shared boot ISO:** [pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
-- **QEMU root disk image:** [pckfs.img (IMG)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
-- **VirtualBox root disk image:** [pckfs-vbox.vdi (VDI)](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
+- **PCKOS ISO:** [pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
+- **PCKFS disk image (raw IMG):** [pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
+- **PCKFS disk image (VirtualBox VDI):** [pckfs-vbox.vdi](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs-vbox.vdi)
 - [SHA-256 checksums](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/SHA256SUMS)
 
 If the VDI causes problems, see “Run in VirtualBox” for instructions on recreating it.
