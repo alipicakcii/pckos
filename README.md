@@ -88,17 +88,13 @@ Başka bir lisans bildirimi bulunmayan PCKOS kodu GNU Genel Kamu Lisansı'nın 3
 
 Bellek Avcısı oyununda her yem alındığında kullanıcı heap'inden bir `uint32_t` (4 bayt) ayrılır. Pencerede tahsis adresi ve ayrılan oyun verisinin toplam boyutu gösterilir. Son tahsis adresi, ayrılan son 4 baytlık bloğun başlangıç adresidir. Oyun kapanırken tahsisler `delete` ile serbest bırakılır. Gerçek bir Bellek Avcısı! 🙂
 
-### Görev Yöneticisi
-
-![PCKOS masaüstünde Görev Yöneticisi](assets/screenshots/qemu-task-manager-2026-11.png)
-
 ### Masaüstü
 
 ![PCKOS masaüstü](assets/screenshots/qemu-desktop-2026-11.png)
 
-### Başlat menüsü
+### Görev Yöneticisi ve Hesap Makinesi
 
-![PCKOS masaüstünde Başlat menüsü açıkken Görev Yöneticisi](assets/screenshots/qemu-start-menu-2026-11.png)
+![PCKOS masaüstünde Görev Yöneticisi ve Hesap Makinesi](assets/screenshots/qemu-task-manager-calculator-2026-11.png)
 
 ## Geliştirme ortamı
 

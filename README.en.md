@@ -85,17 +85,13 @@ Unless a file says otherwise, PCKOS code is licensed under the GNU General Publi
 
 In Memory Hunter, each time food is eaten, the game allocates one `uint32_t` (4 bytes) from the user heap. The window shows the allocation address and the total size of game data allocated. The last allocation address is the starting address of the most recently allocated 4-byte block. The allocations are released with `delete` when the game closes. A real memory hunter! 🙂
 
-### Task Manager
-
-![Task Manager on the PCKOS desktop](assets/screenshots/qemu-task-manager-2026-11.png)
-
 ### Desktop
 
 ![PCKOS desktop](assets/screenshots/qemu-desktop-2026-11.png)
 
-### Start menu
+### Task Manager and Calculator
 
-![Task Manager open with the PCKOS Start menu](assets/screenshots/qemu-start-menu-2026-11.png)
+![Task Manager and Calculator on the PCKOS desktop](assets/screenshots/qemu-task-manager-calculator-2026-11.png)
 
 ## Development environment
 
