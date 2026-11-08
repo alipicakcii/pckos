@@ -9,7 +9,7 @@ I have now decided to share PCKOS as an open-source project. My goal is to build
 
 More information: [PCKOS on my blog](https://pckblog.com/pckos.html)
 
-PCKOS uses its own PCKFS filesystem. To run it, download the PCKOS ISO and the PCKFS disk image for your virtualization program:
+Use the links below to download the latest compiled PCKOS ISO and filesystem image:
 
 - **PCKOS ISO:** [pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
 - **PCKFS filesystem image:** [pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)

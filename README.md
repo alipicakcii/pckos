@@ -9,7 +9,7 @@ Artık PCKOS'u açık kaynak olarak paylaşmaya karar verdim. Amacım, projeye i
 
 Daha fazla bilgi için blog: [PCKOS blog yazım](https://pckblog.com/pckos.html)
 
-PCKOS kendi dosya sistemi PCKFS'i kullanır. Çalıştırmak için PCKOS ISO'su ile kullandığınız sanallaştırıcıya uygun PCKFS disk imajını indirin:
+PCKOS'un güncel derlenmiş ISO dosyasını ve dosya sistemi imajını indirmek için aşağıdaki bağlantıları kullanın:
 
 - **PCKOS ISO:** [pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
 - **PCKFS dosya sistemi:** [pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
