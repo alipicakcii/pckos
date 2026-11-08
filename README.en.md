@@ -9,7 +9,7 @@ I have now decided to share PCKOS as an open-source project. My goal is to build
 
 More information: [PCKOS on my blog](https://pckblog.com/pckos.html)
 
-Use the links below to download the latest compiled PCKOS ISO and filesystem image:
+Use the links below to download the latest compiled PCKOS ISO and filesystem image. PCKOS uses its own filesystem, PCKFS, so you also need to download `pckfs.img` alongside the ISO. To run PCKOS in VirtualBox, you can use the ready-made `pckfs-vbox.vdi` image instead of `pckfs.img`.
 
 - **PCKOS ISO:** [pckos.iso](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckos.iso)
 - **PCKFS filesystem image:** [pckfs.img](https://raw.githubusercontent.com/alipicakcii/pckos/main/downloads/pckfs.img)
