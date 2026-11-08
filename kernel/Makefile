@@ -269,7 +269,7 @@ user/apps/memory_hunter_process.bin: user/apps/memory_hunter_process.elf
 arch/i386/user_desktop.o: arch/i386/user_desktop.asm user/apps/desktop.bin
 	nasm -felf32 $< -o $@
 
-user/apps/demo_process.user.o: user/apps/demo_process.cpp include/user/lib/new.hh include/user/syscall.hh include/user/gui.hh include/user/window_drag.hh
+user/apps/demo_process.user.o: user/apps/demo_process.cpp include/user/graphics.hh include/user/input.hh include/user/process.hh include/user/thread.hh include/user/gui.hh include/user/lib/window.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/demo_process.elf: $(USER_RUNTIME_OBJECTS) user/apps/demo_process.user.o user/apps/linker.ld
