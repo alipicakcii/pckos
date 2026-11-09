@@ -16,7 +16,7 @@ namespace kernel::syscalls
 
             if (max < 0)
             {
-                registers->eax = static_cast<uint32_t>(ERROR_INVALID_ARGUMENT);
+                registers->eax = 0;//static_cast<uint32_t>(ERROR_INVALID_ARGUMENT);
                 return;
             }
             uint32_t rnd = lib::rand(max);
