@@ -74,21 +74,25 @@ I am not opposed to using AI. Contributions to the project may use AI tools; my 
 
 ### Terminal
 
-![Terminal open on the PCKOS desktop](assets/screenshots/qemu-terminal-2026-11.png)
+![PCKOS — Terminal](assets/screenshots/qemu-terminal-2026-11-09.png)
 
 ### Memory Hunter
 
-![Memory Hunter game on the PCKOS desktop](assets/screenshots/qemu-memory-hunter-2026-11.png)
+![PCKOS — Memory Hunter](assets/screenshots/qemu-memory-hunter-2026-11-09.png)
 
 In Memory Hunter, each time food is eaten, the game allocates one `uint32_t` (4 bytes) from the user heap. The window shows the allocation address and the total size of game data allocated. The last allocation address is the starting address of the most recently allocated 4-byte block. The allocations are released with `delete` when the game closes. A real memory hunter! 🙂
 
-### Desktop
-
-![PCKOS desktop](assets/screenshots/qemu-desktop-2026-11.png)
-
 ### Task Manager and Calculator
 
-![Task Manager and Calculator on the PCKOS desktop](assets/screenshots/qemu-task-manager-calculator-2026-11.png)
+![PCKOS — Task Manager and Calculator](assets/screenshots/qemu-task-manager-calculator-2026-11-09.png)
+
+### Start Menu
+
+![PCKOS — Start Menu](assets/screenshots/qemu-start-menu-2026-11-09.png)
+
+### Desktop
+
+![PCKOS — Desktop](assets/screenshots/qemu-desktop-2026-11-09.png)
 
 ## Development environment
 

@@ -77,21 +77,25 @@ Yapay zekâ kullanımına karşı değilim; projeye yapılacak katkılarda yapay
 
 ### Terminal
 
-![PCKOS masaüstünde açık Terminal](assets/screenshots/qemu-terminal-2026-11.png)
+![PCKOS — Terminal](assets/screenshots/qemu-terminal-2026-11-09.png)
 
 ### Bellek Avcısı
 
-![PCKOS masaüstünde Bellek Avcısı oyunu](assets/screenshots/qemu-memory-hunter-2026-11.png)
+![PCKOS — Bellek Avcısı](assets/screenshots/qemu-memory-hunter-2026-11-09.png)
 
 Bellek Avcısı oyununda her yem alındığında kullanıcı heap'inden bir `uint32_t` (4 bayt) ayrılır. Pencerede tahsis adresi ve ayrılan oyun verisinin toplam boyutu gösterilir. Son tahsis adresi, ayrılan son 4 baytlık bloğun başlangıç adresidir. Oyun kapanırken tahsisler `delete` ile serbest bırakılır. Gerçek bir Bellek Avcısı! 🙂
 
-### Masaüstü
-
-![PCKOS masaüstü](assets/screenshots/qemu-desktop-2026-11.png)
-
 ### Görev Yöneticisi ve Hesap Makinesi
 
-![PCKOS masaüstünde Görev Yöneticisi ve Hesap Makinesi](assets/screenshots/qemu-task-manager-calculator-2026-11.png)
+![PCKOS — Görev Yöneticisi ve Hesap Makinesi](assets/screenshots/qemu-task-manager-calculator-2026-11-09.png)
+
+### Başlat Menüsü
+
+![PCKOS — Başlat Menüsü](assets/screenshots/qemu-start-menu-2026-11-09.png)
+
+### Masaüstü
+
+![PCKOS — Masaüstü](assets/screenshots/qemu-desktop-2026-11-09.png)
 
 ## Geliştirme ortamı
 
