@@ -385,6 +385,13 @@ namespace user::apps
                     return;
                 }
                 foreground_process_ = 0;
+                char pending[512];
+                for (uint32_t i = 0; i < 16; ++i)
+                {
+                    const int32_t bytes = user::terminal_read(pending, sizeof(pending));
+                    if (bytes <= 0) break;
+                    append_output(pending, static_cast<uint32_t>(bytes));
+                }
             }
             print_line("^C");
             command_input_.clear();

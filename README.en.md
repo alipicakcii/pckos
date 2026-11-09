@@ -266,7 +266,12 @@ The coordinates in the `Button` constructor are relative to the window's client 
 
 `run /apps/newapp.bin` starts a separate process and passes on the terminal connection. `stdin` (0) receives terminal input; `stdout` (1) carries normal output and `stderr` (2) carries errors. Both output streams appear in the same terminal in syscall order; attached application output is not added to the kernel log. Child processes inherit the terminal connection. Output from applications without a terminal connection goes to the system console log. Nothing is written to the serial port.
 
-The terminal waits for the process started by `run` before accepting another shell command. Lines submitted with Enter go to the application's `stdin` queue. Ctrl+D on empty input sends EOF; if text has been entered, it sends that text first. The `pckos>` prompt returns when the process ends. A graphical application takes focus when it registers its window. Minimized terminals continue collecting output.
+The terminal waits for the process started by `run` before accepting another shell command. Lines submitted with Enter go to the application's `stdin` queue. Ctrl+D on empty input sends EOF; if text has been entered, it sends that text first. The `pckos:/>` prompt returns when the process ends. A graphical application takes focus when it registers its window. Minimized terminals continue collecting output.
+
+Use `cd /apps`, `cd ..`, and `cd -` to change directories, and `pwd` to display the current directory. `ls`, `cat`, and `run` also accept relative paths; for example, use `run demo.bin` from `/apps`. The working directory belongs to the terminal. Additional commands include `ps`, `date`, `uptime`, and `history`; `help` groups commands by purpose. Ctrl+L clears the screen, Up/Down recall commands, and PgUp/PgDn or the scrollbar show earlier output.
+
+Ctrl+C terminates the application launched with `run` and its descendants attached to the same terminal, reclaiming their memory, threads, windows, and open files. This is not a POSIX signal and does not invoke user object destructors. With no application running, it cancels the current command line. `terminal_interrupt(pid)` (50) permits only a terminal owner to terminate applications attached to its own terminal.
+
 
 ```cpp
 #include <user/io.hh>

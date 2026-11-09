@@ -269,7 +269,12 @@ window.handle_mouse(mouse_x, mouse_y, mouse_buttons, pressed,
 
 Örneğin `/apps/newapp.bin` olarak bir PCKOS için uygulama yazdınız; `run /apps/newapp.bin` uygulamayı ayrı süreçte başlatır ve terminal bağlantısını aktarır. `stdin` (0) terminalden giriş alır; `stdout` (1) normal çıktı, `stderr` (2) hata çıktısıdır. İki çıktı akışı aynı terminalde çağrı sırasıyla gösterilir; uygulama çıktısı bu durumda çekirdek günlüğüne eklenmez. Alt süreçler de terminal bağlantısını devralır. Terminal bağlantısı olmayan uygulamalarda çıktı sistem konsol günlüğüne gider. Seri porta yazılmaz.
 
-Terminal, `run` ile başlattığınız süreç bitene kadar yeni kabuk komutu çalıştırmaz; Enter ile gönderdiğiniz satırları uygulamanın `stdin` kuyruğuna koyar. Boş girişte Ctrl+D EOF gönderir; yazılmış metin varsa önce o metni gönderir. Program bitince `pckos>` geri gelir. Grafik uygulaması pencere kaydettiğinde odağı kendi penceresine alır. Simge durumundaki terminal de çıktıları toplamaya devam eder.
+Terminal, `run` ile başlattığınız süreç bitene kadar yeni kabuk komutu çalıştırmaz; Enter ile gönderdiğiniz satırları uygulamanın `stdin` kuyruğuna koyar. Boş girişte Ctrl+D EOF gönderir; yazılmış metin varsa önce o metni gönderir. Program bitince `pckos:/>` geri gelir. Grafik uygulaması pencere kaydettiğinde odağı kendi penceresine alır. Simge durumundaki terminal de çıktıları toplamaya devam eder.
+
+Terminalde `cd /apps`, `cd ..` ve `cd -` ile dizin değiştirebilir, `pwd` ile bulunduğunuz dizini görebilirsiniz. `ls`, `cat` ve `run` göreli yolları da kabul eder; örneğin `/apps` içindeyken `run demo.bin` kullanabilirsiniz. Çalışma dizini terminale aittir. `ps`, `date`, `uptime` ve `history` komutları da kullanılabilir; `help` komutları gruplar halinde gösterir. Ctrl+L ekranı temizler, yukarı/aşağı okları komut geçmişini, PgUp/PgDn ve kaydırma çubuğu önceki çıktıları gösterir.
+
+Ctrl+C, `run` ile başlatılan uygulamayı ve aynı terminale bağlı alt süreçlerini sonlandırır; süreçlerin belleği, thread'leri, pencereleri ve açık dosyaları temizlenir. Bu işlem POSIX sinyali değildir ve kullanıcı nesnelerinin yıkıcılarını çağırmaz. Uygulama çalışmıyorsa yazılmakta olan komutu iptal eder. `terminal_interrupt(pid)` (50) yalnızca terminal sahibinin kendi terminaline bağlı uygulamaları sonlandırmasına izin verir.
+
 
 ```cpp
 #include <user/io.hh>
