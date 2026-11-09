@@ -13,6 +13,7 @@ namespace kernel
     void syscall_initialize(mem::Vmm &virtual_memory,
                             device::FrameBuffer *framebuffer);
     void syscall_reset_process();
+    void syscall_close_process_files(uint32_t process_id);
 }
 
 #endif

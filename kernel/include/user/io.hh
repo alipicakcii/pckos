@@ -34,6 +34,12 @@ namespace user
         return call(syscall_terminal_read, reinterpret_cast<uint32_t>(buffer), length);
     }
 
+    // Yalnızca bu terminale bağlı uygulamayı ve alt süreçlerini sonlandırır.
+    inline int32_t terminal_interrupt(uint32_t process_id)
+    {
+        return call(syscall_terminal_interrupt, process_id);
+    }
+
     inline int32_t terminal_send(uint32_t process_id, const void *buffer, uint32_t length)
     {
         return call(syscall_terminal_send, process_id,

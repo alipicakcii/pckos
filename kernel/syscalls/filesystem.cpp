@@ -3,6 +3,7 @@
 #include "internal.hh"
 #include <abi/filesystem.hh>
 #include <fs/pckfs.hh>
+#include <kernel/thread.hh>
 
 namespace kernel::syscalls
 {
@@ -11,6 +12,7 @@ namespace kernel::syscalls
         constexpr uint32_t MAX_OPEN_FILES = 8;
         struct OpenFile
         {
+            uint32_t process_id;
             uint16_t inode;
             uint32_t offset;
             bool used;
@@ -39,6 +41,7 @@ namespace kernel::syscalls
         {
             if (open_files[i].used)
                 continue;
+            open_files[i].process_id = thread_current_process_id();
             open_files[i].inode = entry.inode;
             open_files[i].offset = 0;
             open_files[i].used = true;
@@ -51,7 +54,8 @@ namespace kernel::syscalls
                       uint32_t length)
     {
         const uint32_t slot = descriptor - 3;
-        if (slot >= MAX_OPEN_FILES || !open_files[slot].used)
+        if (slot >= MAX_OPEN_FILES || !open_files[slot].used ||
+            open_files[slot].process_id != thread_current_process_id())
             return ERROR_BAD_DESCRIPTOR;
         if (length > MAX_SYSCALL_TRANSFER)
             return ERROR_INVALID_ARGUMENT;
@@ -97,6 +101,13 @@ namespace kernel::syscalls
         return 1;
     }
 
+    void close_process_files(uint32_t process_id)
+    {
+        for (uint32_t i = 0; i < MAX_OPEN_FILES; ++i)
+            if (open_files[i].used && open_files[i].process_id == process_id)
+                open_files[i] = {};
+    }
+
     void reset_files()
     {
         for (uint32_t i = 0; i < MAX_OPEN_FILES; ++i)
@@ -114,7 +125,8 @@ namespace kernel::syscalls
             case abi::syscall_close:
             {
                 if (registers->ebx < 3 || registers->ebx >= 3 + MAX_OPEN_FILES ||
-                    !open_files[registers->ebx - 3].used)
+                    !open_files[registers->ebx - 3].used ||
+                    open_files[registers->ebx - 3].process_id != thread_current_process_id())
                 {
                     registers->eax = static_cast<uint32_t>(ERROR_BAD_DESCRIPTOR);
                     return;
@@ -138,5 +150,13 @@ namespace kernel::syscalls
                 registers->eax = static_cast<uint32_t>(ERROR_NOT_IMPLEMENTED);
                 return;
         }
+    }
+}
+
+namespace kernel
+{
+    void syscall_close_process_files(uint32_t process_id)
+    {
+        syscalls::close_process_files(process_id);
     }
 }

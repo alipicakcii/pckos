@@ -8,6 +8,7 @@ namespace device
     void keyboard_initialize();
     // Kuyruktan çevrilmiş bir karakter döndürür; kuyruk boşsa -1 döndürür.
     int keyboard_read_char();
+    int keyboard_peek_char();
 }
 
 #endif

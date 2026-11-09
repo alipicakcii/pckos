@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include <kernel/thread.hh>
+#include <kernel/syscall.hh>
 #include <cpu/get_cpu.hh>
 #include <interrupts/interrupts.hh>
 #include <interrupts/descriptortables.hh>
@@ -443,6 +444,7 @@ namespace kernel
         if (process_id == 0)
             return;
         syscall_window_remove(process_id);
+        syscall_close_process_files(process_id);
         for (uint32_t i = 0; i < MAX_THREADS; ++i)
             if (i != current_thread && threads[i].process_id == process_id &&
                 threads[i].user)

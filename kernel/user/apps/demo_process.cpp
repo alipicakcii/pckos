@@ -17,8 +17,10 @@ __attribute__((section(".text._start"))) void _start()
     {
         uint32_t rnd = user::lib::rand(1000000);
         print("sira=%d rnd=%u\n", i, static_cast<unsigned int>(rnd));
+        user::thread_sleep(5);
         
     }
+
     
        
     user::exit(0);

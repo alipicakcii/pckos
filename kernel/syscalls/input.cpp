@@ -65,8 +65,13 @@ namespace kernel::syscalls
             }
             const bool input_focused = thread_current_process_id() ==
                                        process_input_focus();
-            const int character = input_focused
-                ? device::keyboard_read_char() : -1;
+            // Ctrl+C, odak uygulamada olsa bile bağlı terminal tarafından işlenir.
+            const uint32_t terminal = user_mode_terminal_owner(process_input_focus());
+            const bool terminal_interrupt = terminal != 0 &&
+                device::keyboard_peek_char() == 3;
+            const bool read_key = terminal_interrupt
+                ? current_process == terminal : input_focused;
+            const int character = read_key ? device::keyboard_read_char() : -1;
             if (character >= 0)
             {
                 event->type = 1;

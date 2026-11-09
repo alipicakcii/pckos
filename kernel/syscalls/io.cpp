@@ -47,6 +47,10 @@ namespace kernel::syscalls
                     registers->eax = static_cast<uint32_t>(ERROR_BAD_DESCRIPTOR);
                 return;
 
+            case abi::syscall_terminal_interrupt:
+                registers->eax = user_mode_terminal_interrupt(registers->ebx);
+                return;
+
             case abi::syscall_terminal_attach:
                 registers->eax = user_mode_terminal_attach();
                 return;

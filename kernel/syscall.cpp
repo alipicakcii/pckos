@@ -27,6 +27,7 @@ namespace kernel
                 case abi::syscall_terminal_attach:
                 case abi::syscall_terminal_read:
                 case abi::syscall_terminal_send:
+                case abi::syscall_terminal_interrupt:
                     syscalls::handle_io(registers);
                     return;
 

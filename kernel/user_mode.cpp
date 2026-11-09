@@ -380,6 +380,55 @@ namespace kernel
         return static_cast<int32_t>(process_id);
     }
 
+    uint32_t user_mode_terminal_owner(uint32_t process_id)
+    {
+        const UserProcessSpace *space = find_process_space(process_id);
+        if (space == nullptr) return 0;
+        const UserProcessSpace *owner = find_process_space(space->terminal_id);
+        return owner != nullptr && owner->terminal_owner ? owner->process_id : 0;
+    }
+
+    int32_t user_mode_terminal_interrupt(uint32_t process_id)
+    {
+        const UserProcessSpace *owner = find_process_space(thread_current_process_id());
+        const UserProcessSpace *target = find_process_space(process_id);
+        if (target == nullptr) return ERROR_NO_ENTRY;
+        if (owner == nullptr || !owner->terminal_owner || target == owner ||
+            target->terminal_id != owner->process_id || target->terminal_owner)
+            return -13;
+
+        // Önce alt süreçleri belirle; süreçler silindikten sonra ebeveyn bağı kaybolur.
+        uint32_t victims[USER_PROCESS_COUNT]{};
+        uint32_t count = 1;
+        victims[0] = process_id;
+        for (uint32_t parent = 0; parent < count; ++parent)
+        {
+            for (uint32_t i = 0; i < process_active_count(); ++i)
+            {
+                ProcessInfo info{};
+                if (!process_get_info(i, &info) || info.parent_id != victims[parent])
+                    continue;
+                const UserProcessSpace *child = find_process_space(info.id);
+                if (child == nullptr || child == owner || child->terminal_owner ||
+                    child->terminal_id != owner->process_id)
+                    continue;
+                bool found = false;
+                for (uint32_t j = 0; j < count; ++j)
+                    if (victims[j] == info.id) found = true;
+                if (!found && count < USER_PROCESS_COUNT) victims[count++] = info.id;
+            }
+        }
+        while (count != 0)
+        {
+            const uint32_t id = victims[--count];
+            UserProcessSpace *space = find_process_space(id);
+            process_finish(id);
+            if (space != nullptr) cleanup_process_space(*space, false);
+        }
+        process_set_input_focus(owner->process_id);
+        return 0;
+    }
+
     int32_t user_mode_terminal_attach()
     {
         UserProcessSpace *space = find_process_space(thread_current_process_id());

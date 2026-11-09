@@ -53,6 +53,12 @@ namespace device
                 extended_scancode = false;
                 return;
             }
+            if (control_keys != 0 && !released && !extended_scancode &&
+                (code == 0x2E || code == 0x26))
+            {
+                queue_character(code == 0x2E ? 3 : 12);
+                return;
+            }
             if (control_keys != 0 && code == 0x20 && !released && !extended_scancode)
             {
                 queue_character(4);
@@ -97,6 +103,11 @@ namespace device
 
         const uint8_t master_mask = cpu::inb(0x21);
         cpu::outb(0x21, static_cast<uint8_t>(master_mask & ~0x02));
+    }
+
+    int keyboard_peek_char()
+    {
+        return queue_read == queue_write ? -1 : key_queue[queue_read];
     }
 
     int keyboard_read_char()

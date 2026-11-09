@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <user/apps/app_thread.hh>
 #include <user/gui.hh>
+#include <user/filesystem.hh>
 
 namespace user::apps
 {
@@ -27,16 +28,23 @@ namespace user::apps
         void print_line(const char *text);
         void print_bytes(const char *text, uint32_t length);
         void execute();
+        void clear_output();
+        void make_prompt(char *output) const;
+        bool resolve_path(const char *path, char *absolute, user::DirectoryEntry *entry);
+        void print_entry(const user::DirectoryEntry &entry);
         void append_output(const char *text, uint32_t length);
         void scroll_lines();
         void remember_command();
         void recall_previous_command();
         void recall_next_command();
 
-        static constexpr uint32_t MAX_LINES = 48;
+        static constexpr uint32_t MAX_LINES = 128;
         static constexpr uint32_t MAX_COLUMNS = 120;
         static constexpr uint32_t MAX_COMMAND = 127;
-        static constexpr uint32_t COMMAND_HISTORY_SIZE = 8;
+        static constexpr uint32_t COMMAND_HISTORY_SIZE = 16;
+        static constexpr uint32_t MAX_PATH = 128;
+        char working_directory_[MAX_PATH];
+        char previous_directory_[MAX_PATH];
         char lines_[MAX_LINES][MAX_COLUMNS];
         char command_history_[COMMAND_HISTORY_SIZE][MAX_COMMAND + 1];
         char history_draft_[MAX_COMMAND + 1];

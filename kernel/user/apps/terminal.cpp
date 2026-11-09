@@ -35,34 +35,6 @@ namespace user::apps
             return *left == '\0' && *right == '\0';
         }
 
-        bool starts_with(const char *value, const char *prefix)
-        {
-            while (*prefix)
-            {
-                char a = *value++;
-                char b = *prefix++;
-                if (a >= 'A' && a <= 'Z') a = static_cast<char>(a - 'A' + 'a');
-                if (b >= 'A' && b <= 'Z') b = static_cast<char>(b - 'A' + 'a');
-                if (a != b)
-                    return false;
-            }
-            return true;
-        }
-
-        void to_number(uint32_t value, char *output)
-        {
-            char reverse[10];
-            uint32_t count = 0;
-            do
-            {
-                reverse[count++] = static_cast<char>('0' + value % 10);
-                value /= 10;
-            } while (value != 0 && count < sizeof(reverse));
-            uint32_t at = 0;
-            while (count != 0)
-                output[at++] = reverse[--count];
-            output[at] = '\0';
-        }
     }
 
     Terminal::Terminal() : command_input_(command_, sizeof(command_))
@@ -80,6 +52,9 @@ namespace user::apps
         maximum_scroll_ = 0;
         scrollbar_grab_offset_ = 0;
         scrollbar_dragging_ = false;
+        working_directory_[0] = '/';
+        working_directory_[1] = '\0';
+        previous_directory_[0] = '\0';
         reset();
     }
 
@@ -300,176 +275,6 @@ namespace user::apps
         }
     }
 
-    void Terminal::execute()
-    {
-        remember_command();
-        history_index_ = history_count_;
-        history_draft_[0] = '\0';
-        scroll_offset_ = 0;
-        char echoed[MAX_COMMAND + 10];
-        const char *prefix = "pckos> ";
-        uint32_t at = 0;
-        while (*prefix)
-            echoed[at++] = *prefix++;
-        for (uint32_t i = 0; i < command_length_ && at + 1 < sizeof(echoed); ++i)
-            echoed[at++] = command_[i];
-        echoed[at] = '\0';
-        print_line(echoed);
-
-        if (equal(command_, "help"))
-        {
-            print_line("Komutlar: help, clear, about, ticks, mem, threads, dmesg, ls, pwd, cat, echo, run");
-            print_line("cat, PCKFS icindeki metin dosyalarini okur.");
-            
-        }
-        else if (equal(command_, "clear"))
-        {
-            for (uint32_t row = 0; row < MAX_LINES; ++row)
-                for (uint32_t column = 0; column < MAX_COLUMNS; ++column)
-                    lines_[row][column] = '\0';
-            line_count_ = 0;
-        }
-        else if (equal(command_, "about"))
-            print_line("PCKOS i386 | Kullanici alani terminali | PCKFS");
-        else if (equal(command_, "ticks"))
-        {
-            char value[11];
-            char result[48] = "PIT tik sayisi: ";
-            to_number(static_cast<uint32_t>(user::get_ticks()), value);
-            uint32_t i = length(result);
-            for (uint32_t j = 0; value[j] != '\0' && i + 1 < sizeof(result); ++j)
-                result[i++] = value[j];
-            result[i] = '\0';
-            print_line(result);
-        }
-        else if (equal(command_, "mem"))
-        {
-            char value[11];
-            char result[48] = "Kernel heap bayt: ";
-            to_number(static_cast<uint32_t>(user::get_heap_usage()), value);
-            uint32_t i = length(result);
-            for (uint32_t j = 0; value[j] != '\0' && i + 1 < sizeof(result); ++j)
-                result[i++] = value[j];
-            result[i] = '\0';
-            print_line(result);
-        }
-        else if (equal(command_, "threads"))
-        {
-            user::thread_yield();
-            user::thread_sleep(2);
-            char value[11];
-            char result[112] = "Thread id=";
-            uint32_t at = length(result);
-            to_number(user::thread_id(), value);
-            for (uint32_t i = 0; value[i] != '\0'; ++i) result[at++] = value[i];
-            const char *active = " aktif=";
-            while (*active) result[at++] = *active++;
-            to_number(user::thread_count(), value);
-            for (uint32_t i = 0; value[i] != '\0'; ++i) result[at++] = value[i];
-            const char *switches = " gecis=";
-            while (*switches) result[at++] = *switches++;
-            to_number(user::thread_switch_count(), value);
-            for (uint32_t i = 0; value[i] != '\0' && at + 1 < sizeof(result); ++i)
-                result[at++] = value[i];
-            result[at] = '\0';
-            print_line(result);
-        }
-        else if (equal(command_, "dmesg"))
-        {
-            char log[4096];
-            const int32_t length = user::get_kernel_log(log, sizeof(log));
-            if (length > 0)
-                print_bytes(log, static_cast<uint32_t>(length));
-            else
-                print_line("Kernel gunlugu bos.");
-        }
-        else if (equal(command_, "pwd"))
-            print_line("/");
-        else if (equal(command_, "ls"))
-        {
-            const int32_t root = user::root_inode();
-            user::DirectoryEntry entry{};
-            uint32_t index = 0;
-            bool any = false;
-            while (root >= 0 && index < 256 &&
-                   user::read_directory(static_cast<uint32_t>(root), index,
-                                        &entry) == 1)
-            {
-                char name[56];
-                uint32_t i = 0;
-                while (i + 2 < sizeof(name) && entry.name[i] != '\0')
-                {
-                    name[i] = entry.name[i];
-                    ++i;
-                }
-                if (entry.type == user::directory_type)
-                    name[i++] = '/';
-                name[i] = '\0';
-                print_line(name);
-                ++index;
-                any = true;
-            }
-            if (!any)
-                print_line("PCKFS bagli degil veya dizin bos.");
-        }
-        else if (starts_with(command_, "run "))
-        {
-            const char *path = command_ + 4;
-            while (*path == ' ') ++path;
-            if (*path != '/')
-                print_line("Kullanim: run /apps/uygulama.bin");
-            else
-            {
-                const int32_t attached = user::terminal_attach();
-                const int32_t pid = attached < 0 ? attached :
-                    user::process_spawn(path, "Uygulama");
-                char number[12];
-                if (pid < 0)
-                {
-                    print_line("Uygulama baslatilamadi. Hata kodu (mutlak):");
-                    to_number(static_cast<uint32_t>(-pid), number);
-                }
-                else
-                {
-                    foreground_process_ = static_cast<uint32_t>(pid);
-                }
-                if (pid < 0) print_line(number);
-            }
-        }
-        else if (starts_with(command_, "echo "))
-            print_line(command_ + 5);
-        else if (starts_with(command_, "cat "))
-        {
-            const char *path = command_ + 4;
-            char absolute_path[128];
-            uint32_t path_length = 0;
-            if (*path != '/')
-                absolute_path[path_length++] = '/';
-            while (path_length + 1 < sizeof(absolute_path) && *path != '\0')
-                absolute_path[path_length++] = *path++;
-            absolute_path[path_length] = '\0';
-
-            const int32_t descriptor = user::open(absolute_path);
-            if (descriptor < 0)
-                print_line("Dosya bulunamadi.");
-            else
-            {
-                char data[512];
-                const int32_t bytes = user::read(descriptor, data, sizeof(data));
-                user::close(descriptor);
-                if (bytes > 0)
-                    print_bytes(data, static_cast<uint32_t>(bytes));
-                else
-                    print_line("Dosya bos veya okunamadi.");
-            }
-        }
-        else if (command_length_ != 0)
-            print_line("Bilinmeyen komut. help yazin.");
-
-        command_length_ = 0;
-        command_input_.clear();
-    }
-
     void Terminal::draw(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
     {
         LockGuard guard(lock_);
@@ -542,9 +347,15 @@ namespace user::apps
             : (scroll_offset_ * thumb_travel) / maximum_scroll;
         scrollbar_thumb_y_ = scrollbar_y_ + thumb_travel - thumb_offset;
         const uint32_t prompt_y = text_y + drawn_rows * row_height;
-        const uint32_t prompt_columns = foreground_process_ == 0 ? 7 : 0;
+        char prompt[MAX_PATH + 10];
+        make_prompt(prompt);
+        const uint32_t prompt_size = length(prompt);
+        const uint32_t prompt_limit = columns / 2;
+        const char *visible_prompt = prompt_size > prompt_limit
+            ? prompt + prompt_size - prompt_limit : prompt;
+        const uint32_t prompt_columns = foreground_process_ == 0 ? length(visible_prompt) : 0;
         if (foreground_process_ == 0 && scroll_offset_ == 0)
-            user::gui::text(text_x, prompt_y, "pckos> ", 0xFFC0FFC0);
+            user::gui::text(text_x, prompt_y, visible_prompt, 0xFFC0FFC0);
         const uint32_t input_columns = columns - prompt_columns;
         uint32_t input_x = text_x + prompt_columns * user::gui::FONT_WIDTH;
         if (scroll_offset_ == 0)
@@ -563,15 +374,36 @@ namespace user::apps
     {
         LockGuard guard(lock_);
         dirty_ = 1;
-        if (foreground_process_ == 0 && key_value == 0xE2)
+        if (key_value == 3)
+        {
+            if (foreground_process_ != 0)
+            {
+                const int32_t result = user::terminal_interrupt(foreground_process_);
+                if (result < 0 && result != -2)
+                {
+                    print_line("Uygulama durdurulamadi.");
+                    return;
+                }
+                foreground_process_ = 0;
+            }
+            print_line("^C");
+            command_input_.clear();
+            command_length_ = 0;
+            history_index_ = history_count_;
+            history_draft_[0] = '\0';
+            scroll_offset_ = 0;
+        }
+        else if (key_value == 12)
+            clear_output();
+        else if (foreground_process_ == 0 && key_value == 0xE2)
             recall_previous_command();
         else if (foreground_process_ == 0 && key_value == 0xE3)
             recall_next_command();
-        else if (foreground_process_ == 0 && key_value == 0xE6)
+        else if (key_value == 0xE6)
         {
             scroll_offset_ += 8;
         }
-        else if (foreground_process_ == 0 && key_value == 0xE7)
+        else if (key_value == 0xE7)
         {
             scroll_offset_ = scroll_offset_ > 8 ? scroll_offset_ - 8 : 0;
         }

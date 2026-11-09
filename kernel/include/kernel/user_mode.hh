@@ -17,6 +17,8 @@ namespace kernel
     int32_t user_mode_run_program(const uint8_t *image, uint32_t image_size);
     int32_t user_mode_spawn_process(const char *path, const char *name);
     int32_t user_mode_terminal_attach();
+    uint32_t user_mode_terminal_owner(uint32_t process_id);
+    int32_t user_mode_terminal_interrupt(uint32_t process_id);
     int32_t user_mode_terminal_read(char *buffer, uint32_t length);
     int32_t user_mode_terminal_send(uint32_t process_id, const char *buffer, uint32_t length);
     int32_t user_mode_stream_write(const char *buffer, uint32_t length);

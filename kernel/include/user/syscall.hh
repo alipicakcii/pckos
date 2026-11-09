@@ -58,6 +58,7 @@ namespace user
     using abi::syscall_read_kernel_log;
     using abi::syscall_pc_speaker;
     using abi::syscall_cpu_rnd;
+    using abi::syscall_terminal_interrupt;
 
     // i386 int 0x80 ABI: çağrı numarası EAX’te,
     // bağımsız değişkenler EBX/ECX/EDX/ESI/EDI yazmaçlarındadır.
