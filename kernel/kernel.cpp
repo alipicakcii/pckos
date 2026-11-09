@@ -145,7 +145,7 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
     _kprintf("PIT zamanlayici: 100 Hz\n");
     _kprintf("Klavye: PS/2 IRQ1\n");
     _kprintf("Fare: PS/2 %s\n", mouse_ready ? "IRQ12 hazir" : "kullanilamiyor");
-
+  
     if (kernel::user_mode_initialize(virtual_memory, framebuffer) &&
         kernel::thread_system_initialize(kernel::user_mode_kernel_stack_top()))
     {
@@ -159,7 +159,6 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
         show_boot_console(*framebuffer);       
 
     
-        
         const int32_t desktop_status = kernel::user_mode_run_desktop();
         _kprintf("Kullanici alani masaustu sonlandi: %d\n", desktop_status);
     }

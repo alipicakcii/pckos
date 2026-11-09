@@ -58,6 +58,7 @@ namespace abi
         syscall_terminal_send = 46,
         syscall_read_kernel_log = 47,
         syscall_pc_speaker = 48,
+        syscall_cpu_rnd = 49
     };
 }
 

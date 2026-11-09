@@ -3,17 +3,23 @@
 
 #include <user/lib/io.hh> 
 #include <user/thread.hh>
+#include <user/lib/rnd.hh>
+#include <user/process.hh>
+
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
-    for (int i = 0; i < 100; i++)
+
+    // Donanım ile yani doğruydan CPU'dan 
+    // Rastgele sayı üreticisi testi çekirdekde CPU'dan 
+    for (int i = 0; i < 50; i++)
     {
-        int *ptr = new int;
-        *ptr = i;
-        print("val=%d addr=%p\n", *ptr, ptr);
-        delete ptr;
-        user::thread_sleep(10);
+        uint32_t rnd = user::lib::rand(1000000);
+        print("sira=%d rnd=%d\n",i,  rnd);
+        
     }
     
+       
+    user::exit(0);
 }

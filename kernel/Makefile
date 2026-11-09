@@ -73,6 +73,7 @@ $(KERNEL_ARCH_OBJS) \
 arch/i386/user_mode.o \
 arch/i386/user_desktop.o \
 library/cppabi.o \
+library/rnd.o \
 library/kernel_log.o \
 library/pck_rtti.o \
 user_mode.o \
@@ -82,6 +83,7 @@ syscalls/common.o \
 syscalls/io.o \
 syscalls/filesystem.o \
 syscalls/thread.o \
+syscalls/cpu_rnd.o \
 syscalls/process.o \
 syscalls/system.o \
 syscalls/memory.o \

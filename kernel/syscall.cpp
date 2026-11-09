@@ -4,6 +4,7 @@
 #include <kernel/user_mode.hh>
 #include "syscalls/internal.hh"
 
+
 namespace kernel
 {
     namespace
@@ -97,6 +98,9 @@ namespace kernel
                     syscalls::handle_audio(registers);
                     return;
 
+                case abi::syscall_cpu_rnd:
+                    syscalls::handle_cpu_rnd(registers);
+                    return;
                 default:
                     registers->eax = static_cast<uint32_t>(syscalls::ERROR_NOT_IMPLEMENTED);
                     return;

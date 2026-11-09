@@ -45,6 +45,7 @@ namespace kernel::syscalls
     void handle_input(Registers *registers);
     void handle_graphics(Registers *registers);
     void handle_audio(Registers *registers);
+    void handle_cpu_rnd(Registers *registers);
 }
 
 #endif
