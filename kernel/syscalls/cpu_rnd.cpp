@@ -2,7 +2,6 @@
 // Copyright (C) PCK
 #include "internal.hh"
 #include <library/rnd.hh>
-#include <library/kprint.hh>
 
 namespace kernel::syscalls
 {
@@ -14,13 +13,7 @@ namespace kernel::syscalls
         {
             const uint32_t max = registers->ebx;
 
-            if (max < 0)
-            {
-                registers->eax = 0;//static_cast<uint32_t>(ERROR_INVALID_ARGUMENT);
-                return;
-            }
-            uint32_t rnd = lib::rand(max);
-            registers->eax = rnd;
+            registers->eax = lib::rand(max);
             return;
         }
 

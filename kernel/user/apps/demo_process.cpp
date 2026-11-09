@@ -16,7 +16,7 @@ __attribute__((section(".text._start"))) void _start()
     for (int i = 0; i < 50; i++)
     {
         uint32_t rnd = user::lib::rand(1000000);
-        print("sira=%d rnd=%d\n",i,  rnd);
+        print("sira=%d rnd=%u\n", i, static_cast<unsigned int>(rnd));
         
     }
     

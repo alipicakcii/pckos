@@ -2,31 +2,27 @@
 // Copyright (C) PCK
 #include <library/rnd.hh>
 
-/**
- * cpu tarafından bir rastgele
- * sayı oluşturulur max uzunluk yine 32 bit işaretsiz sayıdır
- */
-extern "C" uint32_t rand_genaration();
-/**
- * x68 mimaride işlemcinin rdseed desteğini dönderir
- */
+extern "C" bool rdseed_generate(uint32_t *result);
 extern "C" bool is_rdseed();
 
 namespace lib
 {
-
     uint32_t rand(uint32_t max)
     {
-        // is_rdseed() sistem cagrilarinda abiyiş bozdu
-        //TODO: is_rdseed() assemblu fonskiyonu ABI kontrol edilecek
-        //if (max == 0 || !is_rdseed()) 
-    
-        if (max == 0)
+        if (max == 0 || !is_rdseed())
             return 0;
 
-        uint32_t random = rand_genaration();
-
-        return (random % max) + 1; // 1...max arasında sayı üretir
+        // 2^32'nin max'a bölümünden kalanı dışlayarak modulo yanlılığını önler.
+        const uint32_t threshold = (uint32_t(0) - max) % max;
+        for (uint32_t attempt = 0; attempt < 100; ++attempt)
+        {
+            uint32_t random = 0;
+            if (!rdseed_generate(&random))
+                return 0;
+            if (random >= threshold)
+                return (random % max) + 1;
+        }
+        return 0;
     }
 
-} // namespace cpu
+}

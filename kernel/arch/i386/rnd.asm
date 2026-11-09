@@ -1,32 +1,49 @@
 ; SPDX-License-Identifier: GPL-3.0-or-later
 ; Copyright (C) PCK
-	
+BITS 32
+section .text
 
 global is_rdseed
-global rand_genaration
+global rdseed_generate
 
-; işlemci rnd desteği olup olmadığınu
-; kontrol eden bu fonskiyon sistem cagrilarinda ABI sorunu yaşattı kontrol edilecek
-; şimdilik kullanmiyıoruz
+; CPUID, C++ çağrı sözleşmesinde korunması gereken EBX'i değiştirir.
 is_rdseed:
-	mov eax, 7  
-	mov ecx, 0    
-	cpuid
-	shr ebx, 18    
-	and ebx, 1 
-	mov eax, ebx
-	ret
-    
-	;rastgele sayı oluştur
-rand_genaration:
-	mov ecx, 100
-	.retry:
-	rdseed eax
-	jc .done    
-	loop .retry
-	.fail:
-	; akış buraya hiç gelmemeli 
-	; gelirse de rastgele sayı oluşturulamadı demek
-	; bununla ilgili bir işlem yapılacak mı?
-	.done:
-	ret
+    push ebx
+    xor eax, eax
+    cpuid
+    cmp eax, 7
+    jb .unsupported
+    mov eax, 7
+    xor ecx, ecx
+    cpuid
+    mov eax, ebx
+    shr eax, 18
+    and eax, 1
+    pop ebx
+    ret
+.unsupported:
+    xor eax, eax
+    pop ebx
+    ret
+
+; Destek kontrolünden sonra çağrılır. Başarıda *result yazılır ve true döner.
+; Sıfır da geçerli bir donanım çıktısıdır; başarı bilgisi ayrı döndürülür.
+rdseed_generate:
+    mov edx, [esp + 4]
+    test edx, edx
+    jz .failed
+    mov ecx, 100
+.retry:
+    rdseed eax
+    jc .success
+    pause
+    loop .retry
+.failed:
+    xor eax, eax
+    ret
+.success:
+    mov [edx], eax
+    mov eax, 1
+    ret
+
+section .note.GNU-stack noalloc noexec nowrite progbits

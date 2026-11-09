@@ -7,12 +7,12 @@
 
 namespace user::lib
 {
-    inline int32_t rand(uint32_t max)
+    // 1...max arasında sayı; geçersiz sınır, destek yokluğu veya üretim hatasında 0.
+    inline uint32_t rand(uint32_t max)
     {
-        return call(syscall_cpu_rnd, max);
+        return static_cast<uint32_t>(call(syscall_cpu_rnd, max));
     }
 
-    
 }
 
 #endif
