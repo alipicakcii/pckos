@@ -133,7 +133,7 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | `kernel/kernel.cpp` | Çekirdek başlatma sırası |
 | `kernel/core/`, `kernel/include/kernel/core/` | Panic ekranı ve çekirdek hata bildirimi |
 | `kernel/include/kernel/task/`, `kernel/include/kernel/syscalls/` | Çekirdek görev yönetimi ve syscall arayüzleri |
-| `kernel/include/arch/i386/smp.hh` | i386 SMP arayüzü |
+| `kernel/include/firmware/smp.hh` | i386 SMP arayüzü |
 | `kernel/mem/` | Sayfalama, fiziksel bellek, çekirdek heap'i |
 | `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin zamanlama, PID/TID tabloları |
 | `kernel/arch/i386/firmware/` | ACPI işlemci keşfi, APIC, ek işlemci başlatma, çekirdek kilidi ve TLB IPI'leri |
