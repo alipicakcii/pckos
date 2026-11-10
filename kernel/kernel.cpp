@@ -11,7 +11,7 @@
 #include <kernel/core/panic.hh>
 #include <kernel/task/user_mode.hh>
 #include <kernel/task/thread.hh>
-#include <arch/i386/smp.hh>
+#include <firmware/smp.hh>  
 #include <library/kprint.hh>
 #include <library/kernel_log.hh>
 #include <device/rtc.hh>

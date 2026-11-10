@@ -4,7 +4,7 @@
 #include <abi/system.hh>
 #include <device/rtc.hh>
 #include <kernel/task/thread.hh>
-#include <arch/i386/smp.hh>
+#include <firmware/smp.hh>  
 #include <library/kernel_log.hh>
 #include <mem/alloc.hh>
 

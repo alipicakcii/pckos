@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include <kernel/task/thread.hh>
-#include <arch/i386/smp.hh>
+#include <firmware/smp.hh>
 #include <kernel/syscalls/syscall.hh>
 #include <cpu/get_cpu.hh>
 #include <interrupts/interrupts.hh>

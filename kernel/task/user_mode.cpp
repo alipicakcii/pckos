@@ -3,7 +3,7 @@
 #include <kernel/task/user_mode.hh>
 #include <kernel/syscalls/syscall.hh>
 #include <kernel/task/thread.hh>
-#include <arch/i386/smp.hh>
+#include <firmware/smp.hh>
 #include <cpu/get_cpu.hh>
 #include <device/ata_pio.hh>
 #include <fs/pckfs.hh>

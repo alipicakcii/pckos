@@ -7,7 +7,8 @@
 #include <library/kprint.hh>
 #include <kernel/core/panic.hh>
 #include <interrupts/interrupts.hh>
-#include <arch/i386/smp.hh>
+#include <firmware/smp.hh>  
+
 using namespace cpu;
 
 namespace kernel

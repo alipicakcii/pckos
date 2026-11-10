@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include <mem/vmm.hh>
-#include <arch/i386/smp.hh>
+#include <firmware/smp.hh>  
 #include <interrupts/isr.hh>
 #include <interrupts/interrupts.hh>
 #include <library/mem.hh>

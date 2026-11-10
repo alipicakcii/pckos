@@ -2,7 +2,7 @@
 // Copyright (C) PCK
 #include <mem/alloc.hh>
 #include <kernel/core/panic.hh>
-#include <arch/i386/smp.hh>
+#include <firmware/smp.hh>  
 
 #define KMALLOC_MINSIZE 16U
 

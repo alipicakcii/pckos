@@ -5,7 +5,7 @@
 #include <cpu/io.hh>
 #include <interrupts/interrupts.hh>
 #include <kernel/task/thread.hh>
-#include <arch/i386/smp.hh>
+#include <firmware/smp.hh>  
 #include <kernel/core/panic.hh>
 
 using namespace cpu;

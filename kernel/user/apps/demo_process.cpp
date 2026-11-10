@@ -19,7 +19,13 @@ __attribute__((section(".text._start"))) void _start()
     delete ptr;
     print("delete=%p\n", addr);
     
+   
+    auto pid = user::process_spawn("/apps/hello_word.bin", "Deneme");
+
     
-       
+    print("pid=%d\n", pid);
+
+    user::thread_sleep(500);
+
     user::exit(0);
 }
