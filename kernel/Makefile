@@ -31,7 +31,7 @@ USER_APP_CFLAGS=-MMD -MP -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
 	-msoft-float -Iinclude
 USER_RUNTIME_OBJECTS=user/lib/new.user.o user/lib/memory.user.o user/lib/io.user.o \
-	user/lib/window.user.o user/lib/widgets.user.o
+	user/lib/window.user.o user/lib/widgets.user.o user/lib/rnd.user.o
 USER_APP_OBJECTS=\
 $(USER_RUNTIME_OBJECTS) \
 user/lib/image.user.o \
@@ -161,6 +161,9 @@ user/lib/window.user.o: user/lib/window.cpp include/user/lib/window.hh include/u
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/lib/widgets.user.o: user/lib/widgets.cpp include/user/lib/widgets.hh include/user/lib/window.hh include/user/gui.hh
+	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+
+user/lib/rnd.user.o: user/lib/rnd.cpp include/user/lib/rnd.hh include/user/lib/lock.hh include/user/syscall.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/lib/memory.user.o: user/lib/memory.cpp include/user/lib/memory.hh

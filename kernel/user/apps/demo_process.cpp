@@ -4,6 +4,7 @@
 #include <user/lib/io.hh> 
 #include <user/thread.hh>
 #include <user/lib/rnd.hh>
+#include <user/system.hh>
 #include <user/process.hh>
 
 
@@ -11,13 +12,12 @@ extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
 
-    // Donanım ile yani doğruydan CPU'dan 
-    // Rastgele sayı üreticisi testi çekirdekde CPU'dan 
+    user::lib::random::Random random;
     for (int i = 0; i < 50; i++)
     {
-        uint32_t rnd = user::lib::rand(1000000);
+        uint32_t rnd = random.next(100, user::lib::random::Source::software);
         print("sira=%d rnd=%u\n", i, static_cast<unsigned int>(rnd));
-        user::thread_sleep(5);
+       // user::thread_sleep(5);
         
     }
 

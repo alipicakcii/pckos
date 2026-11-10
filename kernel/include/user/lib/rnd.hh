@@ -3,16 +3,31 @@
 #ifndef PCKOS_USER_RND_HH
 #define PCKOS_USER_RND_HH
 
-#include <user/syscall.hh>
+#include <stdint.h>
+#include <user/lib/lock.hh>
 
-namespace user::lib
+namespace user::lib::random
 {
-    // 1...max arasında sayı; geçersiz sınır, destek yokluğu veya üretim hatasında 0.
-    inline uint32_t rand(uint32_t max)
+    enum class Source : uint32_t
     {
-        return static_cast<uint32_t>(call(syscall_cpu_rnd, max));
-    }
+        hardware,
+        software
+    };
 
+    class Random
+    {
+    public:
+        explicit Random(uint32_t seed = 0x6D2B79F5U);
+        void seed(uint32_t value);
+        uint32_t next(uint32_t max, Source source = Source::hardware);
+
+    private:
+        uint32_t next_software(uint32_t max);
+        uint32_t next_hardware(uint32_t max);
+
+        SpinLock lock_;
+        uint32_t state_;
+    };
 }
 
 #endif
