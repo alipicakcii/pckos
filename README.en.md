@@ -130,7 +130,7 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | `kernel/kernel.cpp` | Kernel initialization order |
 | `kernel/core/`, `kernel/include/kernel/core/` | Panic display and kernel error reporting |
 | `kernel/include/kernel/task/`, `kernel/include/kernel/syscalls/` | Kernel task management and syscall interfaces |
-| `kernel/include/arch/i386/smp.hh` | i386 SMP interface |
+| `kernel/include/firmware/smp.hh` | i386 SMP interface |
 | `kernel/mem/` | Paging, physical memory, kernel heap |
 | `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin scheduling, PID/TID tables |
 | `kernel/arch/i386/firmware/` | ACPI CPU discovery, APIC, AP startup, kernel lock, and TLB IPIs |
