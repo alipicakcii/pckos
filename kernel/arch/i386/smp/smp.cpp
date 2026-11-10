@@ -366,7 +366,7 @@ namespace kernel::smp
             if (load(online[index]) == 0)
             {
                 _kprintf("[SMP] APIC %u baslatilamadi; diger islemcilerle devam\n", id);
-                // Posta kutusunu geç gelen bir işlemciyle paylaşmamak için yeni AP başlatma.
+                // Posta kutusunu geç gelen bir işlemciyle paylaşmamak için yeni AP başlatma:D
                 if (!send_ipi(id, 0xC500) || !pit_delay(10000))
                     lib::panic("SMP: failed processor could not be reset");
                 store(online[index], 0);
