@@ -20,10 +20,10 @@ __attribute__((section(".text._start"))) void _start()
     print("delete=%p\n", addr);
     
    
-    auto pid = user::process_spawn("/apps/hello_word.bin", "Deneme");
+    const int32_t deneme_pid = user::process_spawn("/apps/hello_word.bin", "Deneme");
 
     
-    print("pid=%d\n", pid);
+    print("Deneme PID=%d\n", deneme_pid);
 
     user::thread_sleep(500);
 

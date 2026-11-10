@@ -16,12 +16,13 @@ namespace abi
         uint32_t flags;
         uint32_t cpu_ticks;
         uint32_t stack_bytes;
+        uint32_t cpu_id;
         char name[24];
     };
 
     using ThreadEntry = void (*)(void *argument);
 
-    static_assert(sizeof(ThreadInfo) == 48);
+    static_assert(sizeof(ThreadInfo) == 52);
 }
 
 #endif

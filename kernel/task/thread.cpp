@@ -438,6 +438,14 @@ namespace kernel
         info->stack_bytes = thread.user
             ? thread.user_stack_pages * 4096 + STACK_SIZE
             : STACK_SIZE;
+        info->cpu_id = UINT32_MAX;
+        if (thread.state == State::running)
+            for (uint32_t cpu = 0; cpu < smp::MAX_CPUS; ++cpu)
+                if (current_threads[cpu] == id)
+                {
+                    info->cpu_id = cpu;
+                    break;
+                }
         for (uint32_t i = 0; i < sizeof(info->name); ++i)
             info->name[i] = thread.name[i];
         return true;

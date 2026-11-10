@@ -61,7 +61,9 @@ namespace user::apps
 
     TaskManager::TaskManager()
         : lock_{}, system_{}, processes_{}, process_count_(0),
-          previous_process_ticks_{}, rows_{}, row_count_(0), previous_ticks_(0),
+          previous_process_ids_{}, previous_process_ticks_{}, rows_{},
+          row_count_(0), scroll_offset_(0), visible_rows_(0), previous_ticks_(0),
+          total_cpu_percent_(0), baseline_ready_(false),
           previous_cpu_ticks_{}, dirty_(0)
     {
         refresh();
@@ -75,6 +77,7 @@ namespace user::apps
 
         Row rows[abi::MAX_THREADS]{};
         uint32_t count = 0;
+        uint32_t total_cpu_ticks = 0;
         const uint32_t elapsed = system.ticks - previous_ticks_;
         ProcessRow processes[8]{};
         const uint32_t process_count = user::process_count() < 8
@@ -84,20 +87,28 @@ namespace user::apps
             user::ProcessInfo info{};
             if (user::process_get_info(index, &info) < 0)
                 continue;
-            const uint32_t delta = info.cpu_ticks >= previous_process_ticks_[index]
-                ? info.cpu_ticks - previous_process_ticks_[index] : info.cpu_ticks;
+            const uint32_t delta = !baseline_ready_ ? 0
+                : info.id == previous_process_ids_[index] &&
+                  info.cpu_ticks >= previous_process_ticks_[index]
+                    ? info.cpu_ticks - previous_process_ticks_[index]
+                    : info.cpu_ticks;
             processes[index].process = info;
             processes[index].cpu_percent = cpu_percent(delta, elapsed, system.logical_cpu_count);
             if (processes[index].cpu_percent > 100) processes[index].cpu_percent = 100;
             previous_process_ticks_[index] = info.cpu_ticks;
+            previous_process_ids_[index] = info.id;
         }
         for (uint32_t id = 0; id < abi::MAX_THREADS; ++id)
         {
             user::ThreadInfo info{};
             if (user::thread_get_info(id, &info) < 0)
                 continue;
-            const uint32_t delta = info.cpu_ticks >= previous_cpu_ticks_[id]
-                ? info.cpu_ticks - previous_cpu_ticks_[id] : info.cpu_ticks;
+            const uint32_t delta = !baseline_ready_ ? 0
+                : info.cpu_ticks >= previous_cpu_ticks_[id]
+                    ? info.cpu_ticks - previous_cpu_ticks_[id]
+                    : info.cpu_ticks;
+            if ((info.flags & 1U) == 0)
+                total_cpu_ticks += delta;
             rows[count].thread = info;
             rows[count].cpu_percent = cpu_percent(delta, elapsed, system.logical_cpu_count);
             if (rows[count].cpu_percent > 100)
@@ -105,10 +116,15 @@ namespace user::apps
             previous_cpu_ticks_[id] = info.cpu_ticks;
             ++count;
         }
+        const uint32_t total_cpu_delta = baseline_ready_ ? total_cpu_ticks : 0;
         previous_ticks_ = system.ticks;
+        baseline_ready_ = true;
+        const uint32_t total_cpu_percent = cpu_percent(
+            total_cpu_delta, elapsed, system.logical_cpu_count);
 
         LockGuard guard(lock_);
         system_ = system;
+        total_cpu_percent_ = total_cpu_percent;
         process_count_ = process_count;
         for (uint32_t i = 0; i < process_count; ++i)
             processes_[i] = processes[i];
@@ -124,6 +140,41 @@ namespace user::apps
         const bool dirty = dirty_ != 0;
         dirty_ = 0;
         return dirty;
+    }
+
+    void TaskManager::scroll(int32_t rows)
+    {
+        LockGuard guard(lock_);
+        const uint32_t maximum = row_count_ > visible_rows_
+            ? row_count_ - visible_rows_ : 0;
+        if (rows < 0)
+        {
+            const uint32_t amount = static_cast<uint32_t>(-rows);
+            scroll_offset_ = amount > scroll_offset_ ? 0 : scroll_offset_ - amount;
+        }
+        else
+        {
+            const uint32_t amount = static_cast<uint32_t>(rows);
+            scroll_offset_ = amount > maximum - (scroll_offset_ < maximum
+                ? scroll_offset_ : maximum)
+                ? maximum : scroll_offset_ + amount;
+        }
+        dirty_ = 1;
+    }
+
+    void TaskManager::scroll_to_top()
+    {
+        LockGuard guard(lock_);
+        scroll_offset_ = 0;
+        dirty_ = 1;
+    }
+
+    void TaskManager::scroll_to_bottom()
+    {
+        LockGuard guard(lock_);
+        scroll_offset_ = row_count_ > visible_rows_
+            ? row_count_ - visible_rows_ : 0;
+        dirty_ = 1;
     }
 
     void TaskManager::thread_entry(void *argument)
@@ -146,13 +197,17 @@ namespace user::apps
         uint32_t process_count = 0;
         Row rows[abi::MAX_THREADS]{};
         uint32_t count = 0;
+        uint32_t total_cpu_percent = 0;
+        uint32_t scroll_offset = 0;
         {
             LockGuard guard(lock_);
             system = system_;
+            total_cpu_percent = total_cpu_percent_;
             process_count = process_count_;
             for (uint32_t i = 0; i < process_count; ++i)
                 processes[i] = processes_[i];
             count = row_count_;
+            scroll_offset = scroll_offset_;
             for (uint32_t i = 0; i < count; ++i)
                 rows[i] = rows_[i];
         }
@@ -183,6 +238,10 @@ namespace user::apps
         append_number(counts, sizeof(counts), &at, count);
         append(counts, sizeof(counts), &at, " | Zamanlayici gecisi: ");
         append_number(counts, sizeof(counts), &at, system.switch_count);
+        append(counts, sizeof(counts), &at, " | CPU yuk: ");
+        append_number(counts, sizeof(counts), &at,
+                      total_cpu_percent);
+        append(counts, sizeof(counts), &at, "%");
         user::gui::text(x + 8, y + 47, counts, user::gui::COLOR_TEXT);
 
         const uint32_t process_table_y = y + 74;
@@ -231,21 +290,42 @@ namespace user::apps
 
         const uint32_t thread_table_y = process_table_y + 22 +
             (process_count < visible_processes ? process_count : visible_processes) * 18 + 18;
-        user::gui::text(x + 8, thread_table_y - 16, "Thread'ler",
-                        user::gui::COLOR_TEXT);
         user::gui::frame(x + 6, thread_table_y, width > 12 ? width - 12 : width,
                          20, 0xFFB0B0B0, true);
         user::gui::text(x + 10, thread_table_y + 2, "PID", user::gui::COLOR_TEXT);
         user::gui::text(x + 48, thread_table_y + 2, "TID", user::gui::COLOR_TEXT);
         user::gui::text(x + 88, thread_table_y + 2, "Thread", user::gui::COLOR_TEXT);
         user::gui::text(x + 270, thread_table_y + 2, "Durum", user::gui::COLOR_TEXT);
-        user::gui::text(x + 382, thread_table_y + 2, "CPU", user::gui::COLOR_TEXT);
-        user::gui::text(x + 446, thread_table_y + 2, "Yigin", user::gui::COLOR_TEXT);
+        user::gui::text(x + 382, thread_table_y + 2, "CPU%", user::gui::COLOR_TEXT);
+        user::gui::text(x + 426, thread_table_y + 2, "CPU", user::gui::COLOR_TEXT);
+        user::gui::text(x + 486, thread_table_y + 2, "Yigin", user::gui::COLOR_TEXT);
 
         const uint32_t thread_rows_y = thread_table_y + 21;
         const uint32_t visible = height > thread_rows_y - y
             ? (height - (thread_rows_y - y)) / 20 : 0;
-        for (uint32_t i = 0; i < count && i < visible; ++i)
+        const uint32_t maximum_offset = count > visible ? count - visible : 0;
+        if (scroll_offset > maximum_offset)
+            scroll_offset = maximum_offset;
+        {
+            LockGuard guard(lock_);
+            visible_rows_ = visible;
+            scroll_offset_ = scroll_offset;
+        }
+        char thread_title[80] = "Thread'ler ";
+        uint32_t title_at = 11;
+        append_number(thread_title, sizeof(thread_title), &title_at,
+                      count == 0 ? 0 : scroll_offset + 1);
+        append(thread_title, sizeof(thread_title), &title_at, "-");
+        append_number(thread_title, sizeof(thread_title), &title_at,
+                      scroll_offset + (count - scroll_offset < visible
+                          ? count - scroll_offset : visible));
+        append(thread_title, sizeof(thread_title), &title_at, "/");
+        append_number(thread_title, sizeof(thread_title), &title_at, count);
+        append(thread_title, sizeof(thread_title), &title_at,
+               "  Oklar/PgUp/PgDn/Home/End");
+        user::gui::text(x + 8, thread_table_y - 16, thread_title,
+                        user::gui::COLOR_TEXT);
+        for (uint32_t i = 0; i < visible && scroll_offset + i < count; ++i)
         {
             const uint32_t row_y = thread_rows_y + i * 20;
             if ((i & 1U) == 0)
@@ -255,29 +335,40 @@ namespace user::apps
             uint32_t number_at = 0;
             number[0] = '\0';
             append_number(number, sizeof(number), &number_at,
-                          rows[i].thread.process_id);
+                          rows[scroll_offset + i].thread.process_id);
             user::gui::text(x + 10, row_y + 2, number, user::gui::COLOR_TEXT);
             number_at = 0;
             number[0] = '\0';
-            append_number(number, sizeof(number), &number_at, rows[i].thread.id);
+            append_number(number, sizeof(number), &number_at,
+                          rows[scroll_offset + i].thread.id);
             user::gui::text(x + 48, row_y + 2, number, user::gui::COLOR_TEXT);
-            user::gui::text(x + 88, row_y + 2, rows[i].thread.name,
+            user::gui::text(x + 88, row_y + 2, rows[scroll_offset + i].thread.name,
                             user::gui::COLOR_TEXT);
             user::gui::text(x + 270, row_y + 2,
-                            state_name(rows[i].thread.state), user::gui::COLOR_TEXT);
+                            state_name(rows[scroll_offset + i].thread.state), user::gui::COLOR_TEXT);
             char cpu[8];
             uint32_t cpu_at = 0;
             cpu[0] = '\0';
-            append_number(cpu, sizeof(cpu), &cpu_at, rows[i].cpu_percent);
+            append_number(cpu, sizeof(cpu), &cpu_at,
+                          rows[scroll_offset + i].cpu_percent);
             append(cpu, sizeof(cpu), &cpu_at, "%");
             user::gui::text(x + 382, row_y + 2, cpu, user::gui::COLOR_TEXT);
+            char processor[12];
+            uint32_t processor_at = 0;
+            processor[0] = '\0';
+            if (rows[scroll_offset + i].thread.cpu_id == UINT32_MAX)
+                append(processor, sizeof(processor), &processor_at, "-");
+            else
+                append_number(processor, sizeof(processor), &processor_at,
+                              rows[scroll_offset + i].thread.cpu_id);
+            user::gui::text(x + 426, row_y + 2, processor, user::gui::COLOR_TEXT);
             char stack[16];
             uint32_t stack_at = 0;
             stack[0] = '\0';
             append_number(stack, sizeof(stack), &stack_at,
-                          rows[i].thread.stack_bytes / 1024);
+                          rows[scroll_offset + i].thread.stack_bytes / 1024);
             append(stack, sizeof(stack), &stack_at, " KB");
-            user::gui::text(x + 446, row_y + 2, stack, user::gui::COLOR_TEXT);
+            user::gui::text(x + 486, row_y + 2, stack, user::gui::COLOR_TEXT);
         }
     }
 }

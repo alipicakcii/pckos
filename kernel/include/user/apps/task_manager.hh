@@ -16,6 +16,9 @@ namespace user::apps
     public:
         TaskManager();
         void draw(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+        void scroll(int32_t rows);
+        void scroll_to_top();
+        void scroll_to_bottom();
         bool consume_dirty();
         static void thread_entry(void *argument);
 
@@ -38,10 +41,15 @@ namespace user::apps
         user::SystemInfo system_;
         ProcessRow processes_[8];
         uint32_t process_count_;
+        uint32_t previous_process_ids_[8];
         uint32_t previous_process_ticks_[8];
         Row rows_[abi::MAX_THREADS];
         uint32_t row_count_;
+        uint32_t scroll_offset_;
+        uint32_t visible_rows_;
         uint32_t previous_ticks_;
+        uint32_t total_cpu_percent_;
+        bool baseline_ready_;
         uint32_t previous_cpu_ticks_[abi::MAX_THREADS];
         volatile uint32_t dirty_;
     };

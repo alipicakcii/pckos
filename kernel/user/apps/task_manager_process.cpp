@@ -64,8 +64,17 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             (void)manager.consume_dirty();
             continue;
         }
-        if (event.type == 1 && event.value0 == 0x1B)
-            user::exit(0);
+        if (event.type == 1)
+        {
+            if (event.value0 == 0x1B)
+                user::exit(0);
+            if (event.value0 == 0xE2) manager.scroll(-1);
+            else if (event.value0 == 0xE3) manager.scroll(1);
+            else if (event.value0 == 0xE6) manager.scroll(-10);
+            else if (event.value0 == 0xE7) manager.scroll(10);
+            else if (event.value0 == 0xE0) manager.scroll_to_top();
+            else if (event.value0 == 0xE1) manager.scroll_to_bottom();
+        }
         if (event.type == 2)
         {
             int32_t cursor_x = mouse_x;

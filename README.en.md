@@ -422,7 +422,7 @@ SMP sources are under `kernel/arch/i386/firmware/`: `topology.cpp` reads the ACP
 
 This initial SMP implementation serializes kernel services with a shared lock. User code runs in parallel; drawing frames are serialized between `begin_frame` and `end_frame` to protect shared graphics state. Other processors briefly pause during process memory teardown, and terminated threads are no longer scheduled. Use `SpinLock`/`LockGuard` or atomic operations for shared user data; `volatile` alone does not provide synchronization.
 
-Limits: 32 logical processors, 64 threads including idle threads, and 8 processes. Startup currently uses ACPI RSDT/MADT and xAPIC; x2APIC is not supported. If an additional processor fails to start, the system continues with the online processors. Without SMP information, it uses the single-processor path. Task Manager reports online logical processors and calculates CPU percentages against total processor capacity.
+Limits: 32 logical processors, 64 threads including idle threads, and 8 processes. Startup currently uses ACPI RSDT/MADT and xAPIC; x2APIC is not supported. If an additional processor fails to start, the system continues with the online processors. Without SMP information, it uses the single-processor path. Task Manager reports online logical processors and total CPU usage; process and thread percentages are calculated against total processor capacity. A running thread row shows its current CPU number. Scroll the thread list with Up/Down or Page Up/Page Down; use Home/End to jump to the beginning or end.
 
 ## 8. Writing, building, and launching an application
 

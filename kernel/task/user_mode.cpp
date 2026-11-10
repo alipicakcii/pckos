@@ -554,17 +554,24 @@ namespace kernel
         const uint32_t first_page = offset / PAGESIZE_4K;
         const uint32_t last_page = (offset + size - 1) / PAGESIZE_4K;
         // Küçük tahsisler aynı sayfayı paylaşır. Fiziksel bellek ihtiyaçla alınır.
-        for (uint32_t page = first_page; page <= last_page; ++page)
+        uint32_t mapped_until = first_page;
         {
-            if (space->heap_page_users[page] == 0 &&
-                !map_user_page(*space, USER_HEAP_ADDRESS + page * PAGESIZE_4K,
-                               PG_USER | PG_WRITE, nullptr))
+            smp::NewMappingBatch mapping_batch;
+            for (; mapped_until <= last_page; ++mapped_until)
             {
-                for (uint32_t rollback = first_page; rollback < page; ++rollback)
-                    if (space->heap_page_users[rollback] == 0)
-                        unmap_user_page(*space, USER_HEAP_ADDRESS + rollback * PAGESIZE_4K);
-                return ERROR_NO_MEMORY;
+                if (space->heap_page_users[mapped_until] == 0 &&
+                    !map_user_page(*space, USER_HEAP_ADDRESS + mapped_until * PAGESIZE_4K,
+                                   PG_USER | PG_WRITE, nullptr))
+                    break;
             }
+        }
+        // Hata durumunda geri alma başlamadan önce ertelenmiş bildirim tamamlanır.
+        if (mapped_until <= last_page)
+        {
+            for (uint32_t rollback = first_page; rollback < mapped_until; ++rollback)
+                if (space->heap_page_users[rollback] == 0)
+                    unmap_user_page(*space, USER_HEAP_ADDRESS + rollback * PAGESIZE_4K);
+            return ERROR_NO_MEMORY;
         }
         for (uint32_t page = first_page; page <= last_page; ++page)
             ++space->heap_page_users[page];

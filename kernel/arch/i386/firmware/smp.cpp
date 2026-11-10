@@ -312,7 +312,10 @@ namespace kernel::smp
         thread_attach_cpu(reinterpret_cast<uint32_t>(ap_stacks[index]) + AP_STACK_SIZE);
         kernel_leave();
         store(online[index], 1);
-        while (load(processors_released) == 0) asm volatile("pause");
+        // Açılış bitene kadar boş döngüyle ana işlemcinin kaynaklarını tüketme.
+        // Kontrol ile HLT arasında kesme alınmaması, uyandırmanın kaybolmasını önler.
+        while (load(processors_released) == 0)
+            asm volatile("sti; hlt; cli" ::: "memory");
         write_apic(0x3E0, 3);
         write_apic(0x320, (1U << 17) | TIMER_VECTOR);
         write_apic(0x380, timer_count);
@@ -379,7 +382,15 @@ namespace kernel::smp
         return online_count();
     }
 
-    void release_processors() { store(processors_released, 1); }
+    void release_processors()
+    {
+        store(processors_released, 1);
+        // TLB işleyicisi kilit almadan döner; burada bekleyen işlemciyi de uyandırır.
+        for (uint32_t index = 1; index < MAX_CPUS; ++index)
+            if (load(online[index]) != 0)
+                if (!send_ipi(apic_ids[index], TLB_VECTOR))
+                    lib::panic("SMP: processor wake IPI delivery failed");
+    }
 }
 
 extern "C" void smp_kernel_leave() { kernel::smp::kernel_leave(); }

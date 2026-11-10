@@ -88,6 +88,7 @@ namespace kernel::syscalls
                 destination->flags = source.flags;
                 destination->cpu_ticks = source.cpu_ticks;
                 destination->stack_bytes = source.stack_bytes;
+                destination->cpu_id = source.cpu_id;
                 for (uint32_t i = 0; i < sizeof(source.name); ++i)
                     destination->name[i] = source.name[i];
                 registers->eax = 0;
