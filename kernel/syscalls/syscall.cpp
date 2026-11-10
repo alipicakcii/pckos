@@ -67,6 +67,7 @@ namespace kernel
                 case abi::syscall_system_info:
                 case abi::syscall_read_kernel_log:
                 case abi::syscall_get_kernel_log:
+                case abi::syscall_power_off:
                     syscalls::handle_system(registers);
                     return;
 

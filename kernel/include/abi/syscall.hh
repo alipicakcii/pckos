@@ -60,7 +60,8 @@ namespace abi
         syscall_pc_speaker = 48,
         syscall_cpu_rnd = 49,
         syscall_terminal_interrupt = 50,
-        syscall_thread_capacity = 51
+        syscall_thread_capacity = 51,
+        syscall_power_off = 52
     };
 }
 

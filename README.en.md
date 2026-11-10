@@ -60,6 +60,7 @@ PCKOS is currently a minimal system under development. The kernel currently prov
 - i386 boot, paging, and separation between kernel and user mode.
 - User applications that access kernel services through system calls.
 - ACPI/xAPIC SMP with Round Robin scheduling on up to 32 logical processors, and processes with separate address spaces. Single-processor systems are also supported.
+- ACPI S5 power-off from the Start menu; additional processors are parked before shutdown.
 - A framebuffer desktop with keyboard, mouse, windows, and a taskbar.
 - Shared user interface APIs for `Window`, `Widget`, `Button`, and `ClickListener`; PNG application icons appear on the desktop, Start menu, and taskbar.
 - The PCKFS root filesystem and an IDE ATA PIO disk driver. User applications can currently read files; general file writing is not implemented yet.
@@ -133,7 +134,7 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | `kernel/include/firmware/smp.hh` | i386 SMP interface |
 | `kernel/mem/` | Paging, physical memory, kernel heap |
 | `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin scheduling, PID/TID tables |
-| `kernel/arch/i386/firmware/` | ACPI CPU discovery, APIC, AP startup, kernel lock, and TLB IPIs |
+| `kernel/arch/i386/firmware/` | ACPI tables and S5 power-off, CPU discovery, APIC, AP startup, kernel lock, and TLB IPIs |
 | `kernel/device/ata_pio.cpp` | Sector access to the IDE disk |
 | `kernel/device/rtc.cpp` | Date and time from the CMOS RTC |
 | `kernel/fs/pckfs.cpp` | PCKFS mount, path lookup, directory and file reads |
@@ -141,6 +142,7 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | `kernel/syscalls/syscall.cpp` | `int 0x80` entry checks and call routing |
 | `kernel/syscalls/` | Handlers grouped by subsystem, including user-memory validation |
 | `kernel/include/user/syscall/call.hh` | User-side `int 0x80` entry helper |
+| `kernel/include/user/system/power.hh` | User API for requesting system power-off |
 | `kernel/include/abi/` | Fixed syscall numbers and data structures shared by kernel and user space |
 | `kernel/include/user/fs/` | File and directory API |
 | `kernel/include/user/task/` | Process and thread APIs |
@@ -325,12 +327,12 @@ For terminal frontends, `terminal_attach()` (44) makes the caller a terminal own
 | Processes | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Threads | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
 | Memory | `heap_alloc`, `heap_free`, `new`/`delete` via `<user/memory/new.hh>`, `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` via `<user/lib/memory.hh>` |
-| System | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
+| System | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info`, `shutdown` (`<user/system/power.hh>`) |
 | Graphics | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
 `wait_event(&event, ticks)`: `type=1` is keyboard (`value0` character), `type=2` is mouse (`value0` X delta, `value1` Y delta), and `type=3` is timeout. `buttons & 1` means left button; `buttons & 0x100` marks a new press edge. 100 PIT ticks are approximately one second. Drawing uses screen coordinates. A windowed app creates a `Window`, draws each frame between `user::gui::begin_frame()` and `end_frame()`, and calls `Window::draw()`. Route mouse events through `Window::handle_mouse()`. Low-level helpers include `fill`, `text`, `button`, `icon`, and `push_clip`.
 
-`get_datetime(&date)` fills `user::DateTime` from the RTC. The taskbar clock displays the VM's RTC time, not elapsed uptime; QEMU sets the RTC to host local time. Calculator and Notepad launch from the Start menu and each get a separate PID and main thread. Calculator supports integer `+`, `-`, `*`, and `/`. Notepad displays the first 8191 bytes of any PCKFS text file as **read-only**. For example, `host-share/home/notlar.txt` appears at `/home/notlar.txt`; the file name has no special meaning in code.
+`get_datetime(&date)` fills `user::DateTime` from the RTC. `user::shutdown()` (`<user/system/power.hh>`) exposes the Start menu power-off action to user applications; the kernel uses the ACPI FADT/DSDT S5 information to power off. The taskbar clock displays the VM's RTC time, not elapsed uptime; QEMU sets the RTC to host local time. Calculator and Notepad launch from the Start menu and each get a separate PID and main thread. Calculator supports integer `+`, `-`, `*`, and `/`. Notepad displays the first 8191 bytes of any PCKFS text file as **read-only**. For example, `host-share/home/notlar.txt` appears at `/home/notlar.txt`; the file name has no special meaning in code.
 
 ```cpp
 user::InputEvent event{};

@@ -5,6 +5,7 @@
 #include <device/rtc.hh>
 #include <kernel/task/thread.hh>
 #include <firmware/smp.hh>  
+#include <firmware/acpi.hh>
 #include <library/kernel_log.hh>
 #include <mem/alloc.hh>
 
@@ -23,6 +24,11 @@ namespace kernel::syscalls
     {
         switch (registers->eax)
         {
+            case abi::syscall_power_off:
+                if (!firmware::power_off())
+                    registers->eax = static_cast<uint32_t>(ERROR_NO_DEVICE);
+                return;
+
             case abi::syscall_get_ticks:
                 registers->eax = timer_get_ticks();
                 return;

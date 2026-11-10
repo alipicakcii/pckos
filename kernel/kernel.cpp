@@ -13,6 +13,7 @@
 #include <kernel/task/user_mode.hh>
 #include <kernel/task/thread.hh>
 #include <firmware/smp.hh>  
+#include <firmware/acpi.hh>
 #include <library/kprint.hh>
 #include <library/kernel_log.hh>
 #include <device/rtc.hh>
@@ -104,6 +105,8 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
     _kprintf("Islemci topolojisi: %u etkin islemci | ACPI MADT: %s | LAPIC: %s\n",
              cpu_topology.count, cpu_topology.acpi_found ? "var" : "yok",
              cpu_topology.local_apic_found ? "var" : "yok");
+    const bool acpi_power_ready = firmware::initialize_power_off();
+    _kprintf("ACPI sistem kapatma: %s\n", acpi_power_ready ? "hazir" : "desteklenmiyor");
 
     mem::Vmm virtual_memory;
     virtual_memory.initialize_paging(multiboot_info->mem_upper);

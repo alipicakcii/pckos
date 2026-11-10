@@ -62,6 +62,7 @@ PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çek
 - i386 üzerinde açılma, bellek sayfalama ve çekirdek/kullanıcı modu ayrımı.
 - Sistem çağrıları üzerinden çekirdek hizmetlerine erişen kullanıcı uygulamaları.
 - ACPI/xAPIC tabanlı SMP: en çok 32 mantıksal işlemcide Round Robin zamanlama; ayrı adres alanları olan process'ler. Tek işlemcili sistemler de desteklenir.
+- Başlat menüsünden ACPI S5 ile sistemi kapatma; kapanıştan önce ek işlemciler duraklatılır.
 - Framebuffer tabanlı masaüstü; klavye, fare, pencereler ve görev çubuğu.
 - Ortak `Window`, `Widget`, `Button` ve `ClickListener` kullanıcı arayüzü API'si; uygulama simgeleri masaüstü, Başlat menüsü ve görev çubuğunda PNG olarak gösterilir.
 - PCKFS kök dosya sistemi ve IDE ATA PIO disk sürücüsü. Kullanıcı uygulamaları şu an dosyaları okuyabilir; genel dosya yazma desteği henüz yoktur.
@@ -136,7 +137,7 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | `kernel/include/firmware/smp.hh` | i386 SMP arayüzü |
 | `kernel/mem/` | Sayfalama, fiziksel bellek, çekirdek heap'i |
 | `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin zamanlama, PID/TID tabloları |
-| `kernel/arch/i386/firmware/` | ACPI işlemci keşfi, APIC, ek işlemci başlatma, çekirdek kilidi ve TLB IPI'leri |
+| `kernel/arch/i386/firmware/` | ACPI tabloları ve S5 güç kapatma, işlemci keşfi, APIC, ek işlemci başlatma, çekirdek kilidi ve TLB IPI'leri |
 | `kernel/device/ata_pio.cpp` | IDE diskten sektör okuma/yazma |
 | `kernel/device/rtc.cpp` | CMOS RTC'den gerçek tarih ve saati okuma |
 | `kernel/fs/pckfs.cpp` | PCKFS bağlama, yol çözme, dizin ve dosya okuma |
@@ -144,6 +145,7 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | `kernel/syscalls/syscall.cpp` | `int 0x80` giriş kontrolü ve çağrı yönlendirmesi |
 | `kernel/syscalls/` | Konuya göre ayrılmış syscall işleyicileri ve kullanıcı belleği doğrulaması |
 | `kernel/include/user/syscall/call.hh` | Kullanıcı alanındaki `int 0x80` geçiş kodu |
+| `kernel/include/user/system/power.hh` | Kullanıcı uygulamalarının sistemi kapatma API'si |
 | `kernel/include/abi/` | Sabit syscall numaraları ve çekirdek/kullanıcı alanının ortak veri yapıları |
 | `kernel/include/user/fs/` | Dosya ve dizin API'si |
 | `kernel/include/user/task/` | Process ve thread API'leri |
@@ -328,12 +330,12 @@ Terminal ön yüzü için `terminal_attach()` (44) çağıran süreci terminal s
 | Process | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Thread | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
 | Bellek | `heap_alloc`, `heap_free`, `<user/memory/new.hh>` ile `new`/`delete`, `<user/lib/memory.hh>` ile `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` |
-| Sistem | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
+| Sistem | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info`, `shutdown` (`<user/system/power.hh>`) |
 | Grafik | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
 `wait_event(&event, ticks)`: `type=1` klavye (`value0` karakter), `type=2` fare (`value0` X farkı, `value1` Y farkı), `type=3` zaman aşımıdır. `buttons & 1` sol tuş; `buttons & 0x100` yeni basma kenarıdır. 100 PIT tik'i yaklaşık bir saniyedir. Çizim ekran koordinatlarıyla yapılır. Pencereli uygulamalar `Window` oluşturucusuyla pencereyi kaydeder; kareyi `user::gui::begin_frame()` ve `end_frame()` arasında çizer, `Window::draw()` ile pencereyi gösterir ve fare olaylarını `Window::handle_mouse()` metoduna verir. Düşük seviyeli özel çizimler için `user::gui::fill`, `text`, `button`, `icon` ve `push_clip` yardımcıları kullanılabilir.
 
-`get_datetime(&date)` RTC'deki yıl, ay, gün, saat, dakika ve saniyeyi `user::DateTime` yapısına doldurur. Görev çubuğundaki saat açılıştan beri geçen süreyi değil sanal makinenin RTC saatini gösterir; QEMU betiği RTC'yi host yerel saatiyle başlatır. Hesap Makinesi ve Not Defteri Başlat menüsünden açılır; ikisi de ayrı PID ve ana thread alır. Hesap Makinesi tam sayı işlemleri (`+`, `-`, `*`, `/`) yapar. Not Defteri, yol alanına yazılan herhangi bir PCKFS metin dosyasının ilk 8191 baytını **salt okunur** gösterir. Örneğin `host-share/home/notlar.txt` konursa yol `/home/notlar.txt` olur; dosya adının kodda özel bir anlamı yoktur.
+`get_datetime(&date)` RTC'deki yıl, ay, gün, saat, dakika ve saniyeyi `user::DateTime` yapısına doldurur. `user::shutdown()` (`<user/system/power.hh>`) Başlat menüsündeki kapatma işlemini kullanıcı uygulamalarına açar; çekirdek ACPI FADT/DSDT içindeki S5 bilgisiyle sistemi kapatır. Görev çubuğundaki saat açılıştan beri geçen süreyi değil sanal makinenin RTC saatini gösterir; QEMU betiği RTC'yi host yerel saatiyle başlatır. Hesap Makinesi ve Not Defteri Başlat menüsünden açılır; ikisi de ayrı PID ve ana thread alır. Hesap Makinesi tam sayı işlemleri (`+`, `-`, `*`, `/`) yapar. Not Defteri, yol alanına yazılan herhangi bir PCKFS metin dosyasının ilk 8191 baytını **salt okunur** gösterir. Örneğin `host-share/home/notlar.txt` konursa yol `/home/notlar.txt` olur; dosya adının kodda özel bir anlamı yoktur.
 
 ```cpp
 user::InputEvent event{};

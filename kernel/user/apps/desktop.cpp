@@ -6,6 +6,7 @@
 #include <user/io/stream.hh>
 #include <user/task/process.hh>
 #include <user/system/info.hh>
+#include <user/system/power.hh>
 #include <user/task/thread.hh>
 #include <user/apps/file_manager.hh>
 #include <user/apps/task_manager.hh>
@@ -17,6 +18,8 @@
 namespace
 {
     constexpr uint32_t TASKBAR_HEIGHT = 38;
+    constexpr uint32_t START_MENU_HEIGHT = 468;
+    constexpr uint32_t START_MENU_BOTTOM = START_MENU_HEIGHT + 8;
     constexpr uint32_t TASKBAR_APP_START_X = 104;
     constexpr uint32_t TASKBAR_APP_GAP = 3;
     constexpr uint32_t TASKBAR_CLOCK_WIDTH = 126;
@@ -31,6 +34,7 @@ namespace
     constexpr uint32_t WINDOW_MEMORY_HUNTER = 9;
     constexpr uint32_t START_ABOUT = 10;
     constexpr uint32_t START_CONSOLE = 11;
+    constexpr uint32_t START_SHUTDOWN = 12;
 
     struct ApplicationInfo
     {
@@ -83,7 +87,7 @@ namespace
               app_process_ids_{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, foreground_window_(0),
               logo_available_(false), file_visible_(false),
               terminal_visible_(false), task_visible_(false), app_taskbar_{},
-              about_open_(false), menu_open_(false),
+              about_open_(false), menu_open_(false), shutdown_error_(false),
               context_menu_open_(false), settings_open_(false),
               wallpaper_error_(false), wallpaper_count_(0), wallpaper_selected_(0),
               wallpaper_first_(0),
@@ -565,6 +569,13 @@ namespace
                 desktop->console_mode_ = true;
                 desktop->render();
             }
+            else if (id == START_SHUTDOWN)
+            {
+                desktop->menu_open_ = false;
+                if (user::shutdown() < 0)
+                    desktop->shutdown_error_ = true;
+                desktop->render();
+            }
         }
 
         void draw_clock()
@@ -800,10 +811,11 @@ namespace
 
         void draw_start_menu()
         {
-            const uint32_t y = screen_.height > TASKBAR_HEIGHT + 438
-                ? screen_.height - TASKBAR_HEIGHT - 438 : 0;
-            user::gui::frame(7, y, 214, 430, user::gui::COLOR_FACE);
-            user::gui::fill(11, y + 4, 34, 422, user::gui::COLOR_TITLE);
+            const uint32_t y = screen_.height > TASKBAR_HEIGHT + START_MENU_BOTTOM
+                ? screen_.height - TASKBAR_HEIGHT - START_MENU_BOTTOM : 0;
+            user::gui::frame(7, y, 214, START_MENU_HEIGHT, user::gui::COLOR_FACE);
+            user::gui::fill(11, y + 4, 34, START_MENU_HEIGHT - 8,
+                            user::gui::COLOR_TITLE);
             user::gui::text(24, y + 15, "P\nC\nK\nO\nS", user::gui::COLOR_WHITE);
             user::gui::ClickListener listener(&DesktopSession::start_menu_click, this);
             for (uint32_t index = 0; index < sizeof(APPLICATIONS) / sizeof(APPLICATIONS[0]); ++index)
@@ -819,8 +831,23 @@ namespace
                                     "PCKOS Hakkinda", &listener);
             user::gui::Button console(START_CONSOLE, 51, y + 388, 162, 34,
                                       "Konsol", &listener);
+            user::gui::Button shutdown(START_SHUTDOWN, 51, y + 426, 162, 34,
+                                      "Bilgisayari Kapat", &listener);
             about.draw();
             console.draw();
+            shutdown.draw();
+        }
+
+        void draw_shutdown_error()
+        {
+            const uint32_t width = 360;
+            const uint32_t height = 112;
+            const uint32_t x = (screen_.width - width) / 2;
+            const uint32_t y = (screen_.height - TASKBAR_HEIGHT - height) / 2;
+            user::gui::window(x, y, width, height, "PCKOS - Kapatma", true);
+            user::gui::text(x + 14, y + 42,
+                "ACPI kapatma bilgisi bulunamadi.", user::gui::COLOR_TEXT);
+            user::gui::button(x + width - 86, y + height - 32, 72, 22, "Tamam");
         }
 
         void draw_about()
@@ -955,6 +982,8 @@ namespace
                 draw_about();
             if (settings_open_)
                 draw_screen_settings();
+            if (shutdown_error_)
+                draw_shutdown_error();
             if (damage != nullptr) user::gui::pop_clip();
             user::gui::end_frame();
         }
@@ -972,6 +1001,8 @@ namespace
             {
                 if (console_mode_)
                     console_mode_ = false;
+                else if (shutdown_error_)
+                    shutdown_error_ = false;
                 else if (settings_open_)
                     settings_open_ = false;
                 else if (context_menu_open_)
@@ -1113,6 +1144,12 @@ namespace
 
         void handle_click()
         {
+            if (shutdown_error_)
+            {
+                shutdown_error_ = false;
+                render();
+                return;
+            }
             const uint32_t taskbar_y = screen_.height > TASKBAR_HEIGHT
                 ? screen_.height - TASKBAR_HEIGHT : 0;
             const int32_t x = mouse_x_;
@@ -1192,8 +1229,8 @@ namespace
             }
             if (menu_open_)
             {
-                const uint32_t menu_y = screen_.height > TASKBAR_HEIGHT + 438
-                    ? screen_.height - TASKBAR_HEIGHT - 438 : 0;
+                const uint32_t menu_y = screen_.height > TASKBAR_HEIGHT + START_MENU_BOTTOM
+                    ? screen_.height - TASKBAR_HEIGHT - START_MENU_BOTTOM : 0;
                 user::gui::ClickListener listener(&DesktopSession::start_menu_click, this);
                 for (uint32_t index = 0; index < sizeof(APPLICATIONS) / sizeof(APPLICATIONS[0]); ++index)
                 {
@@ -1210,6 +1247,9 @@ namespace
                 user::gui::Button console(START_CONSOLE, 51, menu_y + 388, 162, 34,
                                           "Konsol", &listener);
                 if (console.handle_click(x, y)) return;
+                user::gui::Button shutdown(START_SHUTDOWN, 51, menu_y + 426,
+                    162, 34, "Bilgisayari Kapat", &listener);
+                if (shutdown.handle_click(x, y)) return;
                 menu_open_ = false;
                 render();
                 return;
@@ -1363,6 +1403,7 @@ namespace
         bool app_taskbar_[10];
         bool about_open_;
         bool menu_open_;
+        bool shutdown_error_;
         bool context_menu_open_;
         bool settings_open_;
         bool wallpaper_error_;

@@ -34,6 +34,7 @@ namespace user
     using abi::syscall_thread_id;
     using abi::syscall_thread_count;
     using abi::syscall_thread_capacity;
+    using abi::syscall_power_off;
     using abi::syscall_thread_switch_count;
     using abi::syscall_thread_create;
     using abi::syscall_thread_exit;

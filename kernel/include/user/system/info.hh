@@ -38,6 +38,7 @@ namespace user
         return call(syscall_read_kernel_log, reinterpret_cast<uint32_t>(buffer),
                     capacity, reinterpret_cast<uint32_t>(cursor));
     }
+
 }
 
 #endif
