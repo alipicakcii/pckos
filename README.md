@@ -136,7 +136,7 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | `kernel/include/arch/i386/smp.hh` | i386 SMP arayüzü |
 | `kernel/mem/` | Sayfalama, fiziksel bellek, çekirdek heap'i |
 | `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin zamanlama, PID/TID tabloları |
-| `kernel/arch/i386/smp/` | ACPI işlemci keşfi, APIC, ek işlemci başlatma, çekirdek kilidi ve TLB IPI'leri |
+| `kernel/arch/i386/firmware/` | ACPI işlemci keşfi, APIC, ek işlemci başlatma, çekirdek kilidi ve TLB IPI'leri |
 | `kernel/device/ata_pio.cpp` | IDE diskten sektör okuma/yazma |
 | `kernel/device/rtc.cpp` | CMOS RTC'den gerçek tarih ve saati okuma |
 | `kernel/fs/pckfs.cpp` | PCKFS bağlama, yol çözme, dizin ve dosya okuma |
@@ -434,7 +434,7 @@ if (tid < 0) {
 
 `thread_create` başarılıysa TID döndürür. Kernel uygun bir thread yeri ve yeni kullanıcı yığını ayırır, giriş fonksiyonu ile argümanı yığına koyar; `thread_start_trampoline` fonksiyon bitince `thread_exit` çağırır. Çalışan örnek: `kernel/user/apps/task_manager_process.cpp` içindeki `TaskManager::thread_entry`; ana thread pencereyi çizerken worker thread bilgileri toplar. Paylaşılan veriler için mevcut `kernel/include/user/apps/app_thread.hh` içindeki `SpinLock`/`LockGuard` örneğini inceleyin. Genel amaçlı `join`, mutex ve semaphore API'si henüz yoktur. Ana thread/process bitince diğer thread'ler de temizlenir.
 
-SMP kodları `kernel/arch/i386/smp/` dizinindedir: `topology.cpp` ACPI MADT'yi okur; `trampoline.asm` ek işlemciyi gerçek moddan korumalı moda ve sayfalamaya geçirir; `smp.cpp` APIC, INIT/SIPI, TLB bildirimleri ve çekirdek kilidini yönetir. Her işlemci ayrı GDT, TSS, çekirdek yığını ve çalışan thread kaydı kullanır. Açılıştaki masaüstü ana thread'i BSP'de tutulur; diğer kullanıcı thread'leri işlemciler arasında taşınabilir.
+SMP kodları `kernel/arch/firmware/firmware/` dizinindedir: `topology.cpp` ACPI MADT'yi okur; `trampoline.asm` ek işlemciyi gerçek moddan korumalı moda ve sayfalamaya geçirir; `smp.cpp` APIC, INIT/SIPI, TLB bildirimleri ve çekirdek kilidini yönetir. Her işlemci ayrı GDT, TSS, çekirdek yığını ve çalışan thread kaydı kullanır. Açılıştaki masaüstü ana thread'i BSP'de tutulur; diğer kullanıcı thread'leri işlemciler arasında taşınabilir.
 
 İlk SMP uygulamasında çekirdek hizmetleri ortak bir kilitle sıraya alınır. Kullanıcı kodu paralel çalışır; çizim kareleri `begin_frame` ile `end_frame` arasında ortak çizim durumunu korumak için sırayla tamamlanır. Süreç belleği temizlenirken diğer işlemciler kısa süreli durdurulur ve kapanan thread'ler tekrar zamanlanmaz. Kullanıcı kodunda paylaşılan verilere erişirken `SpinLock`/`LockGuard` veya atomik işlemler kullanın; `volatile` tek başına eşzamanlama sağlamaz.
 

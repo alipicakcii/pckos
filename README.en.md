@@ -133,7 +133,7 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | `kernel/include/arch/i386/smp.hh` | i386 SMP interface |
 | `kernel/mem/` | Paging, physical memory, kernel heap |
 | `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin scheduling, PID/TID tables |
-| `kernel/arch/i386/smp/` | ACPI CPU discovery, APIC, AP startup, kernel lock, and TLB IPIs |
+| `kernel/arch/i386/firmware/` | ACPI CPU discovery, APIC, AP startup, kernel lock, and TLB IPIs |
 | `kernel/device/ata_pio.cpp` | Sector access to the IDE disk |
 | `kernel/device/rtc.cpp` | Date and time from the CMOS RTC |
 | `kernel/fs/pckfs.cpp` | PCKFS mount, path lookup, directory and file reads |
@@ -418,7 +418,7 @@ if (tid < 0) {
 
 `thread_create` returns a TID on success. The kernel allocates a thread slot and user stack, then places the entry point and argument on the stack. `thread_start_trampoline` calls `thread_exit` when the function returns. A working example is `TaskManager::thread_entry` in `kernel/user/apps/task_manager_process.cpp`, where a worker gathers information while the main thread draws the window. See `SpinLock`/`LockGuard` in `kernel/include/user/apps/app_thread.hh` for shared data. Generic `join`, mutex, and semaphore APIs are not available yet. Other threads are cleaned up when the main thread/process exits.
 
-SMP sources are under `kernel/arch/i386/smp/`: `topology.cpp` reads the ACPI MADT, `trampoline.asm` brings an additional processor from real mode into protected mode and enables paging, and `smp.cpp` manages APIC, INIT/SIPI, TLB notifications, and the kernel lock. Each processor has its own GDT, TSS, kernel stack, and current-thread record. The bootstrap desktop main thread stays on the BSP; other user threads can migrate between processors.
+SMP sources are under `kernel/arch/i386/firmware/`: `topology.cpp` reads the ACPI MADT, `trampoline.asm` brings an additional processor from real mode into protected mode and enables paging, and `smp.cpp` manages APIC, INIT/SIPI, TLB notifications, and the kernel lock. Each processor has its own GDT, TSS, kernel stack, and current-thread record. The bootstrap desktop main thread stays on the BSP; other user threads can migrate between processors.
 
 This initial SMP implementation serializes kernel services with a shared lock. User code runs in parallel; drawing frames are serialized between `begin_frame` and `end_frame` to protect shared graphics state. Other processors briefly pause during process memory teardown, and terminated threads are no longer scheduled. Use `SpinLock`/`LockGuard` or atomic operations for shared user data; `volatile` alone does not provide synchronization.
 

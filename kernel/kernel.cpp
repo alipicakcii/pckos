@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
+#include "firmware/smbios.hh"
 #include <device/ata_pio.hh>
 #include <device/input/ps2_keyboard.hh>
 #include <device/input/ps2_mouse.hh>
@@ -21,7 +22,6 @@
 #include <mem/multiboot.hh>
 #include <mem/vmm.hh>
 #include <mem/new.hh>
-
 
 
 
@@ -88,6 +88,8 @@ namespace
 extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
                             [[maybe_unused]] uint32_t multiboot_magic)
 {
+
+
     cpu::disable_interrupt();
     _kprintf("\n[PCKOS boot] Multiboot magic=0x%x flags=0x%x\n",
              multiboot_magic, multiboot_info->flags);
@@ -95,6 +97,8 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
     kernel::descriptor_tables_initialize();
     _kprintf("GDT / IDT / TSS: kuruldu | cekirdek yetki seviyesi: 0\n");
     log_cpu();
+
+
 
     const kernel::smp::CpuTopology cpu_topology = kernel::smp::discover_cpus();
     _kprintf("Islemci topolojisi: %u etkin islemci | ACPI MADT: %s | LAPIC: %s\n",
@@ -132,7 +136,7 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
     _kprintf("\n[PckOS acilis]\n");
     _kprintf("Mimari: i386\n");
     _kprintf("Bellek: %d MiB\n", memory_mb);
-    _kprintf("Goruntu alani: %d x %d\n", framebuffer->get_width(), framebuffer->get_height());
+_kprintf("Goruntu alani: %d x %d\n", framebuffer->get_width(), framebuffer->get_height());
     _kprintf("IDE disk: %s (%d sektor)\n", disk_ready ? "hazir" : "bulunamadi",
              disk_ready ? system_disk.sector_count() : 0);
     _kprintf("PCKFS kok: %s (%d oge)\n", pckfs_ready ? "baglandi" : "bulunamadi",
