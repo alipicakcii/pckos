@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
-#include <user/filesystem.hh>
-#include <user/heap.hh>
-#include <user/io.hh>
-#include <user/process.hh>
-#include <user/system.hh>
-#include <user/thread.hh>
+#include <user/fs/filesystem.hh>
+#include <user/memory/heap.hh>
+#include <user/io/stream.hh>
+#include <user/task/process.hh>
+#include <user/system/info.hh>
+#include <user/task/thread.hh>
 #include <user/apps/terminal.hh>
-#include <user/gui.hh>
+#include <user/gui/drawing.hh>
 
 namespace user::apps
 {

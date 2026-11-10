@@ -5,8 +5,8 @@
 
 #include <stdint.h>
 #include <user/apps/app_thread.hh>
-#include <user/gui.hh>
-#include <user/filesystem.hh>
+#include <user/gui/drawing.hh>
+#include <user/fs/filesystem.hh>
 
 namespace user::apps
 {

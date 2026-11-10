@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
-#include <user/graphics.hh>
-#include <user/gui.hh>
+#include <user/gui/graphics.hh>
+#include <user/gui/drawing.hh>
 
 namespace user::gui
 {

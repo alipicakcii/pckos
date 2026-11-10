@@ -7,6 +7,7 @@ global cpu_halt
 extern handle_isr
 extern handle_irq
 extern handle_timer_irq
+extern smp_kernel_leave
 
 enable_interrupt:
     sti
@@ -79,6 +80,10 @@ ISR_NO_ERROR_CODE  30
 ISR_NO_ERROR_CODE  31
 ISR_NO_ERROR_CODE  128
 ISR_NO_ERROR_CODE  129
+ISR_NO_ERROR_CODE  208
+ISR_NO_ERROR_CODE  225
+ISR_NO_ERROR_CODE  242
+ISR_NO_ERROR_CODE  255
 
 IRQ   0,    32
 IRQ   1,    33
@@ -131,6 +136,7 @@ handle_isr_common:
     call handle_isr
     add esp, 4
     mov esp, eax
+    call smp_kernel_leave
     RESTORE_REGS
     add esp, 8
     iret
@@ -143,6 +149,7 @@ handle_irq_common:
     call handle_irq
     add esp, 4
     mov esp, eax
+    call smp_kernel_leave
     RESTORE_REGS
     add esp, 8
     iret

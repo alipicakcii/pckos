@@ -3,8 +3,8 @@
 #include "internal.hh"
 #include <abi/graphics.hh>
 #include <device/video/frame_buffer.hh>
-#include <kernel/thread.hh>
-#include <kernel/graphics.hh>
+#include <kernel/task/thread.hh>
+#include <kernel/syscalls/graphics.hh>
 
 namespace kernel::syscalls
 {

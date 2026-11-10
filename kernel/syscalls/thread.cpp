@@ -2,8 +2,8 @@
 // Copyright (C) PCK
 #include "internal.hh"
 #include <abi/thread.hh>
-#include <kernel/thread.hh>
-#include <kernel/user_mode.hh>
+#include <kernel/task/thread.hh>
+#include <kernel/task/user_mode.hh>
 
 namespace kernel::syscalls
 {

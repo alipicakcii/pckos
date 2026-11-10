@@ -9,6 +9,7 @@ namespace kernel
 {
 
     void descriptor_tables_initialize();
+    void descriptor_tables_initialize_ap();
     void set_kernel_stack(uint32_t stack_top);
 
     struct GdtEntry
@@ -122,6 +123,10 @@ namespace kernel
     extern "C" void irq15();
     extern "C" void isr128();
     extern "C" void isr129();
+    extern "C" void isr208();
+    extern "C" void isr225();
+    extern "C" void isr242();
+    extern "C" void isr255();
 
 } // namespace kernel
 

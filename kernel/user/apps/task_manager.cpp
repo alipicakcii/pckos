@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
-#include <user/process.hh>
-#include <user/system.hh>
-#include <user/thread.hh>
+#include <user/task/process.hh>
+#include <user/system/info.hh>
+#include <user/task/thread.hh>
 #include <user/apps/task_manager.hh>
-#include <user/gui.hh>
+#include <user/gui/drawing.hh>
 
 namespace user::apps
 {
@@ -33,6 +33,20 @@ namespace user::apps
             destination[*at] = '\0';
         }
 
+        uint32_t cpu_percent(uint32_t busy, uint32_t elapsed, uint32_t processors)
+        {
+            if (elapsed == 0) return 0;
+            if (processors == 0) processors = 1;
+            while (elapsed > UINT32_MAX / 100)
+            {
+                elapsed >>= 1;
+                busy >>= 1;
+            }
+            const uint32_t whole = busy / elapsed;
+            if (whole >= processors) return 100;
+            return (whole * 100 + ((busy % elapsed) * 100) / elapsed) / processors;
+        }
+
         const char *state_name(uint32_t state)
         {
             switch (state)
@@ -59,7 +73,7 @@ namespace user::apps
         if (user::get_system_info(&system) < 0)
             return;
 
-        Row rows[16]{};
+        Row rows[abi::MAX_THREADS]{};
         uint32_t count = 0;
         const uint32_t elapsed = system.ticks - previous_ticks_;
         ProcessRow processes[8]{};
@@ -73,11 +87,11 @@ namespace user::apps
             const uint32_t delta = info.cpu_ticks >= previous_process_ticks_[index]
                 ? info.cpu_ticks - previous_process_ticks_[index] : info.cpu_ticks;
             processes[index].process = info;
-            processes[index].cpu_percent = elapsed == 0 ? 0 :
-                (delta >= elapsed ? 100 : (delta * 100) / elapsed);
+            processes[index].cpu_percent = cpu_percent(delta, elapsed, system.logical_cpu_count);
+            if (processes[index].cpu_percent > 100) processes[index].cpu_percent = 100;
             previous_process_ticks_[index] = info.cpu_ticks;
         }
-        for (uint32_t id = 0; id < 16; ++id)
+        for (uint32_t id = 0; id < abi::MAX_THREADS; ++id)
         {
             user::ThreadInfo info{};
             if (user::thread_get_info(id, &info) < 0)
@@ -85,8 +99,7 @@ namespace user::apps
             const uint32_t delta = info.cpu_ticks >= previous_cpu_ticks_[id]
                 ? info.cpu_ticks - previous_cpu_ticks_[id] : info.cpu_ticks;
             rows[count].thread = info;
-            rows[count].cpu_percent = elapsed == 0 ? 0 :
-                (delta >= elapsed ? 100 : (delta * 100) / elapsed);
+            rows[count].cpu_percent = cpu_percent(delta, elapsed, system.logical_cpu_count);
             if (rows[count].cpu_percent > 100)
                 rows[count].cpu_percent = 100;
             previous_cpu_ticks_[id] = info.cpu_ticks;
@@ -131,7 +144,7 @@ namespace user::apps
         user::SystemInfo system{};
         ProcessRow processes[8]{};
         uint32_t process_count = 0;
-        Row rows[16]{};
+        Row rows[abi::MAX_THREADS]{};
         uint32_t count = 0;
         {
             LockGuard guard(lock_);
@@ -158,7 +171,9 @@ namespace user::apps
         const char *brand = system.cpu_brand[0] != '\0'
             ? system.cpu_brand : system.cpu_vendor;
         append(processor, sizeof(processor), &at, brand);
-        append(processor, sizeof(processor), &at, " | 1 cekirdek | i386");
+        append(processor, sizeof(processor), &at, " | ");
+        append_number(processor, sizeof(processor), &at, system.logical_cpu_count);
+        append(processor, sizeof(processor), &at, " islemci | i386");
         user::gui::text(x + 8, y + 27, processor, user::gui::COLOR_TEXT);
 
         char counts[96] = "Surec: ";

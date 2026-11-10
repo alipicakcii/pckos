@@ -5,6 +5,7 @@ section .text
 global _enable_paging
 global change_pd
 global invalidate
+extern smp_invalidate_remote_tlb
 
 ; Bu fonsksiyon işlemcinin sayfalama unitesini etkinleştirir
 ; çekirdeğin ilk 16MB kısmı 4M sayfalama olarak eşlenmiştir
@@ -37,7 +38,8 @@ invalidate:
 	push ebp
 	mov ebp, esp
 	mov eax, [esp+8]
-	invlpg [eax] 
+	invlpg [eax]
+	call smp_invalidate_remote_tlb
 	pop ebp
 	ret
 

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
-#include <user/graphics.hh>
-#include <user/input.hh>
-#include <user/process.hh>
-#include <user/thread.hh>
-#include <user/gui.hh>
-#include <user/lib/widgets.hh>
-#include <user/lib/window.hh>
+#include <user/gui/graphics.hh>
+#include <user/input/events.hh>
+#include <user/task/process.hh>
+#include <user/task/thread.hh>
+#include <user/gui/drawing.hh>
+#include <user/gui/widgets.hh>
+#include <user/gui/window.hh>
 
 namespace
 {

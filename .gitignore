@@ -1,4 +1,4 @@
-# Compiler and linker outputs
+# derleyici
 *.o
 *.d
 *.elf
@@ -8,14 +8,12 @@
 *.vdi
 *.pyc
 
-# Generated build trees and logs
 /sysroot/
 /isodir/
 /serial
 __pycache__/
 /host-code-test/
 
-# Local planning, host files, and editor/environment state
 /TODO.md
 /.agents/
 /.aws/

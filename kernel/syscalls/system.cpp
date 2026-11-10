@@ -3,7 +3,8 @@
 #include "internal.hh"
 #include <abi/system.hh>
 #include <device/rtc.hh>
-#include <kernel/thread.hh>
+#include <kernel/task/thread.hh>
+#include <arch/i386/smp.hh>
 #include <library/kernel_log.hh>
 #include <mem/alloc.hh>
 
@@ -65,7 +66,7 @@ namespace kernel::syscalls
                 info.kernel_heap_used = mem::MemAlloc::get_kernel_heap_used();
                 info.ticks = thread_tick_count();
                 info.switch_count = thread_switch_count();
-                info.logical_cpu_count = 1;
+                info.logical_cpu_count = smp::online_count();
                 uint32_t eax = 0, ebx = 0, ecx = 0, edx = 0;
                 read_cpuid(0, 0, eax, ebx, ecx, edx);
                 const uint32_t maximum_leaf = eax;

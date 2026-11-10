@@ -8,9 +8,10 @@
 #include <interrupts/descriptortables.hh>
 #include <interrupts/interrupts.hh>
 #include <interrupts/isr.hh>
-#include <kernel/panic.hh>
-#include <kernel/user_mode.hh>
-#include <kernel/thread.hh>
+#include <kernel/core/panic.hh>
+#include <kernel/task/user_mode.hh>
+#include <kernel/task/thread.hh>
+#include <arch/i386/smp.hh>
 #include <library/kprint.hh>
 #include <library/kernel_log.hh>
 #include <device/rtc.hh>
@@ -95,6 +96,11 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
     _kprintf("GDT / IDT / TSS: kuruldu | cekirdek yetki seviyesi: 0\n");
     log_cpu();
 
+    const kernel::smp::CpuTopology cpu_topology = kernel::smp::discover_cpus();
+    _kprintf("Islemci topolojisi: %u etkin islemci | ACPI MADT: %s | LAPIC: %s\n",
+             cpu_topology.count, cpu_topology.acpi_found ? "var" : "yok",
+             cpu_topology.local_apic_found ? "var" : "yok");
+
     mem::Vmm virtual_memory;
     virtual_memory.initialize_paging(multiboot_info->mem_upper);
 
@@ -149,7 +155,8 @@ extern "C" void kernel_main(mem::multiboot_info_t *multiboot_info,
     if (kernel::user_mode_initialize(virtual_memory, framebuffer) &&
         kernel::thread_system_initialize(kernel::user_mode_kernel_stack_top()))
     {
-        _kprintf("Zamanlayici: Round Robin, PIT 100 Hz\n");
+        const uint32_t online_cpus = kernel::smp::initialize(cpu_topology, virtual_memory);
+        _kprintf("SMP: %u islemci etkin | Round Robin, 100 Hz\n", online_cpus);
         _kprintf("Sistem cagrilari: int 0x80 | kullanici yetki seviyesi: 3\n");
         _kprintf("Uygulama girisi: 0x40000000 | ayri surec adres alanlari\n");
         _kprintf("Kullanici heap: 32 MiB/surec | ana yigin: 128 KiB\n");

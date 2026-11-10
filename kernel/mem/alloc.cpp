@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include <mem/alloc.hh>
-#include <library/kernel_panic.hh>
+#include <kernel/core/panic.hh>
+#include <arch/i386/smp.hh>
 
 #define KMALLOC_MINSIZE 16U
 
@@ -36,6 +37,8 @@ namespace mem
 			return reinterpret_cast<void *>(-1);
 
 		MallocHeader *chunk = reinterpret_cast<MallocHeader *>(kernel_heap);
+		// Her sayfada ayrı IPI yerine, yeni blok tamamlandığında tek bildirim gönder.
+		kernel::smp::NewMappingBatch mapping_batch;
 		for (int i = 0; i < n; ++i)
 		{
 			const uint32_t p_addr = vm.acquire_page_frame_4k();

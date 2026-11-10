@@ -28,7 +28,7 @@ qemu-system-i386 -m 2G \
   -drive file=pckfs.img,format=raw,if=ide,index=0,media=disk
 ```
 
-The ISO boots the kernel; `pckfs.img` provides the PCKOS root filesystem. Both are required.
+The ISO boots the kernel; `pckfs.img` provides the PCKOS root filesystem. Both are required. Add, for example, `-smp 4` to the QEMU command to use multiple processors. When building from source, `./run.sh` uses the host's logical processor count, capped at 32. Run `PCKOS_CPUS=4 ./run.sh` to choose a count or `PCKOS_CPUS=1 ./run.sh` for one processor.
 
 ## Run in VirtualBox
 
@@ -59,7 +59,7 @@ PCKOS is currently a minimal system under development. The kernel currently prov
 
 - i386 boot, paging, and separation between kernel and user mode.
 - User applications that access kernel services through system calls.
-- Single-core Round Robin thread scheduling and processes with separate address spaces.
+- ACPI/xAPIC SMP with Round Robin scheduling on up to 32 logical processors, and processes with separate address spaces. Single-processor systems are also supported.
 - A framebuffer desktop with keyboard, mouse, windows, and a taskbar.
 - Shared user interface APIs for `Window`, `Widget`, `Button`, and `ClickListener`; PNG application icons appear on the desktop, Start menu, and taskbar.
 - The PCKFS root filesystem and an IDE ATA PIO disk driver. User applications can currently read files; general file writing is not implemented yet.
@@ -115,7 +115,7 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 2. GRUB reads the Multiboot header in `kernel/arch/i386/boot.asm`. `_start` sets up the first 16 KiB kernel stack and passes the Multiboot info address to `kernel_main()`. `kernel/arch/i386/linker.ld` links the kernel at 1 MiB.
 3. `kernel/kernel.cpp` disables interrupts, initializes the processor tables, and starts paging. After the kernel heap is ready, `_init()` runs global C++ constructors.
 4. The keyboard, mouse, framebuffer, ATA PIO disk, and PCKFS are initialized. `_kprintf` writes boot messages to the kernel console log. The PIT is set to 100 Hz. Once the framebuffer is ready, the boot log is displayed on screen: CPU vendor/model, Multiboot information, GDT/IDT/TSS, CR3, physical page counts, display dimensions, disk/PCKFS status, and RTC date/time. Syscall, user heap/stack, and scheduler information is shown before entering the desktop. Press ESC on the desktop to see the system console with boot messages and subsequent kernel output. `dmesg` also reads the log.
-5. `kernel/user_mode.cpp` prepares user pages, the user stack, and system calls; `kernel/thread.cpp` initializes scheduling. `user_mode_run_desktop()` loads the desktop image at `0x40000000`. `iret` in `kernel/arch/i386/user_mode.asm` enters Ring 3.
+5. `kernel/task/user_mode.cpp` prepares user pages, the user stack, and system calls; `kernel/task/thread.cpp` initializes scheduling. On SMP systems, INIT/SIPI starts additional processors and prepares per-CPU GDT/TSS and scheduler state. `user_mode_run_desktop()` loads the desktop image at `0x40000000`. `iret` in `kernel/arch/i386/user_mode.asm` enters Ring 3.
 6. The desktop starts at `_start` in `kernel/user/apps/desktop.cpp`. Opening Files, Terminal, Tasks, Calculator, or Notepad calls `process_spawn()`. The kernel loads `/apps/*.bin` from PCKFS and creates a PID, address space, and main thread.
 
 ### Loading the desktop and applications
@@ -128,20 +128,29 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | --- | --- |
 | `kernel/arch/i386/` | Multiboot entry, GDT/IDT, interrupts, Ring 3 transition, linker scripts |
 | `kernel/kernel.cpp` | Kernel initialization order |
+| `kernel/core/`, `kernel/include/kernel/core/` | Panic display and kernel error reporting |
+| `kernel/include/kernel/task/`, `kernel/include/kernel/syscalls/` | Kernel task management and syscall interfaces |
+| `kernel/include/arch/i386/smp.hh` | i386 SMP interface |
 | `kernel/mem/` | Paging, physical memory, kernel heap |
-| `kernel/interrupts/`, `kernel/thread.cpp` | IRQ/PIT, Round Robin scheduling, PID/TID tables |
+| `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin scheduling, PID/TID tables |
+| `kernel/arch/i386/smp/` | ACPI CPU discovery, APIC, AP startup, kernel lock, and TLB IPIs |
 | `kernel/device/ata_pio.cpp` | Sector access to the IDE disk |
 | `kernel/device/rtc.cpp` | Date and time from the CMOS RTC |
 | `kernel/fs/pckfs.cpp` | PCKFS mount, path lookup, directory and file reads |
-| `kernel/user_mode.cpp` | User address spaces, program loading, process and user-thread creation |
-| `kernel/syscall.cpp` | `int 0x80` entry checks and call routing |
+| `kernel/task/user_mode.cpp` | User address spaces, program loading, process and user-thread creation |
+| `kernel/syscalls/syscall.cpp` | `int 0x80` entry checks and call routing |
 | `kernel/syscalls/` | Handlers grouped by subsystem, including user-memory validation |
-| `kernel/include/user/syscall.hh` | User-side `int 0x80` entry helper |
+| `kernel/include/user/syscall/call.hh` | User-side `int 0x80` entry helper |
 | `kernel/include/abi/` | Fixed syscall numbers and data structures shared by kernel and user space |
-| `kernel/include/user/` | User APIs for threads, processes, files, graphics, and other subsystems |
-| `kernel/include/user/gui.hh`, `kernel/user/gui/graphics.cpp` | Shared Ring 3 drawing API |
-| `kernel/include/user/lib/window.hh`, `kernel/user/lib/window.cpp` | Application window, title bar, dragging, minimize, and close |
-| `kernel/include/user/lib/widgets.hh`, `kernel/user/lib/widgets.cpp` | Reusable widgets, buttons, and `ClickListener` |
+| `kernel/include/user/fs/` | File and directory API |
+| `kernel/include/user/task/` | Process and thread APIs |
+| `kernel/include/user/gui/` | Graphics calls, drawing, and window dragging helpers |
+| `kernel/include/user/memory/`, `kernel/include/user/io/` | Heap and standard stream APIs |
+| `kernel/include/user/input/`, `kernel/include/user/device/`, `kernel/include/user/system/` | Input events, audio, and system information |
+| `kernel/include/user/lib/` | General memory/string routines, random numbers, and template helpers |
+| `kernel/include/user/gui/drawing.hh`, `kernel/user/gui/graphics.cpp` | Shared Ring 3 drawing API |
+| `kernel/include/user/gui/window.hh`, `kernel/user/gui/window.cpp` | Application window, title bar, dragging, minimize, and close |
+| `kernel/include/user/gui/widgets.hh`, `kernel/user/gui/widgets.cpp` | Reusable widgets, buttons, and `ClickListener` |
 | `kernel/device/video/frame_buffer.cpp` | Framebuffer and window-layer composition |
 | `kernel/user/apps/desktop.cpp` | Desktop, icons, Start menu, taskbar, application launch |
 | `kernel/user/apps/*_process.cpp` | Application `_start` and event loop |
@@ -198,8 +207,8 @@ The file appears at `/home/pck/example.txt` in PCKOS. It is visible in Files and
 Read a file from a user application:
 
 ```cpp
-#include <user/filesystem.hh>
-#include <user/io.hh>
+#include <user/fs/filesystem.hh>
+#include <user/io/stream.hh>
 
 char buffer[128];
 const int32_t fd = user::open("/home/pck/example.txt"); // flags=0, read-only
@@ -220,19 +229,19 @@ The user API is grouped by subsystem under `kernel/include/user/`:
 
 | Header | Purpose |
 | --- | --- |
-| `user/thread.hh` | Thread creation, sleep, and thread information |
-| `user/process.hh` | Process launch, exit, and window focus |
-| `user/filesystem.hh` | File reading and directory listing |
-| `user/io.hh` | Standard streams and terminal connections |
-| `user/input.hh` | Keyboard and mouse events |
-| `user/graphics.hh` | Low-level drawing and window calls |
-| `user/heap.hh` | User memory allocation and release |
-| `user/system.hh` | System information, time, and the kernel log |
-| `user/audio.hh` | PC speaker |
+| `user/task/thread.hh` | Thread creation, sleep, and thread information |
+| `user/task/process.hh` | Process launch, exit, and window focus |
+| `user/fs/filesystem.hh` | File reading and directory listing |
+| `user/io/stream.hh` | Standard streams and terminal connections |
+| `user/input/events.hh` | Keyboard and mouse events |
+| `user/gui/graphics.hh` | Low-level drawing and window calls |
+| `user/memory/heap.hh` | User memory allocation and release |
+| `user/system/info.hh` | System information, time, and the kernel log |
+| `user/device/audio.hh` | PC speaker |
 
-`user/syscall.hh` provides only the `int 0x80` entry helper and access to syscall numbers. Shared data structures such as `ThreadInfo` are defined once under `kernel/include/abi/` and used by the corresponding kernel and user headers.
+`user/syscall/call.hh` provides only the `int 0x80` entry helper and access to syscall numbers. Shared data structures such as `ThreadInfo` are defined once under `kernel/include/abi/` and used by the corresponding kernel and user headers.
 
-Graphics helpers are in `kernel/include/user/gui.hh` and `kernel/user/gui/graphics.cpp`. The shared window and widget API is declared under `kernel/include/user/lib/` and implemented in `kernel/user/lib/window.cpp` and `widgets.cpp`. `Window` handles registration, its frame, title-bar controls, dragging, minimizing, and closing. `Button`, `Label`, and `TextInputWidget` attach to their parent window when constructed. `Window::draw()` draws attached widgets inside the client area, and `Window::handle_mouse()` routes clicks to them. `Button` calls its `ClickListener`; `TextInputWidget` places the text cursor at the clicked position. The Makefile links these library sources into user applications. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/lib/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
+Graphics helpers are in `kernel/include/user/gui/drawing.hh` and `kernel/user/gui/graphics.cpp`. The shared window and widget API is declared under `kernel/include/user/gui/` and implemented in `kernel/user/gui/window.cpp` and `widgets.cpp`. `Window` handles registration, its frame, title-bar controls, dragging, minimizing, and closing. `Button`, `Label`, and `TextInputWidget` attach to their parent window when constructed. `Window::draw()` draws attached widgets inside the client area, and `Window::handle_mouse()` routes clicks to them. `Button` calls its `ClickListener`; `TextInputWidget` places the text cursor at the clicked position. The Makefile links these library sources into user applications. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/memory/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
 
 ### Window and button widgets
 
@@ -241,8 +250,8 @@ Each application creates a `Window` object. The window API handles registration,
 `ClickListener` takes a callback and a context pointer instead of a capturing C++ lambda. The context lets the callback access application state:
 
 ```cpp
-#include <user/lib/widgets.hh>
-#include <user/lib/window.hh>
+#include <user/gui/widgets.hh>
+#include <user/gui/window.hh>
 
 void on_button_click(void *context, uint32_t id)
 {
@@ -278,9 +287,9 @@ Ctrl+C terminates the application launched with `run` and its descendants attach
 
 
 ```cpp
-#include <user/io.hh>
-#include <user/process.hh>
-#include <user/lib/io.hh>
+#include <user/io/stream.hh>
+#include <user/task/process.hh>
+#include <user/io/io.hh>
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 {
@@ -295,7 +304,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Include `<user/lib/io.hh>` to use `print("Value: %d\n", value)` directly. `print` writes to stdout, `eprint` to stderr, and `fprint(fd, format, ...)` chooses either descriptor. These functions are also available in `user::io`. They return the number of bytes written or a negative error. The implementation is `kernel/user/lib/io.cpp`; link `kernel/user/lib/io.user.o` when building an application manually. The project Makefile links it automatically.
+Include `<user/io/io.hh>` to use `print("Value: %d\n", value)` directly. `print` writes to stdout, `eprint` to stderr, and `fprint(fd, format, ...)` chooses either descriptor. These functions are also available in `user::io`. They return the number of bytes written or a negative error. The implementation is `kernel/user/io/io.cpp`; link `kernel/user/io/io.user.o` when building an application manually. The project Makefile links it automatically.
 
 Supported formats: `%s`, `%c`, `%d`, `%i`, `%u`, `%x`, `%X`, `%o`, `%p`, and `%%`; field width, `-`, `0`, `+`, space and `#` flags; precision such as `%.3s` or `%08x`; `*` width/precision; and `h`, `hh`, `l`, `z` integer modifiers. Width and precision are limited to 4096. Floating-point formats, `ll`, and `%n` are not supported; unsupported formats return `-22`. Use `print("%s", text)` for text containing literal percent signs.
 
@@ -307,15 +316,15 @@ Low-level `user::write(fd, buffer, length)` accepts at most 4096 bytes per call.
 
 For terminal frontends, `terminal_attach()` (44) makes the caller a terminal owner; `terminal_read(buffer, length)` (45) drains pending output; `terminal_send(pid, buffer, length)` (46) sends input only to processes attached to that terminal. Zero length signals EOF. Normal applications use `read`/`write` or the `user::io` helpers instead. File redirection (`>`), pipes (`|`), `dup2`, signals, and full job control are not implemented yet.
 
-`user::call()` invokes `int 0x80`. `EAX` contains the syscall number; `EBX/ECX/EDX/ESI/EDI` carry up to five arguments; the result is returned in `EAX`. `kernel/syscall.cpp` routes calls to the appropriate handler under `kernel/syscalls/`, which validates user pointers and lengths. Errors are negative values. Prefer wrapper functions to hard-coded syscall numbers.
+`user::call()` invokes `int 0x80`. `EAX` contains the syscall number; `EBX/ECX/EDX/ESI/EDI` carry up to five arguments; the result is returned in `EAX`. `kernel/syscalls/syscall.cpp` routes calls to the appropriate handler under `kernel/syscalls/`, which validates user pointers and lengths. Errors are negative values. Prefer wrapper functions to hard-coded syscall numbers.
 
 | Area | Main APIs |
 | --- | --- |
 | Files | `open`, `read`, `close`, `root_inode`, `read_directory` |
-| Logging/input | `read`, `write`, `<user/lib/io.hh>`, `terminal_attach`, `terminal_read`, `terminal_send`, `get_kernel_log`, `read_kernel_log`, `wait_event` |
+| Logging/input | `read`, `write`, `<user/io/io.hh>`, `terminal_attach`, `terminal_read`, `terminal_send`, `get_kernel_log`, `read_kernel_log`, `wait_event` |
 | Processes | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Threads | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
-| Memory | `heap_alloc`, `heap_free`, `new`/`delete` via `<user/lib/new.hh>`, `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` via `<user/lib/memory.hh>` |
+| Memory | `heap_alloc`, `heap_free`, `new`/`delete` via `<user/memory/new.hh>`, `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` via `<user/lib/memory.hh>` |
 | System | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
 | Graphics | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
@@ -330,13 +339,13 @@ if (user::wait_event(&event, 10) > 0 &&
     user::exit(0); // ESC
 ```
 
-To add a syscall, add its number to `kernel/include/abi/syscall.hh` and its user wrapper to the appropriate header under `kernel/include/user/`. Add the handler in the relevant `kernel/syscalls/` source file and route the call in `kernel/syscall.cpp`. Validate user-provided addresses with `is_user_range`. Implement kernel functionality in the relevant module under `kernel/`. Document return values and limits here.
+To add a syscall, add its number to `kernel/include/abi/syscall.hh` and its user wrapper to the appropriate header under `kernel/include/user/`. Add the handler in the relevant `kernel/syscalls/` source file and route the call in `kernel/syscalls/syscall.cpp`. Validate user-provided addresses with `is_user_range`. Implement kernel functionality in the relevant module under `kernel/`. Document return values and limits here.
 
 **Memory and basic helpers in user applications**
 
 The `kernel/include/user/lib/memory.hh` header provides `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, and `strncpy`. You can also call these through `user::memory::copy`, `move`, `fill`, `compare`, `length`, and `equal`. Link `kernel/user/lib/memory.user.o` into the application.
 
-The `kernel/include/user/lib/new.hh` header and `kernel/user/lib/new.cpp` provide user-space `new`, `new[]`, `delete`, `delete[]`, placement new, and C++17 aligned allocation. Link `kernel/user/lib/new.user.o` into the application. The existing Makefile links all three runtime objects automatically for built-in apps. The kernel's `kernel/mem/new.cpp` continues to use its own heap.
+The `kernel/include/user/memory/new.hh` header and `kernel/user/memory/new.cpp` provide user-space `new`, `new[]`, `delete`, `delete[]`, placement new, and C++17 aligned allocation. Link `kernel/user/memory/new.user.o` into the application. The existing Makefile links all three runtime objects automatically for built-in apps. The kernel's `kernel/mem/new.cpp` continues to use its own heap.
 
 Example:
 
@@ -350,7 +359,7 @@ const bool matches = user::memory::equal(text, "PCKOS");
 ```
 
 ```cpp
-#include <user/lib/new.hh>
+#include <user/memory/new.hh>
 
 int *value = new int(42);
 delete value;
@@ -364,7 +373,7 @@ if (numbers != nullptr) {
 
 Each process has a heap of up to 32 MiB at `0x41000000–0x43000000`; physical pages are allocated on demand. Threads in the same process share this heap, while different processes have separate page mappings. Up to 1024 allocations can be live at once. Default alignment is 16 bytes; power-of-two alignments up to 1 MiB are accepted. Small allocations share pages; freeing the last allocation on a page releases that physical page. Process exit also reclaims allocations that were not deleted.
 
-`heap_alloc(size, alignment)` (syscall 42) returns raw memory or `nullptr` on failure; `heap_free(address)` (syscall 43) releases it. Allocation records are stored in the kernel; only a valid allocation start in the calling process can be freed. Operations complete inside the syscall with interrupts disabled on the current single-core system. If normal `new` cannot allocate memory, it logs an error and terminates the calling process with status `-12`, since exceptions are disabled. Use `new (std::nothrow)` to handle failure in the application. `get_heap_usage()` still reports kernel heap usage.
+`heap_alloc(size, alignment)` (syscall 42) returns raw memory or `nullptr` on failure; `heap_free(address)` (syscall 43) releases it. Allocation records are stored in the kernel; only a valid allocation start in the calling process can be freed. A shared kernel lock protects allocation records. Page mapping changes send TLB invalidation IPIs to the other processors. If normal `new` cannot allocate memory, it logs an error and terminates the calling process with status `-12`, since exceptions are disabled. Use `new (std::nothrow)` to handle failure in the application. `get_heap_usage()` still reports kernel heap usage.
 
 
 ## 6. Creating a process
@@ -385,10 +394,10 @@ List processes with `process_count()` and `process_get_info()`. `process_focus(p
 
 ## 7. Creating a thread
 
-A **thread** shares its process PID and address space, but gets its own TID, user stack, and kernel interrupt stack. PCKOS is single-core: a 100 Hz PIT and Round Robin scheduler switch between threads. Only one thread executes physically at a time; threads take turns on the CPU.
+A **thread** shares its process PID and address space, but gets its own TID, user stack, and kernel interrupt stack. The Round Robin scheduler distributes ready user threads across online processors; threads in the same process can execute in parallel on different processors. The BSP uses the PIT for the 100 Hz system clock, while additional processors use local APIC timers at approximately 100 Hz. With one processor, threads take turns.
 
 ```cpp
-#include <user/thread.hh>
+#include <user/task/thread.hh>
 
 void worker(void *argument)
 {
@@ -409,17 +418,23 @@ if (tid < 0) {
 
 `thread_create` returns a TID on success. The kernel allocates a thread slot and user stack, then places the entry point and argument on the stack. `thread_start_trampoline` calls `thread_exit` when the function returns. A working example is `TaskManager::thread_entry` in `kernel/user/apps/task_manager_process.cpp`, where a worker gathers information while the main thread draws the window. See `SpinLock`/`LockGuard` in `kernel/include/user/apps/app_thread.hh` for shared data. Generic `join`, mutex, and semaphore APIs are not available yet. Other threads are cleaned up when the main thread/process exits.
 
+SMP sources are under `kernel/arch/i386/smp/`: `topology.cpp` reads the ACPI MADT, `trampoline.asm` brings an additional processor from real mode into protected mode and enables paging, and `smp.cpp` manages APIC, INIT/SIPI, TLB notifications, and the kernel lock. Each processor has its own GDT, TSS, kernel stack, and current-thread record. The bootstrap desktop main thread stays on the BSP; other user threads can migrate between processors.
+
+This initial SMP implementation serializes kernel services with a shared lock. User code runs in parallel; drawing frames are serialized between `begin_frame` and `end_frame` to protect shared graphics state. Other processors briefly pause during process memory teardown, and terminated threads are no longer scheduled. Use `SpinLock`/`LockGuard` or atomic operations for shared user data; `volatile` alone does not provide synchronization.
+
+Limits: 32 logical processors, 64 threads including idle threads, and 8 processes. Startup currently uses ACPI RSDT/MADT and xAPIC; x2APIC is not supported. If an additional processor fails to start, the system continues with the online processors. Without SMP information, it uses the single-processor path. Task Manager reports online logical processors and calculates CPU percentages against total processor capacity.
+
 ## 8. Writing, building, and launching an application
 
 Example file: `kernel/user/apps/newapp_process.cpp`. The entry point for a flat binary loaded by PCKOS must be `_start`:
 
 ```cpp
-#include <user/graphics.hh>
-#include <user/input.hh>
-#include <user/process.hh>
-#include <user/thread.hh>
-#include <user/gui.hh>
-#include <user/lib/window.hh>
+#include <user/gui/graphics.hh>
+#include <user/input/events.hh>
+#include <user/task/process.hh>
+#include <user/task/thread.hh>
+#include <user/gui/drawing.hh>
+#include <user/gui/window.hh>
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
@@ -502,7 +517,7 @@ This example builds the app manually. The existing Makefile builds only the appl
 ./build.sh
 ```
 
-This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, `kernel/user/lib/window.user.o`, `kernel/user/lib/widgets.user.o`, `kernel/user/lib/new.user.o`, `kernel/user/lib/memory.user.o`, and `kernel/user/lib/io.user.o`, which our example links. It does not yet compile our new `newapp_process.cpp`; we will do that in the next step.
+This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, `kernel/user/gui/window.user.o`, `kernel/user/gui/widgets.user.o`, `kernel/user/memory/new.user.o`, `kernel/user/lib/memory.user.o`, and `kernel/user/io/io.user.o`, which our example links. It does not yet compile our new `newapp_process.cpp`; we will do that in the next step.
 
 **2. Compile the application's C++ source.**
 
@@ -522,8 +537,8 @@ The input is your `newapp_process.cpp` file. The `-c` option compiles it into th
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/newapp_process.elf \
-  kernel/user/lib/new.user.o kernel/user/lib/memory.user.o kernel/user/lib/io.user.o \
-  kernel/user/lib/window.user.o kernel/user/lib/widgets.user.o \
+  kernel/user/memory/new.user.o kernel/user/lib/memory.user.o kernel/user/io/io.user.o \
+  kernel/user/gui/window.user.o kernel/user/gui/widgets.user.o \
   kernel/user/gui/graphics.user.o kernel/user/apps/newapp_process.user.o
 ```
 

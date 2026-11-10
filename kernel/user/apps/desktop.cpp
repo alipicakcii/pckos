@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
-#include <user/filesystem.hh>
-#include <user/graphics.hh>
-#include <user/input.hh>
-#include <user/io.hh>
-#include <user/process.hh>
-#include <user/system.hh>
-#include <user/thread.hh>
+#include <user/fs/filesystem.hh>
+#include <user/gui/graphics.hh>
+#include <user/input/events.hh>
+#include <user/io/stream.hh>
+#include <user/task/process.hh>
+#include <user/system/info.hh>
+#include <user/task/thread.hh>
 #include <user/apps/file_manager.hh>
 #include <user/apps/task_manager.hh>
 #include <user/apps/terminal.hh>
-#include <user/gui.hh>
-#include <user/lib/image.hh>
-#include <user/lib/widgets.hh>
+#include <user/gui/drawing.hh>
+#include <user/gui/image.hh>
+#include <user/gui/widgets.hh>
 
 namespace
 {
@@ -847,7 +847,7 @@ namespace
                 info.cpu_brand[0] != '\0' ? info.cpu_brand : info.cpu_vendor);
             user::gui::text(x + 20, y + 72, cpu, user::gui::COLOR_TEXT);
             user::gui::text(x + 20, y + 96,
-                            "Mimari: i386, 32-bit | Tek cekirdek",
+                            "Mimari: i386, 32-bit | SMP destegi",
                             user::gui::COLOR_TEXT);
 
             char memory[96] = "Bellek: ";
@@ -875,7 +875,7 @@ namespace
                 "Programlar: her uygulama ayri process ve ana thread olarak calisir",
                 user::gui::COLOR_TEXT);
             user::gui::text(x + 20, y + 216,
-                "Thread sistemi: tek cekirdekte Round Robin, PIT 100 Hz",
+                "Thread sistemi: SMP Round Robin | PIT / yerel APIC, 100 Hz",
                 user::gui::COLOR_TEXT);
             user::gui::text(x + 20, y + 240,
                 "Dosya sistemi: PCKFS v1, IDE ATA PIO, salt okunur",

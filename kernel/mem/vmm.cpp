@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include <mem/vmm.hh>
+#include <arch/i386/smp.hh>
 #include <interrupts/isr.hh>
 #include <interrupts/interrupts.hh>
 #include <library/mem.hh>
 #include <mem/alloc.hh>
 #include <cpu/get_cpu.hh>
-#include <library/kernel_panic.hh>
+#include <kernel/core/panic.hh>
 
 namespace mem
 {
@@ -362,6 +363,7 @@ namespace mem
 				}
 			}
 		}
+		kernel::smp::invalidate_remote_tlb();
 	}
 
 	uint32_t Vmm::get_total_page_count()

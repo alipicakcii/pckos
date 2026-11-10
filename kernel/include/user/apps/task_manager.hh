@@ -3,9 +3,9 @@
 #ifndef PCKOS_USER_TASK_MANAGER_HH
 #define PCKOS_USER_TASK_MANAGER_HH
 
-#include <user/process.hh>
-#include <user/system.hh>
-#include <user/thread.hh>
+#include <user/task/process.hh>
+#include <user/system/info.hh>
+#include <user/task/thread.hh>
 #include <stdint.h>
 #include <user/apps/app_thread.hh>
 
@@ -39,10 +39,10 @@ namespace user::apps
         ProcessRow processes_[8];
         uint32_t process_count_;
         uint32_t previous_process_ticks_[8];
-        Row rows_[16];
+        Row rows_[abi::MAX_THREADS];
         uint32_t row_count_;
         uint32_t previous_ticks_;
-        uint32_t previous_cpu_ticks_[16];
+        uint32_t previous_cpu_ticks_[abi::MAX_THREADS];
         volatile uint32_t dirty_;
     };
 }

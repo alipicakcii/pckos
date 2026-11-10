@@ -30,11 +30,11 @@ USER_APP_CFLAGS=-MMD -MP -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-
 	-fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
 	-msoft-float -Iinclude
-USER_RUNTIME_OBJECTS=user/lib/new.user.o user/lib/memory.user.o user/lib/io.user.o \
-	user/lib/window.user.o user/lib/widgets.user.o user/lib/rnd.user.o
+USER_RUNTIME_OBJECTS=user/memory/new.user.o user/lib/memory.user.o user/io/io.user.o \
+	user/gui/window.user.o user/gui/widgets.user.o user/lib/rnd.user.o
 USER_APP_OBJECTS=\
 $(USER_RUNTIME_OBJECTS) \
-user/lib/image.user.o \
+user/gui/image.user.o \
 user/gui/graphics.user.o \
 user/apps/file_manager.user.o \
 user/apps/terminal.user.o user/apps/terminal_commands.user.o \
@@ -76,9 +76,9 @@ library/cppabi.o \
 library/rnd.o \
 library/kernel_log.o \
 library/pck_rtti.o \
-user_mode.o \
-thread.o \
-syscall.o \
+task/user_mode.o \
+task/thread.o \
+syscalls/syscall.o \
 syscalls/common.o \
 syscalls/io.o \
 syscalls/filesystem.o \
@@ -100,7 +100,7 @@ device/rtc.o \
 device/video/frame_buffer.o \
 device/pc_speaker.o \
 fs/pckfs.o \
-panic.o \
+core/panic.o \
 mem/vmm.o \
 mem/addr.o \
 mem/alloc.o \
@@ -145,46 +145,43 @@ $(ARCHDIR)/crtbegin.o $(ARCHDIR)/crtend.o:
 device/video/frame_buffer.o: device/video/frame_buffer.cpp
 	$(CC) -MD -O2 -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
-syscall.o: syscall.cpp
-	$(CC) -MD -O2 -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
-
 syscalls/%.o: syscalls/%.cpp
 	$(CC) -MD -O2 -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 .asm.o:
 	nasm -felf32 $< -o $@
 
-user/lib/new.user.o: user/lib/new.cpp include/user/lib/new.hh include/user/syscall.hh
+user/memory/new.user.o: user/memory/new.cpp include/user/memory/new.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/lib/window.user.o: user/lib/window.cpp include/user/lib/window.hh include/user/graphics.hh include/user/gui.hh include/user/process.hh
+user/gui/window.user.o: user/gui/window.cpp include/user/gui/window.hh include/user/gui/graphics.hh include/user/gui/drawing.hh include/user/task/process.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/lib/widgets.user.o: user/lib/widgets.cpp include/user/lib/widgets.hh include/user/lib/window.hh include/user/gui.hh
+user/gui/widgets.user.o: user/gui/widgets.cpp include/user/gui/widgets.hh include/user/gui/window.hh include/user/gui/drawing.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/lib/rnd.user.o: user/lib/rnd.cpp include/user/lib/rnd.hh include/user/lib/lock.hh include/user/syscall.hh
+user/lib/rnd.user.o: user/lib/rnd.cpp include/user/lib/rnd.hh include/user/task/lock.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/lib/memory.user.o: user/lib/memory.cpp include/user/lib/memory.hh
 	$(CC) $(USER_APP_CFLAGS) -O2 -c $< -o $@
 
-user/gui/graphics.user.o: user/gui/graphics.cpp include/user/gui.hh include/user/syscall.hh
+user/gui/graphics.user.o: user/gui/graphics.cpp include/user/gui/drawing.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/file_manager.user.o: user/apps/file_manager.cpp include/user/apps/file_manager.hh include/user/apps/app_thread.hh include/user/gui.hh include/user/lib/image.hh include/user/syscall.hh
+user/apps/file_manager.user.o: user/apps/file_manager.cpp include/user/apps/file_manager.hh include/user/apps/app_thread.hh include/user/gui/drawing.hh include/user/gui/image.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/terminal.user.o: user/apps/terminal.cpp include/user/apps/terminal.hh include/user/apps/app_thread.hh include/user/gui.hh include/user/syscall.hh
+user/apps/terminal.user.o: user/apps/terminal.cpp include/user/apps/terminal.hh include/user/apps/app_thread.hh include/user/gui/drawing.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/terminal_commands.user.o: user/apps/terminal_commands.cpp include/user/apps/terminal.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/task_manager.user.o: user/apps/task_manager.cpp include/user/apps/task_manager.hh include/user/apps/app_thread.hh include/user/gui.hh include/user/syscall.hh
+user/apps/task_manager.user.o: user/apps/task_manager.cpp include/user/apps/task_manager.hh include/user/apps/app_thread.hh include/user/gui/drawing.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/desktop.user.o: user/apps/desktop.cpp include/user/apps/file_manager.hh include/user/apps/terminal.hh include/user/apps/task_manager.hh include/user/gui.hh include/user/lib/image.hh include/user/lib/widgets.hh include/user/syscall.hh
+user/apps/desktop.user.o: user/apps/desktop.cpp include/user/apps/file_manager.hh include/user/apps/terminal.hh include/user/apps/task_manager.hh include/user/gui/drawing.hh include/user/gui/image.hh include/user/gui/widgets.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/desktop.elf: $(USER_APP_OBJECTS) user/apps/linker.ld
@@ -193,38 +190,38 @@ user/apps/desktop.elf: $(USER_APP_OBJECTS) user/apps/linker.ld
 user/apps/desktop.bin: user/apps/desktop.elf
 	$(OBJCOPY) -O binary $< $@
 
-user/apps/terminal_process.user.o: user/apps/terminal_process.cpp include/user/apps/terminal.hh include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/terminal_process.user.o: user/apps/terminal_process.cpp include/user/apps/terminal.hh include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/file_manager_process.user.o: user/apps/file_manager_process.cpp include/user/apps/file_manager.hh include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/file_manager_process.user.o: user/apps/file_manager_process.cpp include/user/apps/file_manager.hh include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/task_manager_process.user.o: user/apps/task_manager_process.cpp include/user/apps/task_manager.hh include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/task_manager_process.user.o: user/apps/task_manager_process.cpp include/user/apps/task_manager.hh include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/calculator_process.user.o: user/apps/calculator_process.cpp include/user/gui.hh include/user/lib/widgets.hh include/user/lib/window.hh include/user/syscall.hh
+user/apps/calculator_process.user.o: user/apps/calculator_process.cpp include/user/gui/drawing.hh include/user/gui/widgets.hh include/user/gui/window.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/notepad_process.user.o: user/apps/notepad_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/notepad_process.user.o: user/apps/notepad_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/system_info_process.user.o: user/apps/system_info_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/system_info_process.user.o: user/apps/system_info_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/clock_process.user.o: user/apps/clock_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/clock_process.user.o: user/apps/clock_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/unit_converter_process.user.o: user/apps/unit_converter_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/unit_converter_process.user.o: user/apps/unit_converter_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/apps/memory_hunter_process.user.o: user/apps/memory_hunter_process.cpp include/user/gui.hh include/user/syscall.hh include/user/window_drag.hh
+user/apps/memory_hunter_process.user.o: user/apps/memory_hunter_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/terminal_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_commands.user.o user/apps/terminal_process.user.o user/apps/linker.ld
 	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_commands.user.o user/apps/terminal_process.user.o
 
-user/apps/file_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/lib/image.user.o user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/lib/image.user.o user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o
+user/apps/file_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/image.user.o user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o user/apps/linker.ld
+	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/image.user.o user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o
 
 user/apps/task_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o user/apps/linker.ld
 	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o
@@ -277,7 +274,7 @@ user/apps/memory_hunter_process.bin: user/apps/memory_hunter_process.elf
 arch/i386/user_desktop.o: arch/i386/user_desktop.asm user/apps/desktop.bin
 	nasm -felf32 $< -o $@
 
-user/apps/demo_process.user.o: user/apps/demo_process.cpp include/user/graphics.hh include/user/input.hh include/user/process.hh include/user/thread.hh include/user/gui.hh include/user/lib/window.hh
+user/apps/demo_process.user.o: user/apps/demo_process.cpp include/user/gui/graphics.hh include/user/input/events.hh include/user/task/process.hh include/user/task/thread.hh include/user/gui/drawing.hh include/user/gui/window.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/demo_process.elf: $(USER_RUNTIME_OBJECTS) user/apps/demo_process.user.o user/apps/linker.ld
@@ -286,7 +283,7 @@ user/apps/demo_process.elf: $(USER_RUNTIME_OBJECTS) user/apps/demo_process.user.
 user/apps/demo_process.bin: user/apps/demo_process.elf
 	$(OBJCOPY) -O binary $< $@
 
-user/apps/hello_word.user.o: user/apps/hello_word.cpp include/user/lib/io.hh include/user/syscall.hh
+user/apps/hello_word.user.o: user/apps/hello_word.cpp include/user/io/io.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/apps/hello_word.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/hello_word.user.o user/apps/linker.ld
@@ -317,8 +314,8 @@ install-kernel: pckos.bin
 
 -include $(OBJS:.o=.d) $(USER_APP_OBJECTS:.o=.d) $(USER_PROCESS_OBJECTS:.o=.d)
 
-user/lib/io.user.o: user/lib/io.cpp include/user/lib/io.hh include/user/syscall.hh
+user/io/io.user.o: user/io/io.cpp include/user/io/io.hh include/user/syscall/call.hh
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
-user/lib/image.user.o: user/lib/image.cpp include/user/lib/image.hh include/user/lib/new.hh include/user/lib/memory.hh include/user/syscall.hh user/lib/stb_image.h
+user/gui/image.user.o: user/gui/image.cpp include/user/gui/image.hh include/user/memory/new.hh include/user/lib/memory.hh include/user/syscall/call.hh user/lib/stb_image.h
 	$(CC) $(USER_APP_CFLAGS) -O2 -c $< -o $@

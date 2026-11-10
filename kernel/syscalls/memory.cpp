@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include "internal.hh"
-#include <kernel/user_mode.hh>
+#include <kernel/task/user_mode.hh>
 #include <mem/alloc.hh>
 
 namespace kernel::syscalls

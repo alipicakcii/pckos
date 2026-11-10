@@ -4,8 +4,9 @@
 #include <library/kprint.hh>
 #include <cpu/io.hh>
 #include <interrupts/interrupts.hh>
-#include <kernel/thread.hh>
-#include <library/kernel_panic.hh>
+#include <kernel/task/thread.hh>
+#include <arch/i386/smp.hh>
+#include <kernel/core/panic.hh>
 
 using namespace cpu;
 namespace kernel
@@ -49,6 +50,30 @@ namespace kernel
 
 
 		const uint8_t int_no = regs->interruptNumber & 0xFF;
+        if (int_no == smp::TLB_VECTOR)
+        {
+            if (smp::kernel_owned()) smp::kernel_enter();
+            smp::handle_tlb_interrupt();
+            return regs;
+        }
+        if (int_no == smp::PARK_VECTOR)
+            return smp::handle_park_interrupt(regs);
+        if (int_no == smp::SPURIOUS_VECTOR)
+        {
+            if (smp::kernel_owned()) smp::kernel_enter();
+            return regs;
+        }
+        if (int_no == smp::TIMER_VECTOR) smp::end_interrupt();
+        if (int_no == smp::TIMER_VECTOR && (regs->cs & 3U) == 0 &&
+            !smp::kernel_owned() && (!thread_current_is_idle() || smp::kernel_waiting()))
+        {
+            return regs;
+        }
+        smp::kernel_enter();
+        if (int_no == smp::TIMER_VECTOR)
+        {
+            return thread_schedule(regs, true);
+        }
 		if ((regs->cs & 3U) == 3U && int_no < 32)
 		{
 			user_mode_handle_exception(regs);
@@ -84,11 +109,16 @@ namespace kernel
         }
         outb(0x20, 0x20);
 
+        smp::end_interrupt();
         if (regs->interruptNumber == IRQ0)
         {
             ++g_timer_ticks;
+            if ((regs->cs & 3U) == 0 && !smp::kernel_owned() &&
+                (!thread_current_is_idle() || smp::kernel_waiting())) return regs;
+            smp::kernel_enter();
             return thread_schedule(regs, true);
         }
+        smp::kernel_enter();
 
         if (g_interrupt_handlers[regs->interruptNumber] != 0)
         {

@@ -28,7 +28,7 @@ qemu-system-i386 -m 2G \
   -drive file=pckfs.img,format=raw,if=ide,index=0,media=disk
 ```
 
-ISO çekirdeği başlatır; `pckfs.img` PCKOS kök dosya sistemidir. İkisi de gereklidir.
+ISO çekirdeği başlatır; `pckfs.img` PCKOS kök dosya sistemidir. İkisi de gereklidir. Çok işlemcili çalıştırmak için QEMU komutuna örneğin `-smp 4` ekleyin. Kaynak koddan çalıştıran `./run.sh`, ana makinedeki mantıksal işlemci sayısını en çok 32 olacak şekilde kullanır. Sayıyı değiştirmek için `PCKOS_CPUS=4 ./run.sh`, tek işlemci için `PCKOS_CPUS=1 ./run.sh` çalıştırın.
 
 ## VirtualBox'ta çalıştırma
 
@@ -61,7 +61,7 @@ PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çek
 
 - i386 üzerinde açılma, bellek sayfalama ve çekirdek/kullanıcı modu ayrımı.
 - Sistem çağrıları üzerinden çekirdek hizmetlerine erişen kullanıcı uygulamaları.
-- Tek çekirdekte çalışan, Round Robin zamanlamalı thread'ler ve ayrı adres alanları olan process'ler.
+- ACPI/xAPIC tabanlı SMP: en çok 32 mantıksal işlemcide Round Robin zamanlama; ayrı adres alanları olan process'ler. Tek işlemcili sistemler de desteklenir.
 - Framebuffer tabanlı masaüstü; klavye, fare, pencereler ve görev çubuğu.
 - Ortak `Window`, `Widget`, `Button` ve `ClickListener` kullanıcı arayüzü API'si; uygulama simgeleri masaüstü, Başlat menüsü ve görev çubuğunda PNG olarak gösterilir.
 - PCKFS kök dosya sistemi ve IDE ATA PIO disk sürücüsü. Kullanıcı uygulamaları şu an dosyaları okuyabilir; genel dosya yazma desteği henüz yoktur.
@@ -118,7 +118,7 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 2. `kernel/arch/i386/boot.asm` içindeki Multiboot başlığı GRUB tarafından okunur. `_start` ilk 16 KiB çekirdek yığınını kurar, Multiboot bilgi adresini `kernel_main()` fonksiyonuna verir. `kernel/arch/i386/linker.ld` çekirdeği 1 MiB adresine bağlar.
 3. `kernel/kernel.cpp` kesmeleri kapatır; işlemci tablolarını kurar, sayfalamayı başlatır. `_init()`, çekirdek heap'i hazır olduktan sonra global C++ kurucularını çalıştırır.
 4. Klavye, fare, framebuffer, ATA PIO disk ve PCKFS başlatılır. `_kprintf` ile açılış bilgileri çekirdek konsol günlüğüne yazılır. PIT 100 Hz ayarlanır. Framebuffer hazır olduğunda açılış günlüğü ekranda gösterilir; CPU üreticisi/modeli, Multiboot bilgileri, GDT/IDT/TSS, CR3, fiziksel sayfa sayıları, görüntü boyutları, disk/PCKFS durumu ve RTC tarihi yazılır. Masaüstüne geçmeden önce syscall, kullanıcı heap/yığın ve zamanlayıcı bilgileri gösterilir. Masaüstünde ESC tuşuna bastığınızda açılış mesajları ve sonraki çekirdek çıktıları sistem konsolunda görünür. Günlüğü `dmesg` ile de okuyabilirsiniz.
-5. `kernel/user_mode.cpp` kullanıcı sayfalarını, kullanıcı yığınını ve sistem çağrılarını hazırlar; `kernel/thread.cpp` zamanlayıcıyı kurar. `user_mode_run_desktop()` masaüstü imajını `0x40000000` adresine yükler. `kernel/arch/i386/user_mode.asm` içindeki `iret` Ring 3'e geçer.
+5. `kernel/task/user_mode.cpp` kullanıcı sayfalarını, kullanıcı yığınını ve sistem çağrılarını hazırlar; `kernel/task/thread.cpp` zamanlayıcıyı kurar. SMP'li sistemde ek işlemciler INIT/SIPI ile başlatılır; işlemci başına GDT/TSS ve zamanlayıcı durumu hazırlanır. `user_mode_run_desktop()` masaüstü imajını `0x40000000` adresine yükler. `kernel/arch/i386/user_mode.asm` içindeki `iret` Ring 3'e geçer.
 6. Masaüstü `kernel/user/apps/desktop.cpp` içindeki `_start` ile çalışır. Dosyalar, Terminal, Görevler, Hesap Makinesi veya Not Defteri açıldığında `process_spawn()` çağrılır; çekirdek `/apps/*.bin` imajını PCKFS'ten yükler, yeni PID, adres alanı ve ana thread oluşturur.
 
 ### Masaüstü ve uygulamaların yüklenmesi
@@ -131,20 +131,29 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | --- | --- |
 | `kernel/arch/i386/` | Multiboot girişi, GDT/IDT, kesme ve Ring 3 geçişi, bağlantı betikleri |
 | `kernel/kernel.cpp` | Çekirdek başlatma sırası |
+| `kernel/core/`, `kernel/include/kernel/core/` | Panic ekranı ve çekirdek hata bildirimi |
+| `kernel/include/kernel/task/`, `kernel/include/kernel/syscalls/` | Çekirdek görev yönetimi ve syscall arayüzleri |
+| `kernel/include/arch/i386/smp.hh` | i386 SMP arayüzü |
 | `kernel/mem/` | Sayfalama, fiziksel bellek, çekirdek heap'i |
-| `kernel/interrupts/`, `kernel/thread.cpp` | IRQ/PIT, Round Robin zamanlama, PID/TID tabloları |
+| `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin zamanlama, PID/TID tabloları |
+| `kernel/arch/i386/smp/` | ACPI işlemci keşfi, APIC, ek işlemci başlatma, çekirdek kilidi ve TLB IPI'leri |
 | `kernel/device/ata_pio.cpp` | IDE diskten sektör okuma/yazma |
 | `kernel/device/rtc.cpp` | CMOS RTC'den gerçek tarih ve saati okuma |
 | `kernel/fs/pckfs.cpp` | PCKFS bağlama, yol çözme, dizin ve dosya okuma |
-| `kernel/user_mode.cpp` | Kullanıcı adres alanları, program yükleme, process ve kullanıcı thread'i oluşturma |
-| `kernel/syscall.cpp` | `int 0x80` giriş kontrolü ve çağrı yönlendirmesi |
+| `kernel/task/user_mode.cpp` | Kullanıcı adres alanları, program yükleme, process ve kullanıcı thread'i oluşturma |
+| `kernel/syscalls/syscall.cpp` | `int 0x80` giriş kontrolü ve çağrı yönlendirmesi |
 | `kernel/syscalls/` | Konuya göre ayrılmış syscall işleyicileri ve kullanıcı belleği doğrulaması |
-| `kernel/include/user/syscall.hh` | Kullanıcı alanındaki `int 0x80` geçiş kodu |
+| `kernel/include/user/syscall/call.hh` | Kullanıcı alanındaki `int 0x80` geçiş kodu |
 | `kernel/include/abi/` | Sabit syscall numaraları ve çekirdek/kullanıcı alanının ortak veri yapıları |
-| `kernel/include/user/` | Thread, süreç, dosya, grafik ve diğer kullanıcı API başlıkları |
-| `kernel/include/user/gui.hh`, `kernel/user/gui/graphics.cpp` | Ring 3 ortak çizim API'si |
-| `kernel/include/user/lib/window.hh`, `kernel/user/lib/window.cpp` | Uygulama penceresi, başlık çubuğu, sürükleme, küçültme ve kapatma |
-| `kernel/include/user/lib/widgets.hh`, `kernel/user/lib/widgets.cpp` | Yeniden kullanılabilir widget, buton ve `ClickListener` |
+| `kernel/include/user/fs/` | Dosya ve dizin API'si |
+| `kernel/include/user/task/` | Process ve thread API'leri |
+| `kernel/include/user/gui/` | Grafik çağrıları, çizim ve pencere sürükleme yardımcıları |
+| `kernel/include/user/memory/`, `kernel/include/user/io/` | Heap ve standart akış API'leri |
+| `kernel/include/user/input/`, `kernel/include/user/device/`, `kernel/include/user/system/` | Giriş olayları, ses ve sistem bilgileri |
+| `kernel/include/user/lib/` | Genel bellek/metin işlevleri, rastgele sayı ve şablon yardımcıları |
+| `kernel/include/user/gui/drawing.hh`, `kernel/user/gui/graphics.cpp` | Ring 3 ortak çizim API'si |
+| `kernel/include/user/gui/window.hh`, `kernel/user/gui/window.cpp` | Uygulama penceresi, başlık çubuğu, sürükleme, küçültme ve kapatma |
+| `kernel/include/user/gui/widgets.hh`, `kernel/user/gui/widgets.cpp` | Yeniden kullanılabilir widget, buton ve `ClickListener` |
 | `kernel/device/video/frame_buffer.cpp` | Ekran belleği ve pencerelerin katmanlarla birleştirilmesi |
 | `kernel/user/apps/desktop.cpp` | Masaüstü, simgeler, Başlat, görev çubuğu ve uygulama başlatma |
 | `kernel/user/apps/*_process.cpp` | Her uygulamanın `_start` ve olay döngüsü |
@@ -201,8 +210,8 @@ Dosya PCKOS'ta `/home/pck/ornek.txt` olur. Dosyalar uygulamasında görünür; T
 Kullanıcı programında okuma örneği:
 
 ```cpp
-#include <user/filesystem.hh>
-#include <user/io.hh>
+#include <user/fs/filesystem.hh>
+#include <user/io/stream.hh>
 
 char buffer[128];
 const int32_t fd = user::open("/home/pck/ornek.txt"); // flags=0, okuma
@@ -223,19 +232,19 @@ Kullanıcı API'si `kernel/include/user/` altında konuya göre ayrılmıştır:
 
 | Başlık | İşlev |
 | --- | --- |
-| `user/thread.hh` | Thread oluşturma, bekleme ve thread bilgileri |
-| `user/process.hh` | Süreç başlatma, sonlandırma ve pencere odağı |
-| `user/filesystem.hh` | Dosya okuma ve dizin listeleme |
-| `user/io.hh` | Standart akışlar ve terminal bağlantısı |
-| `user/input.hh` | Klavye ve fare olayları |
-| `user/graphics.hh` | Alt düzey çizim ve pencere çağrıları |
-| `user/heap.hh` | Kullanıcı belleği ayırma ve serbest bırakma |
-| `user/system.hh` | Sistem bilgileri, saat ve çekirdek günlüğü |
-| `user/audio.hh` | PC speaker |
+| `user/task/thread.hh` | Thread oluşturma, bekleme ve thread bilgileri |
+| `user/task/process.hh` | Süreç başlatma, sonlandırma ve pencere odağı |
+| `user/fs/filesystem.hh` | Dosya okuma ve dizin listeleme |
+| `user/io/stream.hh` | Standart akışlar ve terminal bağlantısı |
+| `user/input/events.hh` | Klavye ve fare olayları |
+| `user/gui/graphics.hh` | Alt düzey çizim ve pencere çağrıları |
+| `user/memory/heap.hh` | Kullanıcı belleği ayırma ve serbest bırakma |
+| `user/system/info.hh` | Sistem bilgileri, saat ve çekirdek günlüğü |
+| `user/device/audio.hh` | PC speaker |
 
-`user/syscall.hh` yalnızca `int 0x80` geçiş kodunu ve çağrı numaralarına erişimi sağlar. `ThreadInfo` gibi ortak veri yapıları `kernel/include/abi/` altında tek kez tanımlanır; ilgili çekirdek ve kullanıcı başlıkları bu tanımı kullanır.
+`user/syscall/call.hh` yalnızca `int 0x80` geçiş kodunu ve çağrı numaralarına erişimi sağlar. `ThreadInfo` gibi ortak veri yapıları `kernel/include/abi/` altında tek kez tanımlanır; ilgili çekirdek ve kullanıcı başlıkları bu tanımı kullanır.
 
-Grafik yardımcıları `kernel/include/user/gui.hh` ve `kernel/user/gui/graphics.cpp` içindedir. Ortak pencere ve widget API'si `kernel/include/user/lib/` altında, uygulamaları ise `kernel/user/lib/window.cpp` ve `widgets.cpp` içindedir. `Window` pencere kaydını, çerçeveyi, başlık çubuğu düğmelerini, sürüklemeyi, küçültmeyi ve kapatmayı yönetir. `Button`, `Label` ve `TextInputWidget` oluşturulduklarında ebeveyn pencereye eklenir. `Window::draw()` pencere içeriği alanındaki widget'ları çizer; `Window::handle_mouse()` tıklamaları widget'lara yollar. `Button` tıklamaları `ClickListener` callback'ini çağırır; `TextInputWidget` tıklanan konumda yazı imlecini ayarlar. Makefile bu kütüphane kaynaklarını kullanıcı uygulamalarına bağlar. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/lib/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
+Grafik yardımcıları `kernel/include/user/gui/drawing.hh` ve `kernel/user/gui/graphics.cpp` içindedir. Ortak pencere ve widget API'si `kernel/include/user/gui/` altında, uygulamaları ise `kernel/user/gui/window.cpp` ve `widgets.cpp` içindedir. `Window` pencere kaydını, çerçeveyi, başlık çubuğu düğmelerini, sürüklemeyi, küçültmeyi ve kapatmayı yönetir. `Button`, `Label` ve `TextInputWidget` oluşturulduklarında ebeveyn pencereye eklenir. `Window::draw()` pencere içeriği alanındaki widget'ları çizer; `Window::handle_mouse()` tıklamaları widget'lara yollar. `Button` tıklamaları `ClickListener` callback'ini çağırır; `TextInputWidget` tıklanan konumda yazı imlecini ayarlar. Makefile bu kütüphane kaynaklarını kullanıcı uygulamalarına bağlar. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/memory/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
 
 ### Pencere ve buton widget'ı
 
@@ -244,8 +253,8 @@ Her uygulama kendi `Window` nesnesini oluşturur. Pencere API'si kaydetme, başl
 `ClickListener`, yakalamasız C++ lambda yerine callback ve bağlam işaretçisi alır. Böylece uygulama durumunu callback'e iletebilirsiniz:
 
 ```cpp
-#include <user/lib/widgets.hh>
-#include <user/lib/window.hh>
+#include <user/gui/widgets.hh>
+#include <user/gui/window.hh>
 
 void on_button_click(void *context, uint32_t id)
 {
@@ -281,9 +290,9 @@ Ctrl+C, `run` ile başlatılan uygulamayı ve aynı terminale bağlı alt süre�
 
 
 ```cpp
-#include <user/io.hh>
-#include <user/process.hh>
-#include <user/lib/io.hh>
+#include <user/io/stream.hh>
+#include <user/task/process.hh>
+#include <user/io/io.hh>
 
 extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 {
@@ -298,7 +307,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-`<user/lib/io.hh>` başlığını ekleyip doğrudan `print("Deger: %d\n", value)` kullanın. `print` stdout'a, `eprint` stderr'e yazar; `fprint(fd, format, ...)` ile bu iki tanıtıcıdan birini seçebilirsiniz. İşlevlere `user::io` içinden de erişebilirsiniz. Dönüş değeri yazılan bayt sayısı veya negatif hata kodudur. Uygulama `kernel/user/lib/io.cpp` içindedir; elle derlediğiniz uygulamanın bağlantısına `kernel/user/lib/io.user.o` ekleyin. Projenin Makefile'ı bunu otomatik bağlar.
+`<user/io/io.hh>` başlığını ekleyip doğrudan `print("Deger: %d\n", value)` kullanın. `print` stdout'a, `eprint` stderr'e yazar; `fprint(fd, format, ...)` ile bu iki tanıtıcıdan birini seçebilirsiniz. İşlevlere `user::io` içinden de erişebilirsiniz. Dönüş değeri yazılan bayt sayısı veya negatif hata kodudur. Uygulama `kernel/user/io/io.cpp` içindedir; elle derlediğiniz uygulamanın bağlantısına `kernel/user/io/io.user.o` ekleyin. Projenin Makefile'ı bunu otomatik bağlar.
 
 Desteklenen biçimler: `%s`, `%c`, `%d`, `%i`, `%u`, `%x`, `%X`, `%o`, `%p`, `%%`; alan genişliği, `-`, `0`, `+`, boşluk ve `#` bayrakları; `%.3s` veya `%08x` gibi hassasiyet/genişlik; `*` ile genişlik/hassasiyet ve tam sayılar için `h`, `hh`, `l`, `z` değiştiricileri. Genişlik ve hassasiyet en çok 4096 olabilir. Ondalıklı sayı biçimleri, `ll` ve `%n` henüz desteklenmez; desteklenmeyen biçim `-22` döndürür. İçinde yüzde işareti bulunan hazır metni `print("%s", text)` ile yazın.
 
@@ -310,15 +319,15 @@ Alt düzey `user::write(fd, buffer, length)` bir çağrıda en çok 4096 bayt ka
 
 Terminal ön yüzü için `terminal_attach()` (44) çağıran süreci terminal sahibi yapar; `terminal_read(buffer, length)` (45) sıradaki çıktıyı tüketir; `terminal_send(pid, buffer, length)` (46) yalnızca bu terminale bağlı sürece giriş yollar. Sıfır uzunluk EOF anlamına gelir. Normal uygulamalar bu çağrıları kullanmaz; `read`/`write` veya `user::io` yardımcılarını kullanın. Dosyaya yönlendirme (`>`), pipe (`|`), `dup2`, sinyaller ve tam iş denetimi henüz yoktur.
 
-`user::call()`, `int 0x80` çalıştırır. `EAX` çağrı numarası, `EBX/ECX/EDX/ESI/EDI` en çok beş argüman, sonuç yine `EAX` içindedir. `kernel/syscall.cpp` çağrıyı ilgili `kernel/syscalls/` işleyicisine yönlendirir; işleyici kullanıcı işaretçilerini ve uzunlukları doğrular. Hatalar negatif sayı olarak döner. Kodda sayıları elle kullanmak yerine sarmalayıcı fonksiyonları çağırın.
+`user::call()`, `int 0x80` çalıştırır. `EAX` çağrı numarası, `EBX/ECX/EDX/ESI/EDI` en çok beş argüman, sonuç yine `EAX` içindedir. `kernel/syscalls/syscall.cpp` çağrıyı ilgili `kernel/syscalls/` işleyicisine yönlendirir; işleyici kullanıcı işaretçilerini ve uzunlukları doğrular. Hatalar negatif sayı olarak döner. Kodda sayıları elle kullanmak yerine sarmalayıcı fonksiyonları çağırın.
 
 | Alan | Önemli API'ler |
 | --- | --- |
 | Dosya | `open`, `read`, `close`, `root_inode`, `read_directory` |
-| Günlük/giriş | `read`, `write`, `<user/lib/io.hh>`, `terminal_attach`, `terminal_read`, `terminal_send`, `get_kernel_log`, `read_kernel_log`, `wait_event` |
+| Günlük/giriş | `read`, `write`, `<user/io/io.hh>`, `terminal_attach`, `terminal_read`, `terminal_send`, `get_kernel_log`, `read_kernel_log`, `wait_event` |
 | Process | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Thread | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
-| Bellek | `heap_alloc`, `heap_free`, `<user/lib/new.hh>` ile `new`/`delete`, `<user/lib/memory.hh>` ile `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` |
+| Bellek | `heap_alloc`, `heap_free`, `<user/memory/new.hh>` ile `new`/`delete`, `<user/lib/memory.hh>` ile `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy` |
 | Sistem | `get_ticks`, `get_datetime`, `get_heap_usage`, `get_system_info` |
 | Grafik | `graphics_get_info`, `graphics_register_window`, `graphics_begin_frame`, `graphics_end_frame`, `graphics_rect`, `graphics_text`, `graphics_bitmap`, `graphics_push_clip`, `graphics_pop_clip` |
 
@@ -333,13 +342,13 @@ if (user::wait_event(&event, 10) > 0 &&
     user::exit(0); // ESC
 ```
 
-Yeni syscall eklerken: numarayı `kernel/include/abi/syscall.hh` içine, kullanıcı sarmalayıcısını ilgili `kernel/include/user/` başlığına ekleyin. İşleyiciyi ilgili `kernel/syscalls/` kaynak dosyasına, yönlendirmeyi `kernel/syscall.cpp` içine ekleyin. Kullanıcıdan gelen adresleri `is_user_range` ile denetleyin. Gerekiyorsa asıl çekirdek işlevini `kernel/` altında ilgili modülde uygulayın. Dönüş kodu ve sınırları burada belgeleyin.
+Yeni syscall eklerken: numarayı `kernel/include/abi/syscall.hh` içine, kullanıcı sarmalayıcısını ilgili `kernel/include/user/` başlığına ekleyin. İşleyiciyi ilgili `kernel/syscalls/` kaynak dosyasına, yönlendirmeyi `kernel/syscalls/syscall.cpp` içine ekleyin. Kullanıcıdan gelen adresleri `is_user_range` ile denetleyin. Gerekiyorsa asıl çekirdek işlevini `kernel/` altında ilgili modülde uygulayın. Dönüş kodu ve sınırları burada belgeleyin.
 
 **Kullanıcı uygulamalarında bellek ve temel yardımcılar**
 
 `kernel/include/user/lib/memory.hh` başlığı `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy` ve `strncpy` işlevlerini sunar. Bunlara `user::memory::copy`, `move`, `fill`, `compare`, `length` ve `equal` yardımcılarıyla da erişebilirsiniz. Uygulamanın bağlantısına `kernel/user/lib/memory.user.o` ekleyin.
 
-`kernel/include/user/lib/new.hh` başlığı ve `kernel/user/lib/new.cpp` kullanıcı alanına `new`, `new[]`, `delete`, `delete[]`, placement new ve C++17 hizalı tahsis desteği sağlar. Uygulamanın bağlantısına `kernel/user/lib/new.user.o` ekleyin. Mevcut Makefile üç kullanıcı runtime nesnesini de yerleşik uygulamalar için otomatik bağlar. Çekirdeğin `kernel/mem/new.cpp` uygulaması çekirdek heap'ini kullanmaya devam eder.
+`kernel/include/user/memory/new.hh` başlığı ve `kernel/user/memory/new.cpp` kullanıcı alanına `new`, `new[]`, `delete`, `delete[]`, placement new ve C++17 hizalı tahsis desteği sağlar. Uygulamanın bağlantısına `kernel/user/memory/new.user.o` ekleyin. Mevcut Makefile üç kullanıcı runtime nesnesini de yerleşik uygulamalar için otomatik bağlar. Çekirdeğin `kernel/mem/new.cpp` uygulaması çekirdek heap'ini kullanmaya devam eder.
 
 Örnek:
 
@@ -355,7 +364,7 @@ if (user::memory::equal(text, "PCKOS")) {
 ```
 
 ```cpp
-#include <user/lib/new.hh>
+#include <user/memory/new.hh>
 
 int *value = new int(42);
 delete value;
@@ -369,7 +378,7 @@ if (numbers != nullptr) {
 
 Her süreçte `0x41000000–0x43000000` adres aralığında 32 MiB'a kadar heap vardır; fiziksel sayfalar ihtiyaç oldukça ayrılır. Aynı süreçteki thread'ler bu alanı paylaşır, farklı süreçlerin sayfa eşlemeleri ayrıdır. Aynı anda en çok 1024 tahsis tutulur. Varsayılan hizalama 16 bayttır; ikinin kuvveti olan hizalamalar en çok 1 MiB'a kadar kabul edilir. Küçük tahsisler sayfaları paylaşır; bir sayfadaki son tahsis silinince fiziksel sayfa geri verilir. Süreç kapanınca `delete` edilmemiş tahsisler de temizlenir.
 
-`heap_alloc(size, alignment)` (syscall 42) ham bellek verir, başarısızlıkta `nullptr` döndürür; `heap_free(address)` (syscall 43) belleği geri verir. Tahsis kayıtları çekirdekte saklanır; yalnızca çağıran sürecin geçerli tahsis başlangıcı serbest bırakılabilir. İşlemler mevcut tek çekirdekli sistemde kesmeler kapalı sistem çağrısı içinde tamamlanır. Normal `new` bellek bulamazsa istisnalar kapalı olduğu için günlüğe hata yazıp çağıran süreci `-12` durumuyla sonlandırır. Hatayı uygulamada ele almak için `new (std::nothrow)` kullanın. `get_heap_usage()` hâlâ çekirdek heap kullanımını bildirir.
+`heap_alloc(size, alignment)` (syscall 42) ham bellek verir, başarısızlıkta `nullptr` döndürür; `heap_free(address)` (syscall 43) belleği geri verir. Tahsis kayıtları çekirdekte saklanır; yalnızca çağıran sürecin geçerli tahsis başlangıcı serbest bırakılabilir. Tahsis kayıtları ortak çekirdek kilidiyle korunur. Sayfa eşlemeleri değiştiğinde diğer işlemcilere TLB yenileme IPI'si gönderilir. Normal `new` bellek bulamazsa istisnalar kapalı olduğu için günlüğe hata yazıp çağıran süreci `-12` durumuyla sonlandırır. Hatayı uygulamada ele almak için `new (std::nothrow)` kullanın. `get_heap_usage()` hâlâ çekirdek heap kullanımını bildirir.
 
 
 ## 6. Process nasıl oluşturulur?
@@ -384,7 +393,7 @@ if (pid < 0) {
 }
 ```
 
-`process_spawn` sonucu başarılıysa yeni PID'dir. Çağrı uygulamanın bitmesini beklemez. Çekirdekte akış: `kernel/syscalls/process.cpp` kullanıcı yolunu/adını kopyalar → `user_mode_spawn_process()` PCKFS'te dosyayı bulup düz ikiliyi okur → boş adres alanı ayırır ve kod/yığın sayfalarını eşler → `process_create()` PID verir → `thread_create_user()` ana TID'yi oluşturur → giriş odağı yeni process'e geçer. Bunlar sırasıyla `kernel/user_mode.cpp` ve `kernel/thread.cpp` içindedir. Programın `_start` fonksiyonu başlar; `user::exit(status)` veya ana thread'in bitmesi process'i sonlandırır. Kapanınca kaynakları ve pencere katmanı serbest bırakılır.
+`process_spawn` sonucu başarılıysa yeni PID'dir. Çağrı uygulamanın bitmesini beklemez. Çekirdekte akış: `kernel/syscalls/process.cpp` kullanıcı yolunu/adını kopyalar → `user_mode_spawn_process()` PCKFS'te dosyayı bulup düz ikiliyi okur → boş adres alanı ayırır ve kod/yığın sayfalarını eşler → `process_create()` PID verir → `thread_create_user()` ana TID'yi oluşturur → giriş odağı yeni process'e geçer. Bunlar sırasıyla `kernel/task/user_mode.cpp` ve `kernel/task/thread.cpp` içindedir. Programın `_start` fonksiyonu başlar; `user::exit(status)` veya ana thread'in bitmesi process'i sonlandırır. Kapanınca kaynakları ve pencere katmanı serbest bırakılır.
 
 Süreçleri listeleme:
 
@@ -401,10 +410,10 @@ Bir process'i öne getirmek için `process_focus(pid)`, kendi penceresini küç�
 
 ## 7. Thread nasıl oluşturulur?
 
-**Thread**, aynı process'in PID'sini ve adres alanını paylaşır; ayrı TID, kullanıcı yığını ve çekirdek kesme yığını alır. Tek çekirdekli PCKOS'ta PIT 100 Hz ve Round Robin zamanlayıcı thread'ler arasında geçiş yapar. Aynı anda fiziksel olarak tek thread yürür; birden fazla thread sırayla CPU kullanır.
+**Thread**, aynı process'in PID'sini ve adres alanını paylaşır; ayrı TID, kullanıcı yığını ve çekirdek kesme yığını alır. Round Robin zamanlayıcı hazır kullanıcı thread'lerini çevrimiçi işlemcilere dağıtır; aynı sürecin thread'leri farklı işlemcilerde paralel çalışabilir. BSP üzerindeki PIT sistem saatini 100 Hz ilerletir; ek işlemciler yaklaşık 100 Hz yerel APIC zamanlayıcısı kullanır. Tek işlemci varsa thread'ler sırayla çalışır.
 
 ```cpp
-#include <user/thread.hh>
+#include <user/task/thread.hh>
 
 void worker(void *argument)
 {
@@ -425,17 +434,23 @@ if (tid < 0) {
 
 `thread_create` başarılıysa TID döndürür. Kernel uygun bir thread yeri ve yeni kullanıcı yığını ayırır, giriş fonksiyonu ile argümanı yığına koyar; `thread_start_trampoline` fonksiyon bitince `thread_exit` çağırır. Çalışan örnek: `kernel/user/apps/task_manager_process.cpp` içindeki `TaskManager::thread_entry`; ana thread pencereyi çizerken worker thread bilgileri toplar. Paylaşılan veriler için mevcut `kernel/include/user/apps/app_thread.hh` içindeki `SpinLock`/`LockGuard` örneğini inceleyin. Genel amaçlı `join`, mutex ve semaphore API'si henüz yoktur. Ana thread/process bitince diğer thread'ler de temizlenir.
 
+SMP kodları `kernel/arch/i386/smp/` dizinindedir: `topology.cpp` ACPI MADT'yi okur; `trampoline.asm` ek işlemciyi gerçek moddan korumalı moda ve sayfalamaya geçirir; `smp.cpp` APIC, INIT/SIPI, TLB bildirimleri ve çekirdek kilidini yönetir. Her işlemci ayrı GDT, TSS, çekirdek yığını ve çalışan thread kaydı kullanır. Açılıştaki masaüstü ana thread'i BSP'de tutulur; diğer kullanıcı thread'leri işlemciler arasında taşınabilir.
+
+İlk SMP uygulamasında çekirdek hizmetleri ortak bir kilitle sıraya alınır. Kullanıcı kodu paralel çalışır; çizim kareleri `begin_frame` ile `end_frame` arasında ortak çizim durumunu korumak için sırayla tamamlanır. Süreç belleği temizlenirken diğer işlemciler kısa süreli durdurulur ve kapanan thread'ler tekrar zamanlanmaz. Kullanıcı kodunda paylaşılan verilere erişirken `SpinLock`/`LockGuard` veya atomik işlemler kullanın; `volatile` tek başına eşzamanlama sağlamaz.
+
+Sınırlar: 32 mantıksal işlemci, boşta bekleme thread'leri dahil 64 thread ve 8 process. Mevcut başlatma yolu ACPI RSDT/MADT ve xAPIC kullanır; x2APIC desteği yoktur. Ek işlemci başlatılamazsa çevrimiçi olanlarla devam edilir; SMP bilgisi yoksa tek işlemci yolu kullanılır. Görev Yöneticisi çevrimiçi mantıksal işlemci sayısını gösterir; CPU yüzdeleri toplam işlemci kapasitesine göre hesaplanır.
+
 ## 8. Yeni uygulama yazma, derleme ve başlatma
 
 Örnek dosya: `kernel/user/apps/newapp_process.cpp`. PCKOS'un yüklediği düz ikilinin giriş noktası `_start` olmalıdır:
 
 ```cpp
-#include <user/graphics.hh>
-#include <user/input.hh>
-#include <user/process.hh>
-#include <user/thread.hh>
-#include <user/gui.hh>
-#include <user/lib/window.hh>
+#include <user/gui/graphics.hh>
+#include <user/input/events.hh>
+#include <user/task/process.hh>
+#include <user/task/thread.hh>
+#include <user/gui/drawing.hh>
+#include <user/gui/window.hh>
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
@@ -518,7 +533,7 @@ Bu örnekte uygulamayı elle derliyoruz. Mevcut Makefile yalnızca içinde tanı
 ./build.sh
 ```
 
-Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o`, `kernel/user/lib/window.user.o`, `kernel/user/lib/widgets.user.o`, `kernel/user/lib/new.user.o`, `kernel/user/lib/memory.user.o` ve `kernel/user/lib/io.user.o` dosyalarını üretir. Henüz yeni `newapp_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
+Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o`, `kernel/user/gui/window.user.o`, `kernel/user/gui/widgets.user.o`, `kernel/user/memory/new.user.o`, `kernel/user/lib/memory.user.o` ve `kernel/user/io/io.user.o` dosyalarını üretir. Henüz yeni `newapp_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
 
 **2. Uygulamanın C++ kodunu derleyin.**
 
@@ -538,8 +553,8 @@ Girdi, yazdığınız `newapp_process.cpp` dosyasıdır. `-c` seçeneği yalnız
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
   -o kernel/user/apps/newapp_process.elf \
-  kernel/user/lib/new.user.o kernel/user/lib/memory.user.o kernel/user/lib/io.user.o \
-  kernel/user/lib/window.user.o kernel/user/lib/widgets.user.o \
+  kernel/user/memory/new.user.o kernel/user/lib/memory.user.o kernel/user/io/io.user.o \
+  kernel/user/gui/window.user.o kernel/user/gui/widgets.user.o \
   kernel/user/gui/graphics.user.o kernel/user/apps/newapp_process.user.o
 ```
 

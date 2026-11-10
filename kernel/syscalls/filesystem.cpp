@@ -3,7 +3,7 @@
 #include "internal.hh"
 #include <abi/filesystem.hh>
 #include <fs/pckfs.hh>
-#include <kernel/thread.hh>
+#include <kernel/task/thread.hh>
 
 namespace kernel::syscalls
 {

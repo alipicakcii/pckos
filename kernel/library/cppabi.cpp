@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include <library/cppabi.hh>
-#include <library/kernel_panic.hh>
+#include <kernel/core/panic.hh>
 
 // Çekirdek nesneleri sistem kapanana kadar yaşar; burada process sonlandırma işlemi yapılmaz.
 extern "C" int __cxa_atexit(void (*)(void *), void *, void *)

@@ -20,6 +20,12 @@ elif [ -d /dev/snd ]; then
 fi
 echo "QEMU ses arka ucu: $AUDIO_BACKEND"
 
+QEMU_CPUS=${PCKOS_CPUS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)}
+case "$QEMU_CPUS" in
+    ''|*[!0-9]*|0) echo "PCKOS_CPUS pozitif bir tamsayi olmali" >&2; exit 1 ;;
+esac
+if [ "$QEMU_CPUS" -gt 32 ]; then QEMU_CPUS=32; fi
+
 CPU_ARGS="-cpu qemu32 -accel tcg"
 if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
     CPU_ARGS="-cpu host -enable-kvm"
@@ -37,8 +43,10 @@ fi
 # -cpu host -enable-kvm  = cpu configurasyon
 # -s -S gdb icin debugu etkinleştiri
 # cpu registirlerini görmek icin bayrak -monitor stdio
+# QEMU'ya verilecek mantıksal işlemci sayısını belirle
 qemu-system-i386 \
 -m 2G \
+-smp "$QEMU_CPUS" \
 $CPU_ARGS \
 $DISPLAY_ARGS \
 -cdrom "$SCRIPT_DIR/pckos.iso" \

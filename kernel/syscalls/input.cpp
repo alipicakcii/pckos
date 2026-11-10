@@ -4,9 +4,9 @@
 #include <abi/input.hh>
 #include <device/input/ps2_keyboard.hh>
 #include <device/input/ps2_mouse.hh>
-#include <kernel/thread.hh>
-#include <kernel/user_mode.hh>
-#include <kernel/graphics.hh>
+#include <kernel/task/thread.hh>
+#include <kernel/task/user_mode.hh>
+#include <kernel/syscalls/graphics.hh>
 #include <interrupts/interrupts.hh>
 
 namespace kernel::syscalls
@@ -113,9 +113,7 @@ namespace kernel::syscalls
                 return 1;
             }
             thread_set_waiting_for_input(true);
-            cpu::enable_interrupt();
-            cpu::cpu_halt();
-            cpu::disable_interrupt();
+            thread_sleep(1);
             thread_set_waiting_for_input(false);
         }
     }

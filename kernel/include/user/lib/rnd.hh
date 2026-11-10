@@ -4,7 +4,7 @@
 #define PCKOS_USER_RND_HH
 
 #include <stdint.h>
-#include <user/lib/lock.hh>
+#include <user/task/lock.hh>
 
 namespace user::lib::random
 {

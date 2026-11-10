@@ -3,8 +3,8 @@
 #ifndef PCKOS_USER_APP_THREAD_HH
 #define PCKOS_USER_APP_THREAD_HH
 
-#include <user/thread.hh>
-#include <user/lib/lock.hh>
+#include <user/task/thread.hh>
+#include <user/task/lock.hh>
 #include <stdint.h>
 
 namespace user::apps

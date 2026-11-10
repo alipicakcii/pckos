@@ -2,7 +2,7 @@
 // Copyright (C) PCK
 #include <device/pc_speaker.hh>
 #include <cpu/io.hh>
-#include <kernel/thread.hh>
+#include <kernel/task/thread.hh>
 
 #define PIT_FREQ 1193180
 

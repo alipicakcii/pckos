@@ -5,8 +5,9 @@
 #include <cpu/io.hh>
 #include <interrupts/isr.hh>
 #include <library/kprint.hh>
-#include <library/kernel_panic.hh>
+#include <kernel/core/panic.hh>
 #include <interrupts/interrupts.hh>
+#include <arch/i386/smp.hh>
 using namespace cpu;
 
 namespace kernel
@@ -20,12 +21,12 @@ namespace kernel
     static void set_gdt_entry(int32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
     static void set_idt_entry(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
 
-    GdtEntry g_gdt_entries[7];
-    GdtPointer g_gdt_pointer;
+    GdtEntry cpu_gdt_entries[smp::MAX_CPUS][7];
+    GdtPointer cpu_gdt_pointers[smp::MAX_CPUS];
 
     IdtEntry g_idt_entries[256];
     IdtPointer g_idt_pointer;
-    Tss tss;
+    Tss cpu_tss[smp::MAX_CPUS];
     void cpu_zero_div_error(Registers *regs)
     {
         (void)(regs);
@@ -42,8 +43,18 @@ namespace kernel
         interrupt_register(0, (IsrFunction)cpu_zero_div_error);
     }
 
+    void descriptor_tables_initialize_ap()
+    {
+        gdt_initialize();
+        flush_idt(reinterpret_cast<uint32_t>(&g_idt_pointer));
+    }
+
     static void gdt_initialize()
     {
+        const uint32_t index = smp::current_cpu();
+        GdtEntry (&g_gdt_entries)[7] = cpu_gdt_entries[index];
+        GdtPointer &g_gdt_pointer = cpu_gdt_pointers[index];
+        Tss &tss = cpu_tss[index];
         g_gdt_pointer.limit = (sizeof(GdtEntry) * 7) - 1;
         g_gdt_pointer.base = (uint32_t)&g_gdt_entries;
 
@@ -86,12 +97,14 @@ namespace kernel
 
     void set_kernel_stack(uint32_t stack_top)
     {
+        Tss &tss = cpu_tss[smp::current_cpu()];
         tss.esp0 = stack_top;
         tss.ss0 = 0x10;
     }
 
     static void set_gdt_entry(int32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran)
     {
+        GdtEntry (&g_gdt_entries)[7] = cpu_gdt_entries[smp::current_cpu()];
         g_gdt_entries[num].base_low = (base & 0xFFFF);
         g_gdt_entries[num].base_middle = (base >> 16) & 0xFF;
         g_gdt_entries[num].base_high = (base >> 24) & 0xFF;
@@ -178,6 +191,10 @@ namespace kernel
         set_idt_entry(128, (uint32_t)isr128, 0x08, 0xEE);
         set_idt_entry(129, (uint32_t)isr129, 0x08, 0x8E);
 
+        set_idt_entry(208, (uint32_t)isr208, 0x08, 0x8E);
+        set_idt_entry(225, (uint32_t)isr225, 0x08, 0x8E);
+        set_idt_entry(242, (uint32_t)isr242, 0x08, 0x8E);
+        set_idt_entry(255, (uint32_t)isr255, 0x08, 0x8E);
         flush_idt((uint32_t)&g_idt_pointer);
     }
 

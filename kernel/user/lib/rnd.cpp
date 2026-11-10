@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include <user/lib/rnd.hh>
-#include <user/syscall.hh>
+#include <user/syscall/call.hh>
 
 namespace user::lib::random
 {
