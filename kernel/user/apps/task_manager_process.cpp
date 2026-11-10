@@ -68,12 +68,6 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         {
             if (event.value0 == 0x1B)
                 user::exit(0);
-            if (event.value0 == 0xE2) manager.scroll(-1);
-            else if (event.value0 == 0xE3) manager.scroll(1);
-            else if (event.value0 == 0xE6) manager.scroll(-10);
-            else if (event.value0 == 0xE7) manager.scroll(10);
-            else if (event.value0 == 0xE0) manager.scroll_to_top();
-            else if (event.value0 == 0xE1) manager.scroll_to_bottom();
         }
         if (event.type == 2)
         {
@@ -98,6 +92,9 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
             if (window.handle_mouse(mouse_x, mouse_y, event.buttons, pressed,
                                     screen.width, usable_height))
             { last_buttons = event.buttons; continue; }
+            manager.mouse(mouse_x - static_cast<int32_t>(x + 7),
+                          mouse_y - static_cast<int32_t>(y + 32),
+                          event.buttons, pressed);
             last_buttons = event.buttons;
         }
     }

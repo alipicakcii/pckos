@@ -16,9 +16,7 @@ namespace user::apps
     public:
         TaskManager();
         void draw(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-        void scroll(int32_t rows);
-        void scroll_to_top();
-        void scroll_to_bottom();
+        void mouse(int32_t x, int32_t y, uint32_t buttons, bool pressed);
         bool consume_dirty();
         static void thread_entry(void *argument);
 
@@ -51,6 +49,14 @@ namespace user::apps
         uint32_t row_capacity_;
         uint32_t scroll_offset_;
         uint32_t visible_rows_;
+        uint32_t scrollbar_x_;
+        uint32_t scrollbar_y_;
+        uint32_t scrollbar_height_;
+        uint32_t scrollbar_thumb_y_;
+        uint32_t scrollbar_thumb_height_;
+        uint32_t maximum_scroll_;
+        int32_t scrollbar_grab_offset_;
+        bool scrollbar_dragging_;
         uint32_t previous_ticks_;
         uint32_t total_cpu_percent_;
         bool baseline_ready_;

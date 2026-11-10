@@ -64,7 +64,10 @@ namespace user::apps
         : lock_{}, system_{}, processes_(nullptr), process_count_(0),
           process_capacity_(0), previous_process_ids_(nullptr),
           previous_process_ticks_(nullptr), rows_(nullptr), row_count_(0),
-          row_capacity_(0), scroll_offset_(0), visible_rows_(0), previous_ticks_(0),
+          row_capacity_(0), scroll_offset_(0), visible_rows_(0), scrollbar_x_(0),
+          scrollbar_y_(0), scrollbar_height_(0), scrollbar_thumb_y_(0),
+          scrollbar_thumb_height_(0), maximum_scroll_(0), scrollbar_grab_offset_(0),
+          scrollbar_dragging_(false), previous_ticks_(0),
           total_cpu_percent_(0), baseline_ready_(false),
           previous_cpu_ticks_(nullptr), dirty_(0)
     {
@@ -266,41 +269,6 @@ namespace user::apps
         return dirty;
     }
 
-    void TaskManager::scroll(int32_t rows)
-    {
-        LockGuard guard(lock_);
-        const uint32_t maximum = row_count_ > visible_rows_
-            ? row_count_ - visible_rows_ : 0;
-        if (rows < 0)
-        {
-            const uint32_t amount = static_cast<uint32_t>(-rows);
-            scroll_offset_ = amount > scroll_offset_ ? 0 : scroll_offset_ - amount;
-        }
-        else
-        {
-            const uint32_t amount = static_cast<uint32_t>(rows);
-            scroll_offset_ = amount > maximum - (scroll_offset_ < maximum
-                ? scroll_offset_ : maximum)
-                ? maximum : scroll_offset_ + amount;
-        }
-        dirty_ = 1;
-    }
-
-    void TaskManager::scroll_to_top()
-    {
-        LockGuard guard(lock_);
-        scroll_offset_ = 0;
-        dirty_ = 1;
-    }
-
-    void TaskManager::scroll_to_bottom()
-    {
-        LockGuard guard(lock_);
-        scroll_offset_ = row_count_ > visible_rows_
-            ? row_count_ - visible_rows_ : 0;
-        dirty_ = 1;
-    }
-
     void TaskManager::thread_entry(void *argument)
     {
         auto *manager = static_cast<TaskManager *>(argument);
@@ -443,8 +411,10 @@ namespace user::apps
         user::gui::text(x + 486, thread_table_y + 2, "Yigin", user::gui::COLOR_TEXT);
 
         const uint32_t thread_rows_y = thread_table_y + 21;
-        const uint32_t visible = height > thread_rows_y - y
-            ? (height - (thread_rows_y - y)) / 20 : 0;
+        const uint32_t thread_content_y = thread_rows_y - y;
+        const uint32_t scrollbar_height = height > thread_content_y + 2
+            ? height - thread_content_y - 2 : 0;
+        const uint32_t visible = scrollbar_height / 20;
         const uint32_t maximum_offset = count > visible ? count - visible : 0;
         if (scroll_offset > maximum_offset)
             scroll_offset = maximum_offset;
@@ -452,6 +422,10 @@ namespace user::apps
             LockGuard guard(lock_);
             visible_rows_ = visible;
             scroll_offset_ = scroll_offset;
+            scrollbar_x_ = width > 10 ? width - 10 : 0;
+            scrollbar_y_ = thread_content_y;
+            scrollbar_height_ = scrollbar_height;
+            maximum_scroll_ = maximum_offset;
         }
         char thread_title[80] = "Thread'ler ";
         uint32_t title_at = 11;
@@ -463,8 +437,6 @@ namespace user::apps
                           ? count - scroll_offset : visible));
         append(thread_title, sizeof(thread_title), &title_at, "/");
         append_number(thread_title, sizeof(thread_title), &title_at, count);
-        append(thread_title, sizeof(thread_title), &title_at,
-               "  Oklar/PgUp/PgDn/Home/End");
         user::gui::text(x + 8, thread_table_y - 16, thread_title,
                         user::gui::COLOR_TEXT);
         for (uint32_t i = 0; i < visible && scroll_offset + i < count; ++i)
@@ -512,7 +484,79 @@ namespace user::apps
             append(stack, sizeof(stack), &stack_at, " KB");
             user::gui::text(x + 486, row_y + 2, stack, user::gui::COLOR_TEXT);
         }
+        const uint32_t thumb_height = count <= visible || count == 0 || scrollbar_height == 0
+            ? scrollbar_height : (scrollbar_height * visible) / count;
+        const uint32_t bounded_thumb_height = thumb_height < 12 && scrollbar_height >= 12
+            ? 12 : thumb_height;
+        const uint32_t thumb_travel = scrollbar_height > bounded_thumb_height
+            ? scrollbar_height - bounded_thumb_height : 0;
+        const uint32_t thumb_offset = maximum_offset == 0 || thumb_travel == 0
+            ? 0 : (scroll_offset * thumb_travel) / maximum_offset;
+        {
+            LockGuard guard(lock_);
+            scrollbar_thumb_height_ = bounded_thumb_height;
+            scrollbar_thumb_y_ = scrollbar_y_ + thumb_offset;
+        }
+        if (scrollbar_height != 0)
+        {
+            user::gui::fill(x + width - 12, y + thread_content_y, 8,
+                            scrollbar_height, 0xFF9A9A9A);
+            user::gui::frame(x + width - 12, y + thread_content_y + thumb_offset,
+                             8, bounded_thumb_height, user::gui::COLOR_FACE, false);
+        }
         delete[] processes;
         delete[] rows;
+    }
+
+    void TaskManager::mouse(int32_t x, int32_t y, uint32_t buttons, bool pressed)
+    {
+        LockGuard guard(lock_);
+        const bool held = (buttons & 1U) != 0;
+        const int32_t track_top = static_cast<int32_t>(scrollbar_y_);
+        const int32_t track_bottom = track_top + static_cast<int32_t>(scrollbar_height_);
+        const int32_t thumb_top = static_cast<int32_t>(scrollbar_thumb_y_);
+        const int32_t thumb_bottom = thumb_top +
+            static_cast<int32_t>(scrollbar_thumb_height_);
+        const int32_t thumb_travel = static_cast<int32_t>(scrollbar_height_ -
+            scrollbar_thumb_height_);
+        bool changed = false;
+
+        if (pressed && x >= static_cast<int32_t>(scrollbar_x_) - 2 &&
+            x < static_cast<int32_t>(scrollbar_x_ + 9) &&
+            y >= track_top && y < track_bottom && maximum_scroll_ != 0)
+        {
+            if (y >= thumb_top && y < thumb_bottom)
+            {
+                scrollbar_dragging_ = true;
+                scrollbar_grab_offset_ = y - thumb_top;
+            }
+            else if (thumb_travel > 0)
+            {
+                int32_t next_top = y - track_top -
+                    static_cast<int32_t>(scrollbar_thumb_height_ / 2);
+                if (next_top < 0) next_top = 0;
+                if (next_top > thumb_travel) next_top = thumb_travel;
+                scroll_offset_ = static_cast<uint32_t>(next_top) * maximum_scroll_ /
+                    static_cast<uint32_t>(thumb_travel);
+                changed = true;
+            }
+        }
+        if (held && scrollbar_dragging_ && thumb_travel > 0)
+        {
+            int32_t next_top = y - track_top - scrollbar_grab_offset_;
+            if (next_top < 0) next_top = 0;
+            if (next_top > thumb_travel) next_top = thumb_travel;
+            const uint32_t next_offset = static_cast<uint32_t>(next_top) *
+                maximum_scroll_ / static_cast<uint32_t>(thumb_travel);
+            if (next_offset != scroll_offset_)
+            {
+                scroll_offset_ = next_offset;
+                changed = true;
+            }
+        }
+        if (!held)
+            scrollbar_dragging_ = false;
+        if (changed)
+            dirty_ = 1;
     }
 }
