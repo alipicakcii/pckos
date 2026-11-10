@@ -36,21 +36,25 @@ namespace user::apps
         };
 
         void refresh();
+        bool ensure_process_capacity(uint32_t capacity);
+        bool ensure_thread_capacity(uint32_t capacity);
 
         SpinLock lock_;
         user::SystemInfo system_;
-        ProcessRow processes_[8];
+        ProcessRow *processes_;
         uint32_t process_count_;
-        uint32_t previous_process_ids_[8];
-        uint32_t previous_process_ticks_[8];
-        Row rows_[abi::MAX_THREADS];
+        uint32_t process_capacity_;
+        uint32_t *previous_process_ids_;
+        uint32_t *previous_process_ticks_;
+        Row *rows_;
         uint32_t row_count_;
+        uint32_t row_capacity_;
         uint32_t scroll_offset_;
         uint32_t visible_rows_;
         uint32_t previous_ticks_;
         uint32_t total_cpu_percent_;
         bool baseline_ready_;
-        uint32_t previous_cpu_ticks_[abi::MAX_THREADS];
+        uint32_t *previous_cpu_ticks_;
         volatile uint32_t dirty_;
     };
 }

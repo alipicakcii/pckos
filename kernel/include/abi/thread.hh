@@ -7,7 +7,6 @@
 
 namespace abi
 {
-    constexpr uint32_t MAX_THREADS = 64;
     struct ThreadInfo
     {
         uint32_t id;

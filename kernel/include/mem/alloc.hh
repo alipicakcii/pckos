@@ -11,13 +11,14 @@
 
 namespace mem
 {
-        struct MallocHeader
+        struct alignas(16) MallocHeader
         {
                 uint32_t size:31;
                 uint32_t used:1;
                 uint32_t alignment_padding;
 
-        } __attribute__ ((packed));
+        };
+        static_assert(sizeof(MallocHeader) == 16);
 
 
 
@@ -41,6 +42,7 @@ namespace mem
 		    // çekirdek için bir bellek bloğu
 		    // tahsi eder
 		    void* kmalloc(uint32_t size);
+		void* try_kmalloc(uint32_t size);
 		    // çekirdek için anlık kullanılan
 		    // bellek miktar
 		    static uint32_t get_kernel_heap_used();

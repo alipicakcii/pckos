@@ -5,6 +5,7 @@
 #include <user/task/thread.hh>
 #include <user/apps/task_manager.hh>
 #include <user/gui/drawing.hh>
+#include <user/memory/new.hh>
 
 namespace user::apps
 {
@@ -60,13 +61,120 @@ namespace user::apps
     }
 
     TaskManager::TaskManager()
-        : lock_{}, system_{}, processes_{}, process_count_(0),
-          previous_process_ids_{}, previous_process_ticks_{}, rows_{},
-          row_count_(0), scroll_offset_(0), visible_rows_(0), previous_ticks_(0),
+        : lock_{}, system_{}, processes_(nullptr), process_count_(0),
+          process_capacity_(0), previous_process_ids_(nullptr),
+          previous_process_ticks_(nullptr), rows_(nullptr), row_count_(0),
+          row_capacity_(0), scroll_offset_(0), visible_rows_(0), previous_ticks_(0),
           total_cpu_percent_(0), baseline_ready_(false),
-          previous_cpu_ticks_{}, dirty_(0)
+          previous_cpu_ticks_(nullptr), dirty_(0)
     {
         refresh();
+    }
+
+    bool TaskManager::ensure_process_capacity(uint32_t capacity)
+    {
+        if (capacity <= process_capacity_) return true;
+        uint32_t next = process_capacity_ == 0 ? 8 : process_capacity_;
+        while (next < capacity)
+        {
+            if (next > UINT32_MAX / 2) return false;
+            next *= 2;
+        }
+        auto *processes = new (std::nothrow) ProcessRow[next];
+        auto *ids = new (std::nothrow) uint32_t[next];
+        auto *ticks = new (std::nothrow) uint32_t[next];
+        if (processes == nullptr || ids == nullptr || ticks == nullptr)
+        {
+            delete[] processes;
+            delete[] ids;
+            delete[] ticks;
+            return false;
+        }
+        bool already_large_enough = false;
+        {
+            LockGuard guard(lock_);
+            if (capacity <= process_capacity_)
+                already_large_enough = true;
+            else for (uint32_t i = 0; i < process_capacity_; ++i)
+            {
+                processes[i] = processes_[i];
+                ids[i] = previous_process_ids_[i];
+                ticks[i] = previous_process_ticks_[i];
+            }
+        }
+        if (already_large_enough)
+        {
+            delete[] processes;
+            delete[] ids;
+            delete[] ticks;
+            return true;
+        }
+        ProcessRow *old_processes;
+        uint32_t *old_ids;
+        uint32_t *old_ticks;
+        {
+            LockGuard guard(lock_);
+            old_processes = processes_;
+            old_ids = previous_process_ids_;
+            old_ticks = previous_process_ticks_;
+            processes_ = processes;
+            previous_process_ids_ = ids;
+            previous_process_ticks_ = ticks;
+            process_capacity_ = next;
+        }
+        delete[] old_processes;
+        delete[] old_ids;
+        delete[] old_ticks;
+        return true;
+    }
+
+    bool TaskManager::ensure_thread_capacity(uint32_t capacity)
+    {
+        if (capacity <= row_capacity_) return true;
+        uint32_t next = row_capacity_ == 0 ? 16 : row_capacity_;
+        while (next < capacity)
+        {
+            if (next > UINT32_MAX / 2) return false;
+            next *= 2;
+        }
+        auto *rows = new (std::nothrow) Row[next];
+        auto *ticks = new (std::nothrow) uint32_t[next];
+        if (rows == nullptr || ticks == nullptr)
+        {
+            delete[] rows;
+            delete[] ticks;
+            return false;
+        }
+        bool already_large_enough = false;
+        {
+            LockGuard guard(lock_);
+            if (capacity <= row_capacity_)
+                already_large_enough = true;
+            else for (uint32_t i = 0; i < row_capacity_; ++i)
+            {
+                rows[i] = rows_[i];
+                ticks[i] = previous_cpu_ticks_[i];
+            }
+        }
+        if (already_large_enough)
+        {
+            delete[] rows;
+            delete[] ticks;
+            return true;
+        }
+        Row *old_rows;
+        uint32_t *old_ticks;
+        {
+            LockGuard guard(lock_);
+            old_rows = rows_;
+            old_ticks = previous_cpu_ticks_;
+            rows_ = rows;
+            previous_cpu_ticks_ = ticks;
+            row_capacity_ = next;
+        }
+        delete[] old_rows;
+        delete[] old_ticks;
+        return true;
     }
 
     void TaskManager::refresh()
@@ -75,30 +183,42 @@ namespace user::apps
         if (user::get_system_info(&system) < 0)
             return;
 
-        Row rows[abi::MAX_THREADS]{};
+        const uint32_t thread_capacity = user::thread_capacity();
         uint32_t count = 0;
         uint32_t total_cpu_ticks = 0;
         const uint32_t elapsed = system.ticks - previous_ticks_;
-        ProcessRow processes[8]{};
-        const uint32_t process_count = user::process_count() < 8
-            ? user::process_count() : 8;
+        const uint32_t process_count = user::process_count();
+        if (!ensure_process_capacity(process_count) ||
+            !ensure_thread_capacity(thread_capacity))
+            return;
+        auto *processes = new (std::nothrow) ProcessRow[process_count]{};
+        auto *rows = new (std::nothrow) Row[thread_capacity]{};
+        if ((process_count != 0 && processes == nullptr) ||
+            (thread_capacity != 0 && rows == nullptr))
+        {
+            delete[] processes;
+            delete[] rows;
+            return;
+        }
+        uint32_t process_rows = 0;
         for (uint32_t index = 0; index < process_count; ++index)
         {
             user::ProcessInfo info{};
             if (user::process_get_info(index, &info) < 0)
                 continue;
             const uint32_t delta = !baseline_ready_ ? 0
-                : info.id == previous_process_ids_[index] &&
-                  info.cpu_ticks >= previous_process_ticks_[index]
-                    ? info.cpu_ticks - previous_process_ticks_[index]
+                : info.id == previous_process_ids_[process_rows] &&
+                  info.cpu_ticks >= previous_process_ticks_[process_rows]
+                    ? info.cpu_ticks - previous_process_ticks_[process_rows]
                     : info.cpu_ticks;
-            processes[index].process = info;
-            processes[index].cpu_percent = cpu_percent(delta, elapsed, system.logical_cpu_count);
-            if (processes[index].cpu_percent > 100) processes[index].cpu_percent = 100;
-            previous_process_ticks_[index] = info.cpu_ticks;
-            previous_process_ids_[index] = info.id;
+            processes[process_rows].process = info;
+            processes[process_rows].cpu_percent = cpu_percent(delta, elapsed, system.logical_cpu_count);
+            if (processes[process_rows].cpu_percent > 100) processes[process_rows].cpu_percent = 100;
+            previous_process_ticks_[process_rows] = info.cpu_ticks;
+            previous_process_ids_[process_rows] = info.id;
+            ++process_rows;
         }
-        for (uint32_t id = 0; id < abi::MAX_THREADS; ++id)
+        for (uint32_t id = 0; id < thread_capacity; ++id)
         {
             user::ThreadInfo info{};
             if (user::thread_get_info(id, &info) < 0)
@@ -122,16 +242,20 @@ namespace user::apps
         const uint32_t total_cpu_percent = cpu_percent(
             total_cpu_delta, elapsed, system.logical_cpu_count);
 
-        LockGuard guard(lock_);
-        system_ = system;
-        total_cpu_percent_ = total_cpu_percent;
-        process_count_ = process_count;
-        for (uint32_t i = 0; i < process_count; ++i)
-            processes_[i] = processes[i];
-        row_count_ = count;
-        for (uint32_t i = 0; i < count; ++i)
-            rows_[i] = rows[i];
-        dirty_ = 1;
+        {
+            LockGuard guard(lock_);
+            system_ = system;
+            total_cpu_percent_ = total_cpu_percent;
+            process_count_ = process_rows;
+            for (uint32_t i = 0; i < process_rows; ++i)
+                processes_[i] = processes[i];
+            row_count_ = count;
+            for (uint32_t i = 0; i < count; ++i)
+                rows_[i] = rows[i];
+            dirty_ = 1;
+        }
+        delete[] processes;
+        delete[] rows;
     }
 
     bool TaskManager::consume_dirty()
@@ -193,9 +317,7 @@ namespace user::apps
                            uint32_t height)
     {
         user::SystemInfo system{};
-        ProcessRow processes[8]{};
         uint32_t process_count = 0;
-        Row rows[abi::MAX_THREADS]{};
         uint32_t count = 0;
         uint32_t total_cpu_percent = 0;
         uint32_t scroll_offset = 0;
@@ -204,12 +326,32 @@ namespace user::apps
             system = system_;
             total_cpu_percent = total_cpu_percent_;
             process_count = process_count_;
-            for (uint32_t i = 0; i < process_count; ++i)
-                processes[i] = processes_[i];
             count = row_count_;
             scroll_offset = scroll_offset_;
-            for (uint32_t i = 0; i < count; ++i)
-                rows[i] = rows_[i];
+        }
+        auto *processes = new (std::nothrow) ProcessRow[process_count];
+        auto *rows = new (std::nothrow) Row[count];
+        if ((process_count != 0 && processes == nullptr) ||
+            (count != 0 && rows == nullptr))
+        {
+            delete[] processes;
+            delete[] rows;
+            return;
+        }
+        {
+            LockGuard guard(lock_);
+            if (process_count > process_capacity_ || count > row_capacity_)
+            {
+                process_count = 0;
+                count = 0;
+            }
+            else
+            {
+                for (uint32_t i = 0; i < process_count; ++i)
+                    processes[i] = processes_[i];
+                for (uint32_t i = 0; i < count; ++i)
+                    rows[i] = rows_[i];
+            }
         }
 
         user::gui::fill(x, y, width, height, 0xFFC0C0C0);
@@ -370,5 +512,7 @@ namespace user::apps
             append(stack, sizeof(stack), &stack_at, " KB");
             user::gui::text(x + 486, row_y + 2, stack, user::gui::COLOR_TEXT);
         }
+        delete[] processes;
+        delete[] rows;
     }
 }

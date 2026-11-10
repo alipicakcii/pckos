@@ -309,7 +309,8 @@ namespace kernel::smp
         descriptor_tables_initialize_ap();
         enable_local_apic(false);
         kernel_enter();
-        thread_attach_cpu(reinterpret_cast<uint32_t>(ap_stacks[index]) + AP_STACK_SIZE);
+        if (!thread_attach_cpu(reinterpret_cast<uint32_t>(ap_stacks[index]) + AP_STACK_SIZE))
+            for (;;) cpu::cpu_halt();
         kernel_leave();
         store(online[index], 1);
         // Açılış bitene kadar boş döngüyle ana işlemcinin kaynaklarını tüketme.

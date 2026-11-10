@@ -31,6 +31,11 @@ namespace user
         return static_cast<uint32_t>(call(syscall_thread_count));
     }
 
+    inline uint32_t thread_capacity()
+    {
+        return static_cast<uint32_t>(call(syscall_thread_capacity));
+    }
+
     inline uint32_t thread_switch_count()
     {
         return static_cast<uint32_t>(call(syscall_thread_switch_count));

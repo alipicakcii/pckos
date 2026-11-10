@@ -39,11 +39,24 @@ namespace mem
 		MallocHeader *chunk = reinterpret_cast<MallocHeader *>(kernel_heap);
 		// Her sayfada ayrı IPI yerine, yeni blok tamamlandığında tek bildirim gönder.
 		kernel::smp::NewMappingBatch mapping_batch;
+		char *const start = kernel_heap;
+		int mapped = 0;
 		for (int i = 0; i < n; ++i)
 		{
 			const uint32_t p_addr = vm.acquire_page_frame_4k();
 			if (p_addr == static_cast<uint32_t>(-1))
+			{
+				while (mapped > 0)
+				{
+					--mapped;
+					VirtualAddress rollback = start + mapped * PAGESIZE_4K;
+					uint32_t frame = 0;
+					if (vm.remove_page_from_pd(rollback, &frame))
+						vm.release_page_frame_4k(frame);
+				}
+				kernel_heap = start;
 				return reinterpret_cast<void *>(-1);
+			}
 
 			VirtualAddress vaddr = kernel_heap;
 			PhysicalAddress paddr = p_addr;
@@ -53,6 +66,7 @@ namespace mem
 				return reinterpret_cast<void *>(-1);
 			}
 			kernel_heap += PAGESIZE_4K;
+			++mapped;
 		}
 
 		chunk->size = PAGESIZE_4K * static_cast<uint32_t>(n);
@@ -63,13 +77,21 @@ namespace mem
 
 	void *MemAlloc::kmalloc(uint32_t size)
 	{
+		void *result = try_kmalloc(size);
+		if (result == nullptr && size != 0)
+			lib::panic("kmalloc(): no memory left for kernel heap");
+		return result;
+	}
+
+	void *MemAlloc::try_kmalloc(uint32_t size)
+	{
 		if (size == 0 || kernel_heap == nullptr)
 			return nullptr;
 
-		if (size > UINT32_MAX - sizeof(MallocHeader) - 7)
+		if (size > UINT32_MAX - sizeof(MallocHeader) - 15)
 			return nullptr;
 		uint32_t required = static_cast<uint32_t>(sizeof(MallocHeader)) + size;
-		required = (required + 7) & ~7U;
+		required = (required + 15) & ~15U;
 		if (required < KMALLOC_MINSIZE)
 			required = KMALLOC_MINSIZE;
 
@@ -84,7 +106,6 @@ namespace mem
 				if (pages > static_cast<uint32_t>(KERN_HEAP_END - heap_end) / PAGESIZE_4K ||
 				    ksbrk_page(static_cast<int>(pages)) == reinterpret_cast<void *>(-1))
 				{
-					lib::panic("kmalloc(): no memory left for kernel heap");
 					return nullptr;
 				}
 				continue;

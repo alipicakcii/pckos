@@ -47,6 +47,10 @@ namespace kernel::syscalls
                 registers->eax = thread_active_count();
                 return;
 
+            case abi::syscall_thread_capacity:
+                registers->eax = thread_slot_count();
+                return;
+
             case abi::syscall_thread_switch_count:
                 registers->eax = thread_switch_count();
                 return;

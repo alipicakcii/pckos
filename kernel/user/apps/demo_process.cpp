@@ -12,20 +12,14 @@ extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
 
-    int *ptr = new int;
-    *ptr = 123456789;
-    uint32_t addr= (uint32_t)ptr;
-    print("val=%d addr=%p\n", *ptr, addr);
-    delete ptr;
-    print("delete=%p\n", addr);
-    
    
-    const int32_t deneme_pid = user::process_spawn("/apps/hello_word.bin", "Deneme");
+   
+    const int32_t deneme_pid = user::process_spawn("/apps/calculator.bin", "Deneme");
 
     
     print("Deneme PID=%d\n", deneme_pid);
 
-    user::thread_sleep(500);
+
 
     user::exit(0);
 }

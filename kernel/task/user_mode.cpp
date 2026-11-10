@@ -14,6 +14,7 @@
 #include <library/kernel_log.hh>
 #include <library/mem.hh>
 #include <mem/vmm.hh>
+#include <mem/alloc.hh>
 
 extern "C"
 {
@@ -42,14 +43,16 @@ namespace kernel
         constexpr uint32_t USER_THREAD_STACK_PAGES = 8;
         constexpr uint32_t USER_THREAD_STACK_BYTES =
             USER_THREAD_STACK_PAGES * PAGESIZE_4K;
-        constexpr uint32_t USER_THREAD_STACK_COUNT = 14;
         constexpr uint32_t USER_THREAD_STACK_BASE = USER_STACK_ADDRESS +
             USER_STACK_PAGES * PAGESIZE_4K + PAGESIZE_4K;
-        constexpr uint32_t USER_PROCESS_COUNT = 8;
         constexpr uint32_t USER_HEAP_ADDRESS = USER_CODE_ADDRESS + 0x01000000;
+        constexpr uint32_t USER_THREAD_STACK_COUNT =
+            (USER_HEAP_ADDRESS - USER_THREAD_STACK_BASE) / USER_THREAD_STACK_BYTES;
         constexpr uint32_t USER_HEAP_BYTES = 32 * 1024 * 1024;
         constexpr uint32_t USER_HEAP_PAGES = USER_HEAP_BYTES / PAGESIZE_4K;
         constexpr uint32_t USER_HEAP_ALLOCATION_COUNT = 1024;
+        constexpr uint32_t PROCESS_DIRECTORY_SLOTS =
+            (KERN_PD_AREA_END - KERN_PD_AREA_BEGIN) / PAGESIZE_4K;
         static_assert(USER_THREAD_STACK_BASE +
             USER_THREAD_STACK_COUNT * USER_THREAD_STACK_BYTES < USER_HEAP_ADDRESS,
             "User heap overlaps thread stacks");
@@ -77,6 +80,7 @@ namespace kernel
             uint32_t input_head, input_size;
             bool input_eof;
             bool reserved;
+            uint32_t directory_slot;
             uint32_t process_id;
             uint32_t page_directory_address;
             uint32_t code_pages;
@@ -84,6 +88,7 @@ namespace kernel
             uint32_t heap_count;
             HeapAllocation heap_allocations[USER_HEAP_ALLOCATION_COUNT];
             uint16_t heap_page_users[USER_HEAP_PAGES];
+            UserProcessSpace *next;
         };
 
         uint8_t ring0_interrupt_stack[RING0_INTERRUPT_STACK_SIZE]
@@ -91,30 +96,37 @@ namespace kernel
         mem::Vmm *active_virtual_memory = nullptr;
         volatile bool user_task_active = false;
         int32_t user_task_exit_status = 0;
-        UserProcessSpace process_spaces[USER_PROCESS_COUNT]{};
+        UserProcessSpace *process_spaces = nullptr;
+        bool page_directory_slots[PROCESS_DIRECTORY_SLOTS]{};
         uint8_t spawn_image[USER_CODE_MAX_SIZE];
 
         UserProcessSpace *reserve_process_space()
         {
-            for (uint32_t i = 0; i < USER_PROCESS_COUNT; ++i)
-            {
-                if (process_spaces[i].reserved)
-                    continue;
-                UserProcessSpace &space = process_spaces[i];
-                memset(&space, 0, sizeof(space));
-                space.reserved = true;
-                space.page_directory_address = KERN_PD_AREA_BEGIN + i * PAGESIZE_4K;
-                return &space;
-            }
-            return nullptr;
+            uint32_t slot = 0;
+            while (slot < PROCESS_DIRECTORY_SLOTS && page_directory_slots[slot])
+                ++slot;
+            if (slot == PROCESS_DIRECTORY_SLOTS)
+                return nullptr;
+            auto *space = static_cast<UserProcessSpace *>(
+                mem::MemAlloc{}.try_kmalloc(sizeof(UserProcessSpace)));
+            if (space == nullptr)
+                return nullptr;
+            memset(space, 0, sizeof(UserProcessSpace));
+            page_directory_slots[slot] = true;
+            space->reserved = true;
+            space->directory_slot = slot;
+            space->page_directory_address = KERN_PD_AREA_BEGIN + slot * PAGESIZE_4K;
+            space->next = process_spaces;
+            process_spaces = space;
+            return space;
         }
 
         UserProcessSpace *find_process_space(uint32_t process_id)
         {
-            for (uint32_t i = 0; i < USER_PROCESS_COUNT; ++i)
-                if (process_spaces[i].reserved &&
-                    process_spaces[i].process_id == process_id)
-                    return &process_spaces[i];
+            for (UserProcessSpace *space = process_spaces; space != nullptr;
+                 space = space->next)
+                if (space->reserved && space->process_id == process_id)
+                    return space;
             return nullptr;
         }
 
@@ -221,9 +233,17 @@ namespace kernel
                 ? KERN_PAGE_DIRECTORY : old_cr3;
             if (return_cr3 != space.page_directory_address)
                 mem::change_pd(return_cr3);
+            const uint32_t directory_slot = space.directory_slot;
             memset(reinterpret_cast<void *>(space.page_directory_address), 0,
                    PAGESIZE_4K);
+            UserProcessSpace **link = &process_spaces;
+            while (*link != nullptr && *link != &space)
+                link = &(*link)->next;
+            if (*link == &space)
+                *link = space.next;
+            page_directory_slots[directory_slot] = false;
             memset(&space, 0, sizeof(space));
+            mem::MemAlloc{}.kfree(&space);
         }
 
         bool load_flat_image(UserProcessSpace &space, const uint8_t *image,
@@ -401,7 +421,7 @@ namespace kernel
             return -13;
 
         // Önce alt süreçleri belirle; süreçler silindikten sonra ebeveyn bağı kaybolur.
-        uint32_t victims[USER_PROCESS_COUNT]{};
+        uint32_t victims[PROCESS_DIRECTORY_SLOTS]{};
         uint32_t count = 1;
         victims[0] = process_id;
         for (uint32_t parent = 0; parent < count; ++parent)
@@ -418,7 +438,7 @@ namespace kernel
                 bool found = false;
                 for (uint32_t j = 0; j < count; ++j)
                     if (victims[j] == info.id) found = true;
-                if (!found && count < USER_PROCESS_COUNT) victims[count++] = info.id;
+                if (!found && count < PROCESS_DIRECTORY_SLOTS) victims[count++] = info.id;
             }
         }
         while (count != 0)
@@ -642,14 +662,17 @@ namespace kernel
         user_task_active = false;
         thread_terminate_users();
         UserProcessSpace *space = find_process_space(thread_current_process_id());
-        for (uint32_t i = 0; i < USER_PROCESS_COUNT; ++i)
+        UserProcessSpace *child = process_spaces;
+        while (child != nullptr)
         {
-            UserProcessSpace &child = process_spaces[i];
-            if (!child.reserved || child.process_id == 0 ||
-                child.process_id == thread_current_process_id())
-                continue;
-            process_finish(child.process_id);
-            cleanup_process_space(child, false);
+            UserProcessSpace *next = child->next;
+            if (child->reserved && child->process_id != 0 &&
+                child->process_id != thread_current_process_id())
+            {
+                process_finish(child->process_id);
+                cleanup_process_space(*child, false);
+            }
+            child = next;
         }
         registers->eax = static_cast<uint32_t>(status);
         registers->eip = reinterpret_cast<uint32_t>(user_mode_exit_trampoline);

@@ -8,14 +8,13 @@
 #include <interrupts/descriptortables.hh>
 #include <library/mem.hh>
 #include <mem/vmm.hh>
+#include <mem/alloc.hh>
 #include <kernel/syscalls/graphics.hh>
 
 namespace kernel
 {
     namespace
     {
-        constexpr uint32_t MAX_THREADS = abi::MAX_THREADS;
-        constexpr uint32_t MAX_PROCESSES = 8;
         constexpr uint32_t STACK_SIZE = 8192;
         constexpr uint32_t NO_THREAD = UINT32_MAX;
 
@@ -53,12 +52,114 @@ namespace kernel
             alignas(16) uint8_t stack[STACK_SIZE];
         };
 
-        Thread threads[MAX_THREADS]{};
-        Process processes[MAX_PROCESSES]{};
+        struct ThreadTable
+        {
+            Thread **items = nullptr;
+            uint32_t capacity = 0;
+            uint32_t count = 0;
+
+            bool ensure_slot(uint32_t slot)
+            {
+                if (slot == UINT32_MAX)
+                    return false;
+                if (slot >= capacity)
+                {
+                    uint32_t next = capacity == 0 ? 8 : capacity;
+                    while (next <= slot)
+                    {
+                        if (next > UINT32_MAX / (2 * sizeof(Thread *)))
+                            return false;
+                        next *= 2;
+                    }
+                    auto **grown = static_cast<Thread **>(
+                        mem::MemAlloc{}.try_kmalloc(next * sizeof(Thread *)));
+                    if (grown == nullptr)
+                        return false;
+                    memset(grown, 0, next * sizeof(Thread *));
+                    for (uint32_t i = 0; i < count; ++i)
+                        grown[i] = items[i];
+                    if (items != nullptr)
+                        mem::MemAlloc{}.kfree(items);
+                    items = grown;
+                    capacity = next;
+                }
+                if (items[slot] == nullptr)
+                {
+                    items[slot] = static_cast<Thread *>(
+                        mem::MemAlloc{}.try_kmalloc(sizeof(Thread)));
+                    if (items[slot] == nullptr)
+                        return false;
+                    memset(items[slot], 0, sizeof(Thread));
+                }
+                if (slot >= count)
+                    count = slot + 1;
+                return true;
+            }
+
+            bool has(uint32_t slot) const
+            {
+                return slot < count && items[slot] != nullptr;
+            }
+
+            Thread &operator[](uint32_t slot) { return *items[slot]; }
+            const Thread &operator[](uint32_t slot) const { return *items[slot]; }
+        } threads;
+
+        struct ProcessTable
+        {
+            Process **items = nullptr;
+            uint32_t capacity = 0;
+            uint32_t count = 0;
+
+            bool ensure_slot(uint32_t slot)
+            {
+                if (slot == UINT32_MAX)
+                    return false;
+                if (slot >= capacity)
+                {
+                    uint32_t next = capacity == 0 ? 8 : capacity;
+                    while (next <= slot)
+                    {
+                        if (next > UINT32_MAX / (2 * sizeof(Process *)))
+                            return false;
+                        next *= 2;
+                    }
+                    auto **grown = static_cast<Process **>(
+                        mem::MemAlloc{}.try_kmalloc(next * sizeof(Process *)));
+                    if (grown == nullptr)
+                        return false;
+                    memset(grown, 0, next * sizeof(Process *));
+                    for (uint32_t i = 0; i < count; ++i)
+                        grown[i] = items[i];
+                    if (items != nullptr)
+                        mem::MemAlloc{}.kfree(items);
+                    items = grown;
+                    capacity = next;
+                }
+                if (items[slot] == nullptr)
+                {
+                    items[slot] = static_cast<Process *>(
+                        mem::MemAlloc{}.try_kmalloc(sizeof(Process)));
+                    if (items[slot] == nullptr)
+                        return false;
+                    memset(items[slot], 0, sizeof(Process));
+                }
+                if (slot >= count)
+                    count = slot + 1;
+                return true;
+            }
+
+            Process &operator[](uint32_t slot) { return *items[slot]; }
+            const Process &operator[](uint32_t slot) const { return *items[slot]; }
+        } processes;
+
+        uint32_t thread_slots() { return threads.count; }
+        uint32_t process_slots() { return processes.count; }
         uint32_t current_threads[smp::MAX_CPUS]{};
         uint32_t &current_thread() { return current_threads[smp::current_cpu()]; }
         bool slot_available(uint32_t slot)
         {
+            if (!threads.has(slot)) return true;
             if (threads[slot].state == State::unused) return true;
             if (threads[slot].state != State::exited) return false;
             for (uint32_t cpu = 0; cpu < smp::MAX_CPUS; ++cpu)
@@ -117,9 +218,11 @@ namespace kernel
         uint32_t find_next(uint32_t after)
         {
             const uint32_t cpu = smp::current_cpu();
-            for (uint32_t step = 1; step <= MAX_THREADS; ++step)
+            const uint32_t count = thread_slots();
+            if (count == 0) return NO_THREAD;
+            for (uint32_t step = 1; step <= count; ++step)
             {
-                const uint32_t candidate = (after + step) % MAX_THREADS;
+                const uint32_t candidate = (after + step) % count;
                 const State state = threads[candidate].state;
                 if (state == State::ready && !running_elsewhere(candidate, cpu) &&
                     !threads[candidate].idle &&
@@ -127,9 +230,9 @@ namespace kernel
                     return candidate;
             }
             // Boşta iş parçacığını yalnızca tüm normal iş parçacıkları beklediğinde veya sonlandığında zamanla.
-            for (uint32_t step = 1; step <= MAX_THREADS; ++step)
+            for (uint32_t step = 1; step <= count; ++step)
             {
-                const uint32_t candidate = (after + step) % MAX_THREADS;
+                const uint32_t candidate = (after + step) % count;
                 const State state = threads[candidate].state;
                 if (state == State::ready && threads[candidate].idle &&
                     threads[candidate].idle_cpu == cpu)
@@ -156,8 +259,8 @@ namespace kernel
     {
         if (initialized || ring0_stack_top == 0)
             return false;
-        for (uint32_t i = 0; i < MAX_THREADS; ++i)
-            threads[i].state = State::unused;
+        if (!threads.ensure_slot(0)) return false;
+        threads[0].state = State::unused;
         for (uint32_t i = 0; i < smp::MAX_CPUS; ++i)
             current_threads[i] = NO_THREAD;
 
@@ -186,9 +289,9 @@ namespace kernel
         __asm__ volatile("pushfl; popl %0" : "=r"(flags));
         cpu::disable_interrupt();
         uint32_t slot = 1;
-        while (slot < MAX_THREADS && !slot_available(slot))
+        while (slot < thread_slots() && !slot_available(slot))
             ++slot;
-        if (slot == MAX_THREADS)
+        if (!threads.ensure_slot(slot))
         {
             if ((flags & 0x200U) != 0) cpu::enable_interrupt();
             return -12;
@@ -244,9 +347,9 @@ namespace kernel
         __asm__ volatile("pushfl; popl %0" : "=r"(flags));
         cpu::disable_interrupt();
         uint32_t slot = 2;
-        while (slot < MAX_THREADS && !slot_available(slot))
+        while (slot < thread_slots() && !slot_available(slot))
             ++slot;
-        if (slot == MAX_THREADS)
+        if (!threads.ensure_slot(slot))
         {
             if ((flags & 0x200U) != 0) cpu::enable_interrupt();
             return -12;
@@ -292,13 +395,13 @@ namespace kernel
         if (from_pit)
         {
             pit_ticks = timer_get_ticks();
-            if (current_thread() < MAX_THREADS &&
+            if (current_thread() < thread_slots() &&
                 threads[current_thread()].state == State::running &&
                 !threads[current_thread()].idle &&
                 !threads[current_thread()].waiting_for_input)
                 ++threads[current_thread()].cpu_ticks;
         }
-        for (uint32_t i = 0; i < MAX_THREADS; ++i)
+        for (uint32_t i = 0; i < thread_slots(); ++i)
             if (threads[i].state == State::sleeping &&
                 tick_reached(pit_ticks, threads[i].wake_tick))
                 threads[i].state = State::ready;
@@ -312,7 +415,7 @@ namespace kernel
             return interrupted;
 
         const uint32_t previous = current_thread();
-        if (previous >= MAX_THREADS)
+        if (previous >= thread_slots())
             return interrupted;
         Thread &old = threads[previous];
         old.saved_context = interrupted;
@@ -338,11 +441,11 @@ namespace kernel
         return selected.saved_context != nullptr ? selected.saved_context : interrupted;
     }
 
-    void thread_attach_cpu(uint32_t ring0_stack_top)
+    bool thread_attach_cpu(uint32_t ring0_stack_top)
     {
         uint32_t slot = 1;
-        while (slot < MAX_THREADS && !slot_available(slot)) ++slot;
-        if (slot == MAX_THREADS) return;
+        while (slot < thread_slots() && !slot_available(slot)) ++slot;
+        if (!threads.ensure_slot(slot)) return false;
         Thread &thread = threads[slot];
         memset(&thread, 0, sizeof(thread));
         thread.id = slot;
@@ -354,16 +457,17 @@ namespace kernel
         set_name(thread, "Bos bekleme");
         current_thread() = slot;
         set_kernel_stack(ring0_stack_top);
+        return true;
     }
 
     bool thread_current_is_idle()
     {
-        return current_thread() < MAX_THREADS && threads[current_thread()].idle;
+        return current_thread() < thread_slots() && threads[current_thread()].idle;
     }
 
     bool thread_current_is_alive()
     {
-        return current_thread() < MAX_THREADS &&
+        return current_thread() < thread_slots() &&
                threads[current_thread()].state != State::exited;
     }
 
@@ -395,7 +499,7 @@ namespace kernel
 
     void thread_set_waiting_for_input(bool waiting)
     {
-        if (current_thread() < MAX_THREADS)
+        if (current_thread() < thread_slots())
             threads[current_thread()].waiting_for_input = waiting;
     }
 
@@ -407,10 +511,15 @@ namespace kernel
     uint32_t thread_active_count()
     {
         uint32_t count = 0;
-        for (uint32_t i = 0; i < MAX_THREADS; ++i)
+        for (uint32_t i = 0; i < thread_slots(); ++i)
             if (threads[i].state != State::unused && threads[i].state != State::exited)
                 ++count;
         return count;
+    }
+
+    uint32_t thread_slot_count()
+    {
+        return thread_slots();
     }
 
     uint32_t thread_switch_count()
@@ -425,7 +534,7 @@ namespace kernel
 
     bool thread_get_info(uint32_t id, ThreadInfo *info)
     {
-        if (info == nullptr || id >= MAX_THREADS ||
+        if (info == nullptr || !threads.has(id) ||
             threads[id].state == State::unused || threads[id].state == State::exited)
             return false;
         const Thread &thread = threads[id];
@@ -453,13 +562,13 @@ namespace kernel
 
     uint32_t process_start(const char *name)
     {
-        if (!initialized || current_thread() >= MAX_THREADS)
+        if (!initialized || current_thread() >= thread_slots())
             return 0;
         const uint32_t id = process_create(name, 0);
         if (id == 0)
             return 0;
         Process *created = nullptr;
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active && processes[i].id == id)
                 created = &processes[i];
         if (created == nullptr)
@@ -475,10 +584,9 @@ namespace kernel
         if (!initialized)
             return 0;
         uint32_t slot = 0;
-        while (slot < MAX_PROCESSES && processes[slot].active)
+        while (slot < process_slots() && processes[slot].active)
             ++slot;
-        if (slot == MAX_PROCESSES)
-            return 0;
+        if (!processes.ensure_slot(slot)) return 0;
 
         uint32_t id = next_process_id++;
         if (id == 0)
@@ -502,7 +610,7 @@ namespace kernel
 
     void process_set_main_thread(uint32_t process_id, uint32_t thread_id)
     {
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active && processes[i].id == process_id)
             {
                 processes[i].main_thread_id = thread_id;
@@ -516,11 +624,11 @@ namespace kernel
             return;
         syscall_window_remove(process_id);
         syscall_close_process_files(process_id);
-        for (uint32_t i = 0; i < MAX_THREADS; ++i)
+        for (uint32_t i = 0; i < thread_slots(); ++i)
             if (i != current_thread() && threads[i].process_id == process_id &&
                 threads[i].user)
                 threads[i].state = State::exited;
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active && processes[i].id == process_id)
             {
                 if (focused_process_id == process_id)
@@ -532,7 +640,7 @@ namespace kernel
     uint32_t process_active_count()
     {
         uint32_t count = 0;
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active)
                 ++count;
         return count;
@@ -543,7 +651,7 @@ namespace kernel
         if (info == nullptr)
             return false;
         uint32_t active_index = 0;
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
         {
             const Process &process = processes[i];
             if (!process.active)
@@ -555,7 +663,7 @@ namespace kernel
             info->main_thread_id = process.main_thread_id;
             info->thread_count = 0;
             info->cpu_ticks = 0;
-            for (uint32_t thread_id = 0; thread_id < MAX_THREADS; ++thread_id)
+            for (uint32_t thread_id = 0; thread_id < thread_slots(); ++thread_id)
             {
                 const Thread &thread = threads[thread_id];
                 if (thread.process_id != process.id ||
@@ -573,12 +681,12 @@ namespace kernel
 
     uint32_t thread_current_process_id()
     {
-        return current_thread() < MAX_THREADS ? threads[current_thread()].process_id : 0;
+        return current_thread() < thread_slots() ? threads[current_thread()].process_id : 0;
     }
 
     uint32_t process_main_thread_id(uint32_t process_id)
     {
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active && processes[i].id == process_id)
                 return processes[i].main_thread_id;
         return UINT32_MAX;
@@ -591,7 +699,7 @@ namespace kernel
             focused_process_id = 0;
             return;
         }
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active && processes[i].id == process_id)
             {
                 focused_process_id = process_id;
@@ -608,7 +716,7 @@ namespace kernel
     {
         if (process_id == 0)
             return false;
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active && processes[i].id == process_id)
             {
                 processes[i].minimized = true;
@@ -621,7 +729,7 @@ namespace kernel
 
     bool process_is_minimized(uint32_t process_id)
     {
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active && processes[i].id == process_id)
                 return processes[i].minimized;
         return false;
@@ -629,7 +737,7 @@ namespace kernel
 
     bool process_focus(uint32_t caller_id, uint32_t target_id)
     {
-        for (uint32_t i = 0; i < MAX_PROCESSES; ++i)
+        for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active && processes[i].id == target_id &&
                 (processes[i].parent_id == caller_id || target_id == caller_id))
             {
@@ -644,22 +752,22 @@ namespace kernel
 
     uint32_t thread_current_user_stack_base()
     {
-        return current_thread() < MAX_THREADS ? threads[current_thread()].user_stack_base : 0;
+        return current_thread() < thread_slots() ? threads[current_thread()].user_stack_base : 0;
     }
 
     uint32_t thread_current_user_stack_pages()
     {
-        return current_thread() < MAX_THREADS ? threads[current_thread()].user_stack_pages : 0;
+        return current_thread() < thread_slots() ? threads[current_thread()].user_stack_pages : 0;
     }
 
     bool thread_current_is_user()
     {
-        return current_thread() < MAX_THREADS && threads[current_thread()].user;
+        return current_thread() < thread_slots() && threads[current_thread()].user;
     }
 
     void thread_set_current_name(const char *name)
     {
-        if (current_thread() < MAX_THREADS)
+        if (current_thread() < thread_slots())
             set_name(threads[current_thread()], name);
     }
 
@@ -667,7 +775,7 @@ namespace kernel
                                  uint32_t stack_base,
                                  uint32_t stack_pages)
     {
-        if (current_thread() >= MAX_THREADS)
+        if (current_thread() >= thread_slots())
             return;
         Thread &thread = threads[current_thread()];
         thread.user = true;
@@ -679,7 +787,7 @@ namespace kernel
 
     void thread_set_current_kernel(const char *name)
     {
-        if (current_thread() >= MAX_THREADS)
+        if (current_thread() >= thread_slots())
             return;
         Thread &thread = threads[current_thread()];
         thread.user = false;
@@ -691,14 +799,14 @@ namespace kernel
 
     void thread_terminate_users()
     {
-        for (uint32_t i = 1; i < MAX_THREADS; ++i)
+        for (uint32_t i = 1; i < thread_slots(); ++i)
             if (threads[i].user)
                 threads[i].state = State::exited;
     }
 
     void thread_set_current_ring0_stack(uint32_t stack_top)
     {
-        if (!initialized || current_thread() >= MAX_THREADS || stack_top == 0)
+        if (!initialized || current_thread() >= thread_slots() || stack_top == 0)
             return;
         threads[current_thread()].ring0_stack_top = stack_top;
         set_kernel_stack(stack_top);
@@ -706,7 +814,7 @@ namespace kernel
 
     [[noreturn]] void thread_exit()
     {
-        if (initialized && current_thread() < MAX_THREADS && current_thread() != 0)
+        if (initialized && current_thread() < thread_slots() && current_thread() != 0)
             threads[current_thread()].state = State::exited;
         thread_yield();
         for (;;) cpu::cpu_halt();

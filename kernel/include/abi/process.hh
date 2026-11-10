@@ -7,6 +7,7 @@
 
 namespace abi
 {
+
     struct ProcessInfo
     {
         uint32_t id;

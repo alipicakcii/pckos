@@ -42,6 +42,7 @@ namespace kernel
                 case abi::syscall_thread_sleep:
                 case abi::syscall_thread_id:
                 case abi::syscall_thread_count:
+                case abi::syscall_thread_capacity:
                 case abi::syscall_thread_switch_count:
                 case abi::syscall_thread_create:
                 case abi::syscall_thread_exit:

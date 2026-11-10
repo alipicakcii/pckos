@@ -38,7 +38,7 @@ namespace kernel
                                uint32_t user_stack_base, uint32_t user_stack_pages,
                                uint32_t cr3, uint32_t process_id,
                                const char *name);
-    void thread_attach_cpu(uint32_t ring0_stack_top);
+    bool thread_attach_cpu(uint32_t ring0_stack_top);
     bool thread_current_is_idle();
     bool thread_current_is_alive();
     void thread_yield();
@@ -46,6 +46,7 @@ namespace kernel
     void thread_set_waiting_for_input(bool waiting);
     uint32_t thread_current_id();
     uint32_t thread_active_count();
+    uint32_t thread_slot_count();
     uint32_t thread_switch_count();
     uint32_t thread_tick_count();
     bool thread_get_info(uint32_t id, ThreadInfo *info);
