@@ -142,7 +142,12 @@ namespace
                     const uint32_t process_id = app_process_ids_[foreground_window_];
                     if (process_id != 0 && !user::process_is_minimized(process_id) &&
                         event.type == 3)
+                    {
+                        user::gui::begin_frame();
+                        draw_taskbar();
+                        user::gui::end_frame();
                         continue;
+                    }
                     foreground_window_ = 0;
                     active_ = 0;
                     last_buttons_ = 0;
