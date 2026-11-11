@@ -3,6 +3,7 @@
 #include <device/input/ps2_mouse.hh>
 #include <cpu/io.hh>
 #include <interrupts/isr.hh>
+#include <kernel/task/thread.hh>
 
 namespace device
 {
@@ -86,6 +87,7 @@ namespace device
             event_queue[queue_write].delta_y = event.delta_y;
             event_queue[queue_write].buttons = event.buttons;
             queue_write = next;
+            kernel::thread_wake_input_waiters();
         }
     }
 

@@ -18,7 +18,7 @@ namespace kernel
         constexpr uint32_t STACK_SIZE = 8192;
         constexpr uint32_t NO_THREAD = UINT32_MAX;
 
-        enum class State : uint8_t { unused, ready, running, sleeping, exited };
+        enum class State : uint8_t { unused, ready, running, sleeping, exited, waiting_input };
 
         struct Process
         {
@@ -402,7 +402,8 @@ namespace kernel
                 ++threads[current_thread()].cpu_ticks;
         }
         for (uint32_t i = 0; i < thread_slots(); ++i)
-            if (threads[i].state == State::sleeping &&
+            if ((threads[i].state == State::sleeping ||
+                 (threads[i].state == State::waiting_input && threads[i].wake_tick != 0)) &&
                 tick_reached(pit_ticks, threads[i].wake_tick))
                 threads[i].state = State::ready;
 
@@ -495,6 +496,26 @@ namespace kernel
         thread.wake_tick = timer_get_ticks() + ticks;
         thread.state = State::sleeping;
         thread_yield();
+    }
+
+    void thread_wait_for_input(uint32_t timeout_ticks)
+    {
+        if (!initialized || current_thread() >= thread_slots())
+            return;
+        Thread &thread = threads[current_thread()];
+        thread.waiting_for_input = true;
+        thread.wake_tick = timeout_ticks == 0 ? 0 : timer_get_ticks() + timeout_ticks;
+        thread.state = State::waiting_input;
+        thread_yield();
+        thread.waiting_for_input = false;
+        thread.wake_tick = 0;
+    }
+
+    void thread_wake_input_waiters()
+    {
+        for (uint32_t i = 0; i < thread_slots(); ++i)
+            if (threads[i].state == State::waiting_input)
+                threads[i].state = State::ready;
     }
 
     void thread_set_waiting_for_input(bool waiting)
@@ -697,12 +718,14 @@ namespace kernel
         if (process_id == 0)
         {
             focused_process_id = 0;
+            thread_wake_input_waiters();
             return;
         }
         for (uint32_t i = 0; i < process_slots(); ++i)
             if (processes[i].active && processes[i].id == process_id)
             {
                 focused_process_id = process_id;
+                thread_wake_input_waiters();
                 return;
             }
     }
@@ -722,6 +745,7 @@ namespace kernel
                 processes[i].minimized = true;
                 syscall_window_set_visible(process_id, false);
                 focused_process_id = processes[i].parent_id;
+                thread_wake_input_waiters();
                 return true;
             }
         return false;
@@ -745,6 +769,7 @@ namespace kernel
                 syscall_window_set_visible(target_id, true);
                 syscall_window_raise(target_id);
                 focused_process_id = target_id;
+                thread_wake_input_waiters();
                 return true;
             }
         return false;

@@ -51,9 +51,15 @@ namespace kernel::syscalls
 
         auto *event = reinterpret_cast<abi::InputEvent *>(user_event);
         const uint32_t started = timer_get_ticks();
+        const uint32_t initial_focus = process_input_focus();
         for (;;)
         {
             const uint32_t current_process = thread_current_process_id();
+            if (process_input_focus() != initial_focus)
+            {
+                *event = {3, 0, 0, 0};
+                return 1;
+            }
             if (pending_mouse_process == current_process)
             {
                 event->type = 2;
@@ -112,9 +118,15 @@ namespace kernel::syscalls
                 *event = {3, 0, 0, 0};
                 return 1;
             }
-            thread_set_waiting_for_input(true);
-            thread_sleep(1);
-            thread_set_waiting_for_input(false);
+            uint32_t remaining = 0;
+            if (timeout_ticks != 0)
+            {
+                const uint32_t elapsed = timer_get_ticks() - started;
+                if (elapsed >= timeout_ticks)
+                    continue;
+                remaining = timeout_ticks - elapsed;
+            }
+            thread_wait_for_input(remaining);
         }
     }
 

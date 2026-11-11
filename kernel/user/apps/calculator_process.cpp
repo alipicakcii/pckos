@@ -180,30 +180,37 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
     (void)user::graphics_get_cursor(&mouse_x, &mouse_y);
     uint32_t last_buttons = 0;
+    bool dirty = true;
     for (;;)
     {
         if (user::process_is_minimized())
         {
             last_buttons = 0;
             user::InputEvent ignored{};
-            (void)user::wait_event(&ignored, 10);
+            (void)user::wait_event(&ignored, 0);
+            dirty = true;
             continue;
         }
-        user::gui::begin_frame();
-        x = window.x();
-        y = window.y();
-        window.draw();
-        if (calculator.display()[0] == 'H')
+        if (dirty)
         {
-            user::gui::frame(x + 18, y + 45, width - 36, 56,
-                             user::gui::COLOR_WHITE, true);
-            user::gui::text(x + width - 28 - user::gui::text_width("Hata"),
-                            y + 63, "Hata", user::gui::COLOR_TEXT);
+            user::gui::begin_frame();
+            x = window.x();
+            y = window.y();
+            window.draw();
+            if (calculator.display()[0] == 'H')
+            {
+                user::gui::frame(x + 18, y + 45, width - 36, 56,
+                                 user::gui::COLOR_WHITE, true);
+                user::gui::text(x + width - 28 - user::gui::text_width("Hata"),
+                                y + 63, "Hata", user::gui::COLOR_TEXT);
+            }
+            user::gui::end_frame();
+            dirty = false;
         }
-        user::gui::end_frame();
 
         user::InputEvent event{};
-        if (user::wait_event(&event, 10) <= 0 || event.type == 3) continue;
+        if (user::wait_event(&event, 0) <= 0 || event.type == 3) continue;
+        dirty = true;
         if (event.type == 1)
         {
             if (event.value0 == 0x1B) user::exit(0);

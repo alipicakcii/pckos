@@ -33,6 +33,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
     (void)user::graphics_get_cursor(&mouse_x, &mouse_y);
     uint32_t last_buttons = 0;
+    bool dirty = true;
     user::gui::Window window(x, y, width, height, "PCKOS - Terminal");
     if (!window.valid())
         user::exit(-1);
@@ -41,27 +42,34 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     for (;;)
     {
         terminal.poll_output();
+        dirty = terminal.consume_dirty() || dirty;
         if (user::process_is_minimized())
         {
             last_buttons = 0;
             user::InputEvent event{};
             (void)user::wait_event(&event, 10);
+            dirty = true;
             continue;
         }
-        user::gui::begin_frame();
-        x = window.x();
-        y = window.y();
-        window.draw();
-        const uint32_t content_x = x + 7, content_y = y + 32;
-        const uint32_t content_width = width - 14, content_height = height - 40;
-        user::gui::push_clip(content_x, content_y, content_width, content_height);
-        terminal.draw(content_x, content_y, content_width, content_height);
-        user::gui::pop_clip();
-        user::gui::end_frame();
+        if (dirty)
+        {
+            user::gui::begin_frame();
+            x = window.x();
+            y = window.y();
+            window.draw();
+            const uint32_t content_x = x + 7, content_y = y + 32;
+            const uint32_t content_width = width - 14, content_height = height - 40;
+            user::gui::push_clip(content_x, content_y, content_width, content_height);
+            terminal.draw(content_x, content_y, content_width, content_height);
+            user::gui::pop_clip();
+            user::gui::end_frame();
+            dirty = false;
+        }
 
         user::InputEvent event{};
         if (user::wait_event(&event, 10) <= 0 || event.type == 3)
             continue;
+        dirty = true;
         if (event.type == 1)
         {
             if (event.value0 == 0x1B)

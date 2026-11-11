@@ -152,7 +152,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         {
             last_buttons = 0;
             user::InputEvent ignored{};
-            (void)user::wait_event(&ignored, 10);
+            (void)user::wait_event(&ignored, 0);
             continue;
         }
 

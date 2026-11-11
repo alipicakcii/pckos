@@ -557,6 +557,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     user::graphics_cursor(mouse_x, mouse_y, true);
     uint32_t last_buttons = 0;
     uint32_t last_step = static_cast<uint32_t>(user::get_ticks());
+    bool dirty = true;
 
     for (;;)
     {
@@ -564,21 +565,35 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         {
             last_buttons = 0;
             user::InputEvent ignored{};
-            (void)user::wait_event(&ignored, 10);
+            (void)user::wait_event(&ignored, 0);
             last_step = static_cast<uint32_t>(user::get_ticks());
+            dirty = true;
             continue;
         }
 
-        user::gui::begin_frame();
-        x = window.x();
-        y = window.y();
-        draw_game(window, x, y, width, height, cell_size, game);
-        if (info_open)
-            draw_game_info(x, y, width, height);
-        user::gui::end_frame();
+        if (dirty)
+        {
+            user::gui::begin_frame();
+            x = window.x();
+            y = window.y();
+            draw_game(window, x, y, width, height, cell_size, game);
+            if (info_open)
+                draw_game_info(x, y, width, height);
+            user::gui::end_frame();
+            dirty = false;
+        }
 
         user::InputEvent event{};
-        (void)user::wait_event(&event, 1);
+        uint32_t timeout = 0;
+        if (game.started() && !game.paused() && !game.game_over() && !info_open)
+        {
+            const uint32_t speed = game.score() > 6 ? 4 : 10 - game.score();
+            const uint32_t elapsed = static_cast<uint32_t>(user::get_ticks()) - last_step;
+            timeout = elapsed >= speed ? 1 : speed - elapsed;
+        }
+        (void)user::wait_event(&event, timeout);
+        if (event.type != 3)
+            dirty = true;
         if (event.type == 1)
         {
             if (event.value0 == 'i' || event.value0 == 'I')
@@ -660,6 +675,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         {
             game.step();
             last_step = now;
+            dirty = true;
         }
     }
 }

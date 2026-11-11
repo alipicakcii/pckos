@@ -125,7 +125,7 @@ namespace
                 terminal_.poll_kernel_log();
                 terminal_.poll_output();
                 user::InputEvent event{};
-                if (user::wait_event(&event, 10) <= 0)
+                if (user::wait_event(&event, 100) <= 0)
                     continue;
                 bool desktop_changed = false;
                 for (uint32_t id = WINDOW_FILE; id <= WINDOW_MEMORY_HUNTER; ++id)
@@ -142,12 +142,7 @@ namespace
                     const uint32_t process_id = app_process_ids_[foreground_window_];
                     if (process_id != 0 && !user::process_is_minimized(process_id) &&
                         event.type == 3)
-                    {
-                        user::gui::begin_frame();
-                        draw_taskbar();
-                        user::gui::end_frame();
                         continue;
-                    }
                     foreground_window_ = 0;
                     active_ = 0;
                     last_buttons_ = 0;

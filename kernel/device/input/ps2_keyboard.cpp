@@ -4,6 +4,7 @@
 #include <device/input/keymap.hh>
 #include <cpu/io.hh>
 #include <interrupts/isr.hh>
+#include <kernel/task/thread.hh>
 
 namespace device
 {
@@ -28,6 +29,7 @@ namespace device
                 return;
             key_queue[queue_write] = character;
             queue_write = next;
+            kernel::thread_wake_input_waiters();
         }
 
         void keyboard_irq(kernel::Registers *registers)

@@ -147,6 +147,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     int32_t mouse_y = static_cast<int32_t>(screen.height / 2);
     (void)user::graphics_get_cursor(&mouse_x, &mouse_y);
     uint32_t last_buttons = 0;
+    bool dirty = true;
 
     for (;;)
     {
@@ -154,7 +155,8 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         {
             last_buttons = 0;
             user::InputEvent ignored{};
-            (void)user::wait_event(&ignored, 10);
+            (void)user::wait_event(&ignored, 0);
+            dirty = true;
             continue;
         }
         uint32_t value = parse_value(input.value());
@@ -165,15 +167,20 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         byte_button.set_pressed(unit == 0);
         kib_button.set_pressed(unit == 1);
         mib_button.set_pressed(unit == 2);
-        user::gui::begin_frame();
-        x = window.x();
-        y = window.y();
-        draw_converter(window, x, y, width, input, unit, overflow);
-        user::gui::end_frame();
+        if (dirty)
+        {
+            user::gui::begin_frame();
+            x = window.x();
+            y = window.y();
+            draw_converter(window, x, y, width, input, unit, overflow);
+            user::gui::end_frame();
+            dirty = false;
+        }
 
         user::InputEvent event{};
-        if (user::wait_event(&event, 10) <= 0 || event.type == 3)
+        if (user::wait_event(&event, 0) <= 0 || event.type == 3)
             continue;
+        dirty = true;
         if (event.type == 1)
         {
             if (event.value0 == 0x1B) user::exit(0);

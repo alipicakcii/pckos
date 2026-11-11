@@ -18,7 +18,8 @@ namespace kernel
         thread_state_ready = 1,
         thread_state_running = 2,
         thread_state_sleeping = 3,
-        thread_state_exited = 4
+        thread_state_exited = 4,
+        thread_state_waiting_input = 5
     };
 
     enum ThreadFlags : uint32_t
@@ -43,6 +44,8 @@ namespace kernel
     bool thread_current_is_alive();
     void thread_yield();
     void thread_sleep(uint32_t ticks);
+    void thread_wait_for_input(uint32_t timeout_ticks);
+    void thread_wake_input_waiters();
     void thread_set_waiting_for_input(bool waiting);
     uint32_t thread_current_id();
     uint32_t thread_active_count();

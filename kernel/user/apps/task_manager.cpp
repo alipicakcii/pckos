@@ -55,6 +55,7 @@ namespace user::apps
                 case 1: return "Hazir";
                 case 2: return "Calisiyor";
                 case 3: return "Uyuyor";
+                case 5: return "Giris bekliyor";
                 default: return "Bilinmiyor";
             }
         }
