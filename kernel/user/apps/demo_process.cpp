@@ -13,8 +13,10 @@ extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
 
-    user::io::serialdev::write("deneme deneme deneme deneme deneme deneme");
+    auto result =user::io::serialdev::write("deneme deneme deneme deneme deneme deneme pckos pckospckos");
+    if (result < 0){
+        print("serial porta yazılamadı\n");
+    }else print("basari ile seri porta yazildi\n");
 
-    print("finish\n");
     user::exit(0);
 }
