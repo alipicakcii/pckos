@@ -43,6 +43,7 @@ namespace fs
     bool pckfs_replace_file(uint16_t inode, const uint8_t *buffer,
                             uint32_t length);
     bool pckfs_create_file(const char *path, uint16_t *inode);
+    bool pckfs_create_directory(const char *path, uint16_t *inode);
 }
 
 #endif

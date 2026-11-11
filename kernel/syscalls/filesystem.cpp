@@ -93,6 +93,22 @@ namespace kernel::syscalls
         return static_cast<int32_t>(inode);
     }
 
+    static int32_t create_directory(const Registers *registers)
+    {
+        if (!fs::pckfs_is_mounted())
+            return ERROR_NO_DEVICE;
+        char path[MAX_USER_PATH];
+        if (!copy_user_string(registers->ebx, path, sizeof(path)))
+            return ERROR_BAD_ADDRESS;
+        fs::PckfsEntry existing;
+        if (fs::pckfs_find(path, &existing))
+            return ERROR_INVALID_ARGUMENT;
+        uint16_t inode = 0;
+        if (!fs::pckfs_create_directory(path, &inode))
+            return ERROR_NO_ENTRY;
+        return static_cast<int32_t>(inode);
+    }
+
     int32_t read_file(uint32_t descriptor, uint32_t user_buffer,
                       uint32_t length)
     {
@@ -195,6 +211,10 @@ namespace kernel::syscalls
 
             case abi::syscall_file_create:
                 registers->eax = static_cast<uint32_t>(create_file(registers));
+                return;
+
+            case abi::syscall_directory_create:
+                registers->eax = static_cast<uint32_t>(create_directory(registers));
                 return;
 
             default:

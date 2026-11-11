@@ -47,6 +47,36 @@ namespace user::apps
             return true;
         }
 
+        bool make_absolute_path(const char *argument, const char *working_directory,
+                                char *path, uint32_t capacity)
+        {
+            if (argument == nullptr || *argument == '\0' || capacity == 0)
+                return false;
+            uint32_t argument_length = length(argument);
+            while (argument_length != 0 && argument[argument_length - 1] == ' ')
+                --argument_length;
+            if (argument_length == 0)
+                return false;
+
+            uint32_t output = 0;
+            if (*argument != '/')
+            {
+                const uint32_t directory_length = length(working_directory);
+                if (directory_length + 1 >= capacity)
+                    return false;
+                for (uint32_t i = 0; i < directory_length; ++i)
+                    path[output++] = working_directory[i];
+                if (!(directory_length == 1 && working_directory[0] == '/'))
+                    path[output++] = '/';
+            }
+            if (output + argument_length >= capacity)
+                return false;
+            for (uint32_t i = 0; i < argument_length; ++i)
+                path[output++] = argument[i];
+            path[output] = '\0';
+            return true;
+        }
+
         void to_number(uint32_t value, char *output)
         {
             char reverse[10];
@@ -179,6 +209,8 @@ namespace user::apps
             print_line("  cd [yol]     Dizin degistir (.., /, -)");
             print_line("  ls [yol]     Dizin icerigini listele");
             print_line("  cat <yol>    Metin dosyasini oku");
+            print_line("  mkdir <yol>  Dizin olustur");
+            print_line("  touch <yol>  Bos dosya olustur");
             print_line("");
             print_line("UYGULAMA VE KABUK");
             print_line("  run <yol>    Uygulama baslat");
@@ -312,6 +344,24 @@ namespace user::apps
         }
         else if (equal(command_, "echo")) print_line("");
         else if (starts_with(command_, "echo ")) print_line(command_ + 5);
+        else if (starts_with(command_, "mkdir ") || starts_with(command_, "touch "))
+        {
+            const bool make_directory = starts_with(command_, "mkdir ");
+            const char *argument = command_ + 6;
+            while (*argument == ' ') ++argument;
+            char path[MAX_PATH];
+            if (!make_absolute_path(argument, working_directory_, path, sizeof(path)))
+                print_line(make_directory ? "Kullanim: mkdir <yol>" : "Kullanim: touch <yol>");
+            else
+            {
+                const int32_t result = make_directory
+                    ? user::create_directory(path) : user::create_file(path);
+                if (result < 0)
+                    print_line(make_directory ? "Dizin olusturulamadi." : "Dosya olusturulamadi.");
+                else
+                    print_line(make_directory ? "Dizin olusturuldu." : "Bos dosya olusturuldu.");
+            }
+        }
         else if (equal(command_, "cd") || starts_with(command_, "cd ") ||
                  equal(command_, "ls") || starts_with(command_, "ls ") ||
                  starts_with(command_, "cat ") || starts_with(command_, "run "))

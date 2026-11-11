@@ -568,11 +568,11 @@ namespace fs
         return true;
     }
 
-    bool pckfs_create_file(const char *path, uint16_t *created_inode)
+    static bool pckfs_create_node(const char *path, uint16_t *created_inode,
+                                  PckfsNodeType type)
     {
         if (path == nullptr || created_inode == nullptr)
             return false;
-        PckfsGuard guard;
         if (!mounted)
             return false;
 
@@ -642,7 +642,7 @@ namespace fs
         created.size = 0;
         created.first_block = END_OF_CHAIN;
         created.parent = parent_entry.inode;
-        created.type = static_cast<uint8_t>(PckfsNodeType::file);
+        created.type = static_cast<uint8_t>(type);
         created.flags = NODE_USED;
 
         const uint32_t inode_offset = free_inode * sizeof(PckfsDiskInode);
@@ -658,6 +658,18 @@ namespace fs
         inodes[free_inode] = created;
         *created_inode = free_inode;
         return true;
+    }
+
+    bool pckfs_create_file(const char *path, uint16_t *created_inode)
+    {
+        PckfsGuard guard;
+        return pckfs_create_node(path, created_inode, PckfsNodeType::file);
+    }
+
+    bool pckfs_create_directory(const char *path, uint16_t *created_inode)
+    {
+        PckfsGuard guard;
+        return pckfs_create_node(path, created_inode, PckfsNodeType::directory);
     }
 
 }

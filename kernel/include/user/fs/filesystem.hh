@@ -45,6 +45,11 @@ namespace user
     {
         return call(syscall_file_create, reinterpret_cast<uint32_t>(path));
     }
+
+    inline int32_t create_directory(const char *path)
+    {
+        return call(syscall_directory_create, reinterpret_cast<uint32_t>(path));
+    }
 }
 
 #endif

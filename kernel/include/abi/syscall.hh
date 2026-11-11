@@ -63,7 +63,8 @@ namespace abi
         syscall_thread_capacity = 51,
         syscall_power_off = 52,
         syscall_file_replace = 53,
-        syscall_file_create = 54
+        syscall_file_create = 54,
+        syscall_directory_create = 55
     };
 }
 
