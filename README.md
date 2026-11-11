@@ -77,10 +77,6 @@ Yapay zekâ kullanımına karşı değilim; projeye yapılacak katkılarda yapay
 
 ## Ekran görüntüleri
 
-### Açılış ekranı
-
-![PCKOS — Açılış ekranı](assets/screenshots/qemu-boot-2026-11-11.png)
-
 ### Terminal
 
 ![PCKOS — Terminal](assets/screenshots/qemu-terminal-2026-11-09.png)
@@ -102,6 +98,10 @@ Bellek Avcısı oyununda her yem alındığında kullanıcı heap'inden bir `uin
 ### Masaüstü
 
 ![PCKOS — Masaüstü](assets/screenshots/qemu-desktop-2026-11-09.png)
+
+### Açılış ekranı
+
+![PCKOS — Açılış ekranı](assets/screenshots/qemu-boot-2026-11-11.png)
 
 ## Geliştirme ortamı
 

@@ -74,10 +74,6 @@ I am not opposed to using AI. Contributions to the project may use AI tools; my 
 
 ## Screenshots
 
-### Boot screen
-
-![PCKOS — Boot screen](assets/screenshots/qemu-boot-2026-11-11.png)
-
 ### Terminal
 
 ![PCKOS — Terminal](assets/screenshots/qemu-terminal-2026-11-09.png)
@@ -99,6 +95,10 @@ In Memory Hunter, each time food is eaten, the game allocates one `uint32_t` (4 
 ### Desktop
 
 ![PCKOS — Desktop](assets/screenshots/qemu-desktop-2026-11-09.png)
+
+### Boot screen
+
+![PCKOS — Boot screen](assets/screenshots/qemu-boot-2026-11-11.png)
 
 ## Development environment
 
