@@ -35,6 +35,8 @@ namespace kernel
                 case abi::syscall_close:
                 case abi::syscall_readdir:
                 case abi::syscall_get_root:
+                case abi::syscall_file_replace:
+                case abi::syscall_file_create:
                     syscalls::handle_filesystem(registers);
                     return;
 

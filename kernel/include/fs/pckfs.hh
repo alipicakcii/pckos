@@ -40,6 +40,9 @@ namespace fs
     bool pckfs_read_file_range(uint16_t inode, uint32_t offset,
                                uint8_t *buffer, uint32_t capacity,
                                uint32_t *bytes_read);
+    bool pckfs_replace_file(uint16_t inode, const uint8_t *buffer,
+                            uint32_t length);
+    bool pckfs_create_file(const char *path, uint16_t *inode);
 }
 
 #endif

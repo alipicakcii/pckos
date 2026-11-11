@@ -65,8 +65,8 @@ PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çek
 - Başlat menüsünden ACPI S5 ile sistemi kapatma; kapanıştan önce ek işlemciler duraklatılır.
 - Framebuffer tabanlı masaüstü; klavye, fare, pencereler ve görev çubuğu.
 - Ortak `Window`, `Widget`, `Button` ve `ClickListener` kullanıcı arayüzü API'si; uygulama simgeleri masaüstü, Başlat menüsü ve görev çubuğunda PNG olarak gösterilir.
-- PCKFS kök dosya sistemi ve IDE ATA PIO disk sürücüsü. Kullanıcı uygulamaları şu an dosyaları okuyabilir; genel dosya yazma desteği henüz yoktur.
-- Masaüstünden açılan Terminal, Dosyalar, Görev Yöneticisi, Hesap Makinesi ve salt okunur Not Defteri.
+- PCKFS kök dosya sistemi ve IDE ATA PIO disk sürücüsü. Kullanıcı uygulamaları mevcut dosyaları okuyabilir ve içeriklerini diske yazabilir.
+- Masaüstünden açılan Terminal, Dosyalar, Görev Yöneticisi, Hesap Makinesi ve Not Defteri.
 - RTC'den tarih/saat okuma; Görev Yöneticisi'nde bellek, işlemci ve thread bilgileri.
 
 ## Katkı ve hata bildirimi
@@ -199,7 +199,7 @@ Süperblok toplam sektör, inode/FAT/veri başlangıçlarını ve kök inode num
 
 Açılışta `AtaPioDisk::initialize()` IDE diski bulur. `pckfs_mount()` süperblok, boyutlar, inode'lar ve FAT'i doğrular. `pckfs_find()` `/a/b` yolunu bileşenlere böler; `pckfs_get_child()` dizini listeler; `pckfs_read_file_range()` blok zincirini izleyip sektörleri okur. Üretici `tools/mkpckfs.py`, okuyucu `kernel/fs/pckfs.cpp` ve kullanıcıya sunulan dosya çağrıları `kernel/syscalls/filesystem.cpp` içindedir. **Disk biçimini değiştirirken bu üçünü birlikte güncelleyin.** Sürüm veya inode yerleşimi değişirse eski imajın bağlanmasını engellemek için doğrulamayı da değiştirin.
 
-PCKFS v1 şu anda kullanıcı programları için **salt okunur**. ATA sürücüsünde sektör yazma işlevi bulunsa da PCKFS'te genel dosya oluşturma/yazma/silme ve bunlar için syscall henüz yoktur. Host'tan dosya aktarmak için:
+PCKFS v1 mevcut dosyaları değiştirmeyi ve var olan dizinlerde yeni dosya oluşturmayı destekler. `replace_file(path, buffer, length)` (syscall 53) dosya içeriğini en çok 8192 bayta kadar yeniler; `create_file(path)` (syscall 54) boş dosyayı oluşturur. Yeni dizin oluşturma ve dosya silme henüz desteklenmez. Not Defteri mevcut dosyaları açıp düzenler; **Yeni** düğmesiyle mevcut bir dizin içinde dosya oluşturabilir ve Kaydet düğmesiyle içeriğini yazar. `./run.sh` PCKFS imajını `host-share/` içeriğinden yeniden oluşturduğu için kaydedilen değişiklikler sonraki `./run.sh` çalıştırmasında sıfırlanır; kalıcı kaynak kopya `host-share/` dizinindedir. Host'tan dosya aktarmak için:
 
 ```sh
 mkdir -p host-share/home/pck
@@ -236,7 +236,7 @@ Kullanıcı API'si `kernel/include/user/` altında konuya göre ayrılmıştır:
 | --- | --- |
 | `user/task/thread.hh` | Thread oluşturma, bekleme ve thread bilgileri |
 | `user/task/process.hh` | Süreç başlatma, sonlandırma ve pencere odağı |
-| `user/fs/filesystem.hh` | Dosya okuma ve dizin listeleme |
+| `user/fs/filesystem.hh` | Dosya okuma, yeni dosya oluşturma, mevcut dosyayı değiştirme ve dizin listeleme |
 | `user/io/stream.hh` | Standart akışlar ve terminal bağlantısı |
 | `user/input/events.hh` | Klavye ve fare olayları |
 | `user/gui/graphics.hh` | Alt düzey çizim ve pencere çağrıları |
@@ -325,7 +325,7 @@ Terminal ön yüzü için `terminal_attach()` (44) çağıran süreci terminal s
 
 | Alan | Önemli API'ler |
 | --- | --- |
-| Dosya | `open`, `read`, `close`, `root_inode`, `read_directory` |
+| Dosya | `open`, `read`, `create_file`, `replace_file`, `close`, `root_inode`, `read_directory` |
 | Günlük/giriş | `read`, `write`, `<user/io/io.hh>`, `terminal_attach`, `terminal_read`, `terminal_send`, `get_kernel_log`, `read_kernel_log`, `wait_event` |
 | Process | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Thread | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
@@ -335,7 +335,7 @@ Terminal ön yüzü için `terminal_attach()` (44) çağıran süreci terminal s
 
 `wait_event(&event, ticks)`: `type=1` klavye (`value0` karakter), `type=2` fare (`value0` X farkı, `value1` Y farkı), `type=3` zaman aşımıdır. `buttons & 1` sol tuş; `buttons & 0x100` yeni basma kenarıdır. 100 PIT tik'i yaklaşık bir saniyedir. Çizim ekran koordinatlarıyla yapılır. Pencereli uygulamalar `Window` oluşturucusuyla pencereyi kaydeder; kareyi `user::gui::begin_frame()` ve `end_frame()` arasında çizer, `Window::draw()` ile pencereyi gösterir ve fare olaylarını `Window::handle_mouse()` metoduna verir. Düşük seviyeli özel çizimler için `user::gui::fill`, `text`, `button`, `icon` ve `push_clip` yardımcıları kullanılabilir.
 
-`get_datetime(&date)` RTC'deki yıl, ay, gün, saat, dakika ve saniyeyi `user::DateTime` yapısına doldurur. `user::shutdown()` (`<user/system/power.hh>`) Başlat menüsündeki kapatma işlemini kullanıcı uygulamalarına açar; çekirdek ACPI FADT/DSDT içindeki S5 bilgisiyle sistemi kapatır. Görev çubuğundaki saat açılıştan beri geçen süreyi değil sanal makinenin RTC saatini gösterir; QEMU betiği RTC'yi host yerel saatiyle başlatır. Hesap Makinesi ve Not Defteri Başlat menüsünden açılır; ikisi de ayrı PID ve ana thread alır. Hesap Makinesi tam sayı işlemleri (`+`, `-`, `*`, `/`) yapar. Not Defteri, yol alanına yazılan herhangi bir PCKFS metin dosyasının ilk 8191 baytını **salt okunur** gösterir. Örneğin `host-share/home/notlar.txt` konursa yol `/home/notlar.txt` olur; dosya adının kodda özel bir anlamı yoktur.
+`get_datetime(&date)` RTC'deki yıl, ay, gün, saat, dakika ve saniyeyi `user::DateTime` yapısına doldurur. `user::shutdown()` (`<user/system/power.hh>`) Başlat menüsündeki kapatma işlemini kullanıcı uygulamalarına açar; çekirdek ACPI FADT/DSDT içindeki S5 bilgisiyle sistemi kapatır. Görev çubuğundaki saat açılıştan beri geçen süreyi değil sanal makinenin RTC saatini gösterir; QEMU betiği RTC'yi host yerel saatiyle başlatır. Hesap Makinesi ve Not Defteri Başlat menüsünden açılır; ikisi de ayrı PID ve ana thread alır. Hesap Makinesi tam sayı işlemleri (`+`, `-`, `*`, `/`) yapar. Not Defteri PCKFS'teki dosyaları açıp en çok 8191 baytlık içerik düzenleyebilir; **Yeni** düğmesi mevcut bir dizinde boş dosya oluşturur. Kaydet düğmesi içeriği diske yazar. Örneğin `host-share/home/notlar.txt` PCKOS'ta `/home/notlar.txt` olarak görünür.
 
 ```cpp
 user::InputEvent event{};

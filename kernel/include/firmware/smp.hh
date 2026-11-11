@@ -25,8 +25,13 @@ namespace kernel::smp
         bool local_apic_found;
     };
 
+    using InitProgressCallback = void (*)(uint32_t ready, uint32_t total,
+                                          void *context);
+
     CpuTopology discover_cpus();
-    uint32_t initialize(const CpuTopology &topology, mem::Vmm &memory);
+    uint32_t initialize(const CpuTopology &topology, mem::Vmm &memory,
+                        InitProgressCallback progress = nullptr,
+                        void *context = nullptr);
     void release_processors();
     uint32_t current_cpu();
     uint32_t online_count();

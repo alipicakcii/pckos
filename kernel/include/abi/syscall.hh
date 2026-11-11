@@ -61,7 +61,9 @@ namespace abi
         syscall_cpu_rnd = 49,
         syscall_terminal_interrupt = 50,
         syscall_thread_capacity = 51,
-        syscall_power_off = 52
+        syscall_power_off = 52,
+        syscall_file_replace = 53,
+        syscall_file_create = 54
     };
 }
 

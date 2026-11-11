@@ -50,6 +50,49 @@ namespace kernel::syscalls
         return ERROR_TOO_MANY_FILES;
     }
 
+    static int32_t replace_file(const Registers *registers)
+    {
+        if (!fs::pckfs_is_mounted())
+            return ERROR_NO_DEVICE;
+        const uint32_t length = registers->edx;
+        if (length > MAX_PCKFS_REPLACE)
+            return ERROR_INVALID_ARGUMENT;
+
+        char path[MAX_USER_PATH];
+        if (!copy_user_string(registers->ebx, path, sizeof(path)))
+            return ERROR_BAD_ADDRESS;
+        if (length != 0 && !active_virtual_memory->is_user_range(
+                registers->ecx, length, false))
+            return ERROR_BAD_ADDRESS;
+
+        fs::PckfsEntry entry;
+        if (!fs::pckfs_find(path, &entry))
+            return ERROR_NO_ENTRY;
+        if (entry.type == fs::PckfsNodeType::directory)
+            return ERROR_IS_DIRECTORY;
+
+        const auto *buffer = reinterpret_cast<const uint8_t *>(registers->ecx);
+        if (!fs::pckfs_replace_file(entry.inode, buffer, length))
+            return ERROR_IO;
+        return static_cast<int32_t>(length);
+    }
+
+    static int32_t create_file(const Registers *registers)
+    {
+        if (!fs::pckfs_is_mounted())
+            return ERROR_NO_DEVICE;
+        char path[MAX_USER_PATH];
+        if (!copy_user_string(registers->ebx, path, sizeof(path)))
+            return ERROR_BAD_ADDRESS;
+        fs::PckfsEntry existing;
+        if (fs::pckfs_find(path, &existing))
+            return ERROR_INVALID_ARGUMENT;
+        uint16_t inode = 0;
+        if (!fs::pckfs_create_file(path, &inode))
+            return ERROR_NO_ENTRY;
+        return static_cast<int32_t>(inode);
+    }
+
     int32_t read_file(uint32_t descriptor, uint32_t user_buffer,
                       uint32_t length)
     {
@@ -144,6 +187,14 @@ namespace kernel::syscalls
                 registers->eax = fs::pckfs_is_mounted()
                     ? fs::pckfs_root_inode()
                     : static_cast<uint32_t>(ERROR_NO_DEVICE);
+                return;
+
+            case abi::syscall_file_replace:
+                registers->eax = static_cast<uint32_t>(replace_file(registers));
+                return;
+
+            case abi::syscall_file_create:
+                registers->eax = static_cast<uint32_t>(create_file(registers));
                 return;
 
             default:

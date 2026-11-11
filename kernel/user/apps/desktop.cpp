@@ -51,7 +51,7 @@ namespace
         {WINDOW_TERMINAL, "/apps/terminal.bin", "Terminal", "Terminal", "Terminal", "/system/icons/terminal.png"},
         {WINDOW_TASK_MANAGER, "/apps/task_manager.bin", "Gorev Yoneticisi", "Gorevler", "Gorevler", "/system/icons/tasks.png"},
         {WINDOW_CALCULATOR, "/apps/calculator.bin", "Hesap Makinesi", "Hesap Makinesi", "Hesap", "/system/icons/calculator.png"},
-        {WINDOW_NOTEPAD, "/apps/notepad.bin", "Metin Goruntuleyici", "Metin", "Metin", "/system/icons/notepad.png"},
+        {WINDOW_NOTEPAD, "/apps/notepad.bin", "Not Defteri", "Not Defteri", "Not Defteri", "/system/icons/notepad.png"},
         {WINDOW_SYSTEM_INFO, "/apps/system_info.bin", "Sistem Bilgisi", "Sistem", "Sistem", "/system/icons/system.png"},
         {WINDOW_CLOCK, "/apps/clock.bin", "Saat ve Takvim", "Saat", "Saat", "/system/icons/clock.png"},
         {WINDOW_UNIT_CONVERTER, "/apps/unit_converter.bin", "Birim Donusturucu", "Donusturucu", "Donustur", "/system/icons/converter.png"},

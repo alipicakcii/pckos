@@ -63,8 +63,8 @@ PCKOS is currently a minimal system under development. The kernel currently prov
 - ACPI S5 power-off from the Start menu; additional processors are parked before shutdown.
 - A framebuffer desktop with keyboard, mouse, windows, and a taskbar.
 - Shared user interface APIs for `Window`, `Widget`, `Button`, and `ClickListener`; PNG application icons appear on the desktop, Start menu, and taskbar.
-- The PCKFS root filesystem and an IDE ATA PIO disk driver. User applications can currently read files; general file writing is not implemented yet.
-- Desktop applications: Terminal, Files, Task Manager, Calculator, and a read-only Notepad.
+- The PCKFS root filesystem and an IDE ATA PIO disk driver. User applications can read existing files and write their contents to disk.
+- Desktop applications: Terminal, Files, Task Manager, Calculator, and Notepad.
 - RTC date/time; memory, processor, and thread information in Task Manager.
 
 ## Contributing and reporting issues
@@ -196,7 +196,7 @@ The superblock stores sector count, inode/FAT/data starts, and root inode. Each 
 
 At boot, `AtaPioDisk::initialize()` detects the IDE disk. `pckfs_mount()` validates the superblock, sizes, inodes, and FAT. `pckfs_find()` resolves `/a/b`; `pckfs_get_child()` lists directory children; `pckfs_read_file_range()` follows the block chain and reads sectors. The image builder is `tools/mkpckfs.py`, the reader is `kernel/fs/pckfs.cpp`, and user-facing file handlers are in `kernel/syscalls/filesystem.cpp`. **Update all three together when changing the disk format.** Update version/layout validation too, so older images are rejected when incompatible.
 
-PCKFS v1 is currently **read-only** to user applications. The ATA driver has a sector-write function, but PCKFS does not yet provide generic create/write/delete operations or syscalls. To add a host file:
+PCKFS v1 lets user applications replace existing files and create new files inside existing directories. `replace_file(path, buffer, length)` (syscall 53) replaces a file's contents with up to 8192 bytes; `create_file(path)` (syscall 54) creates an empty file. Creating directories and deleting files are not supported yet. Notepad can open and edit existing files; its **New** button creates a file inside an existing directory, and Save writes its contents. `./run.sh` rebuilds the PCKFS image from `host-share/`, so saved changes are reset the next time `./run.sh` runs; `host-share/` remains the source copy. To add a host file:
 
 ```sh
 mkdir -p host-share/home/pck
@@ -233,7 +233,7 @@ The user API is grouped by subsystem under `kernel/include/user/`:
 | --- | --- |
 | `user/task/thread.hh` | Thread creation, sleep, and thread information |
 | `user/task/process.hh` | Process launch, exit, and window focus |
-| `user/fs/filesystem.hh` | File reading and directory listing |
+| `user/fs/filesystem.hh` | File reading, creating files, replacing file contents, and directory listing |
 | `user/io/stream.hh` | Standard streams and terminal connections |
 | `user/input/events.hh` | Keyboard and mouse events |
 | `user/gui/graphics.hh` | Low-level drawing and window calls |
@@ -322,7 +322,7 @@ For terminal frontends, `terminal_attach()` (44) makes the caller a terminal own
 
 | Area | Main APIs |
 | --- | --- |
-| Files | `open`, `read`, `close`, `root_inode`, `read_directory` |
+| Files | `open`, `read`, `create_file`, `replace_file`, `close`, `root_inode`, `read_directory` |
 | Logging/input | `read`, `write`, `<user/io/io.hh>`, `terminal_attach`, `terminal_read`, `terminal_send`, `get_kernel_log`, `read_kernel_log`, `wait_event` |
 | Processes | `process_spawn`, `process_count`, `process_get_info`, `process_focus`, `process_minimize`, `exit` |
 | Threads | `thread_create`, `thread_id`, `thread_sleep`, `thread_yield`, `thread_exit`, `thread_get_info` |
@@ -332,7 +332,7 @@ For terminal frontends, `terminal_attach()` (44) makes the caller a terminal own
 
 `wait_event(&event, ticks)`: `type=1` is keyboard (`value0` character), `type=2` is mouse (`value0` X delta, `value1` Y delta), and `type=3` is timeout. `buttons & 1` means left button; `buttons & 0x100` marks a new press edge. 100 PIT ticks are approximately one second. Drawing uses screen coordinates. A windowed app creates a `Window`, draws each frame between `user::gui::begin_frame()` and `end_frame()`, and calls `Window::draw()`. Route mouse events through `Window::handle_mouse()`. Low-level helpers include `fill`, `text`, `button`, `icon`, and `push_clip`.
 
-`get_datetime(&date)` fills `user::DateTime` from the RTC. `user::shutdown()` (`<user/system/power.hh>`) exposes the Start menu power-off action to user applications; the kernel uses the ACPI FADT/DSDT S5 information to power off. The taskbar clock displays the VM's RTC time, not elapsed uptime; QEMU sets the RTC to host local time. Calculator and Notepad launch from the Start menu and each get a separate PID and main thread. Calculator supports integer `+`, `-`, `*`, and `/`. Notepad displays the first 8191 bytes of any PCKFS text file as **read-only**. For example, `host-share/home/notlar.txt` appears at `/home/notlar.txt`; the file name has no special meaning in code.
+`get_datetime(&date)` fills `user::DateTime` from the RTC. `user::shutdown()` (`<user/system/power.hh>`) exposes the Start menu power-off action to user applications; the kernel uses the ACPI FADT/DSDT S5 information to power off. The taskbar clock displays the VM's RTC time, not elapsed uptime; QEMU sets the RTC to host local time. Calculator and Notepad launch from the Start menu and each get a separate PID and main thread. Calculator supports integer `+`, `-`, `*`, and `/`. Notepad opens existing PCKFS files and edits up to 8191 bytes; its **New** button creates an empty file in an existing directory, and Save writes its contents to disk. For example, `host-share/home/notlar.txt` appears at `/home/notlar.txt`.
 
 ```cpp
 user::InputEvent event{};

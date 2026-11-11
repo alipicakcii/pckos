@@ -32,6 +32,19 @@ namespace user
     {
         return call(syscall_get_root);
     }
+
+    inline int32_t replace_file(const char *path, const void *buffer,
+                                uint32_t length)
+    {
+        return call(syscall_file_replace,
+                    reinterpret_cast<uint32_t>(path),
+                    reinterpret_cast<uint32_t>(buffer), length);
+    }
+
+    inline int32_t create_file(const char *path)
+    {
+        return call(syscall_file_create, reinterpret_cast<uint32_t>(path));
+    }
 }
 
 #endif

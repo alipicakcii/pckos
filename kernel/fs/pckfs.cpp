@@ -55,6 +55,36 @@ namespace fs
         PckfsDiskInode inodes[MAX_INODES]{};
         uint32_t fat[MAX_BLOCKS + 1]{};
         bool mounted = false;
+        volatile uint32_t pckfs_lock = 0;
+
+        class PckfsGuard
+        {
+        public:
+            PckfsGuard()
+            {
+                asm volatile("pushfl; popl %0; cli" : "=r"(flags_) :: "memory");
+                uint32_t previous = 1;
+                while (previous != 0)
+                {
+                    previous = 1;
+                    asm volatile("xchgl %0, %1"
+                        : "+r"(previous), "+m"(pckfs_lock) :: "memory");
+                    if (previous != 0)
+                        asm volatile("pause");
+                }
+            }
+
+            ~PckfsGuard()
+            {
+                asm volatile("" ::: "memory");
+                pckfs_lock = 0;
+                if ((flags_ & 0x200U) != 0)
+                    asm volatile("sti" ::: "memory");
+            }
+
+        private:
+            uint32_t flags_;
+        };
 
         bool string_equals(const char *left, const char *right)
         {
@@ -365,6 +395,7 @@ namespace fs
                                uint8_t *buffer, uint32_t capacity,
                                uint32_t *bytes_read)
     {
+        PckfsGuard guard;
         if (!mounted || !valid_inode(inode) || bytes_read == nullptr ||
             (capacity != 0 && buffer == nullptr) ||
             inodes[inode].type != static_cast<uint8_t>(PckfsNodeType::file) ||
@@ -425,6 +456,208 @@ namespace fs
             }
         }
         return remaining == 0;
+    }
+
+    bool pckfs_replace_file(uint16_t inode, const uint8_t *buffer,
+                            uint32_t length)
+    {
+        constexpr uint32_t MAX_REPLACE_SIZE = 8192;
+        constexpr uint32_t MAX_REPLACE_BLOCKS =
+            (MAX_REPLACE_SIZE + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        PckfsGuard guard;
+        if (!mounted || !valid_inode(inode) ||
+            inodes[inode].type != static_cast<uint8_t>(PckfsNodeType::file) ||
+            length > MAX_REPLACE_SIZE || (length != 0 && buffer == nullptr))
+            return false;
+
+        const uint32_t block_count = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        uint32_t new_blocks[MAX_REPLACE_BLOCKS]{};
+        uint32_t found = 0;
+        for (uint32_t block = 1; block <= superblock.data_block_count &&
+             found < block_count; ++block)
+        {
+            if (fat[block] == 0)
+                new_blocks[found++] = block;
+        }
+        if (found != block_count)
+            return false;
+
+        uint8_t sector[SECTOR_SIZE];
+        for (uint32_t i = 0; i < block_count; ++i)
+        {
+            for (uint32_t s = 0; s < SECTORS_PER_BLOCK; ++s)
+            {
+                for (uint32_t byte = 0; byte < SECTOR_SIZE; ++byte)
+                {
+                    const uint32_t source_offset =
+                        i * BLOCK_SIZE + s * SECTOR_SIZE + byte;
+                    sector[byte] = source_offset < length
+                        ? buffer[source_offset] : 0;
+                }
+                const uint32_t lba = superblock.data_start_sector +
+                    (new_blocks[i] - 1) * SECTORS_PER_BLOCK + s;
+                if (!system_disk->write_sector(lba, sector))
+                    return false;
+            }
+        }
+
+        for (uint32_t i = 0; i < block_count; ++i)
+        {
+            const uint32_t next = i + 1 < block_count
+                ? new_blocks[i + 1] : END_OF_CHAIN;
+            const uint32_t fat_offset = new_blocks[i] * sizeof(uint32_t);
+            const uint32_t fat_lba = superblock.fat_start_sector +
+                fat_offset / SECTOR_SIZE;
+            if (!system_disk->read_sector(fat_lba, sector))
+                return false;
+            const uint32_t offset = fat_offset % SECTOR_SIZE;
+            sector[offset] = static_cast<uint8_t>(next);
+            sector[offset + 1] = static_cast<uint8_t>(next >> 8);
+            sector[offset + 2] = static_cast<uint8_t>(next >> 16);
+            sector[offset + 3] = static_cast<uint8_t>(next >> 24);
+            if (!system_disk->write_sector(fat_lba, sector))
+                return false;
+            fat[new_blocks[i]] = next;
+        }
+
+        const uint32_t old_first_block = inodes[inode].first_block;
+        PckfsDiskInode updated = inodes[inode];
+        updated.size = length;
+        updated.first_block = block_count == 0
+            ? END_OF_CHAIN : new_blocks[0];
+        const uint32_t inode_offset = inode * sizeof(PckfsDiskInode);
+        const uint32_t inode_lba = superblock.inode_start_sector +
+            inode_offset / SECTOR_SIZE;
+        if (!system_disk->read_sector(inode_lba, sector))
+            return false;
+        const uint32_t record_offset = inode_offset % SECTOR_SIZE;
+        *reinterpret_cast<PckfsDiskInode *>(sector + record_offset) = updated;
+        if (!system_disk->write_sector(inode_lba, sector))
+            return false;
+        inodes[inode] = updated;
+
+        uint32_t old_block = old_first_block;
+        uint32_t walked = 0;
+        while (old_block != END_OF_CHAIN && old_block != 0 &&
+               old_block <= superblock.data_block_count &&
+               walked++ < superblock.data_block_count)
+        {
+            const uint32_t next_old = fat[old_block];
+            const uint32_t fat_offset = old_block * sizeof(uint32_t);
+            const uint32_t fat_lba = superblock.fat_start_sector +
+                fat_offset / SECTOR_SIZE;
+            if (next_old == 0 ||
+                (next_old != END_OF_CHAIN &&
+                 next_old > superblock.data_block_count))
+                return false;
+
+            if (!system_disk->read_sector(fat_lba, sector))
+                return false;
+            const uint32_t offset = fat_offset % SECTOR_SIZE;
+            sector[offset] = 0;
+            sector[offset + 1] = 0;
+            sector[offset + 2] = 0;
+            sector[offset + 3] = 0;
+            if (!system_disk->write_sector(fat_lba, sector))
+                return false;
+            fat[old_block] = 0;
+            if (next_old == END_OF_CHAIN)
+                break;
+            old_block = next_old;
+        }
+        return true;
+    }
+
+    bool pckfs_create_file(const char *path, uint16_t *created_inode)
+    {
+        if (path == nullptr || created_inode == nullptr)
+            return false;
+        PckfsGuard guard;
+        if (!mounted)
+            return false;
+
+        char parent_path[128]{};
+        char name[48]{};
+        uint32_t path_length = 0;
+        while (path[path_length] != '\0')
+        {
+            if (path_length + 1 >= sizeof(parent_path))
+                return false;
+            ++path_length;
+        }
+        if (path_length == 0)
+            return false;
+
+        uint32_t name_start = path_length;
+        while (name_start > 0 && path[name_start - 1] != '/')
+            --name_start;
+        const uint32_t name_length = path_length - name_start;
+        if (name_length == 0 || name_length >= sizeof(name))
+            return false;
+        for (uint32_t i = 0; i < name_length; ++i)
+            name[i] = path[name_start + i];
+        if (string_equals(name, ".") || string_equals(name, ".."))
+            return false;
+
+        if (name_start == 0)
+            parent_path[0] = '/';
+        else if (name_start == 1 && path[0] == '/')
+            parent_path[0] = '/';
+        else
+        {
+            const uint32_t parent_length = name_start - 1;
+            if (parent_length == 0)
+                parent_path[0] = '/';
+            else
+            {
+                for (uint32_t i = 0; i < parent_length; ++i)
+                    parent_path[i] = path[i];
+                parent_path[parent_length] = '\0';
+            }
+        }
+
+        PckfsEntry parent_entry{};
+        if (!pckfs_find(parent_path, &parent_entry) ||
+            parent_entry.type != PckfsNodeType::directory)
+            return false;
+        uint16_t existing = 0;
+        if (find_child(parent_entry.inode, name, &existing))
+            return false;
+
+        uint16_t free_inode = UINT16_MAX;
+        for (uint16_t i = 0; i < superblock.inode_count; ++i)
+        {
+            if (!valid_inode(i))
+            {
+                free_inode = i;
+                break;
+            }
+        }
+        if (free_inode == UINT16_MAX)
+            return false;
+
+        PckfsDiskInode created{};
+        for (uint32_t i = 0; i < sizeof(created.name); ++i)
+            created.name[i] = name[i];
+        created.size = 0;
+        created.first_block = END_OF_CHAIN;
+        created.parent = parent_entry.inode;
+        created.type = static_cast<uint8_t>(PckfsNodeType::file);
+        created.flags = NODE_USED;
+
+        const uint32_t inode_offset = free_inode * sizeof(PckfsDiskInode);
+        const uint32_t inode_lba = superblock.inode_start_sector +
+            inode_offset / SECTOR_SIZE;
+        uint8_t sector[SECTOR_SIZE];
+        if (!system_disk->read_sector(inode_lba, sector))
+            return false;
+        *reinterpret_cast<PckfsDiskInode *>(sector + inode_offset % SECTOR_SIZE) = created;
+        if (!system_disk->write_sector(inode_lba, sector))
+            return false;
+
+        inodes[free_inode] = created;
+        *created_inode = free_inode;
+        return true;
     }
 
 }

@@ -325,12 +325,15 @@ namespace kernel::smp
         for (;;) cpu::cpu_halt();
     }
 
-    uint32_t initialize(const CpuTopology &topology, mem::Vmm &memory)
+    uint32_t initialize(const CpuTopology &topology, mem::Vmm &memory,
+                        InitProgressCallback progress, void *context)
     {
         const uint32_t bootstrap_id = local_apic_id();
         apic_ids[0] = bootstrap_id;
         apic_to_cpu[bootstrap_id] = 0;
         store(online[0], 1);
+        if (progress != nullptr)
+            progress(1, topology.count == 0 ? 1 : topology.count, context);
         if (topology.count < 2 || !topology.local_apic_found) return 1;
         uint32_t a, b, c, d;
         asm volatile("cpuid" : "=a"(a), "=b"(b), "=c"(c), "=d"(d) : "a"(1), "c"(0));
@@ -379,6 +382,8 @@ namespace kernel::smp
             __atomic_add_fetch(&cpu_count, 1U, __ATOMIC_RELEASE);
             _kprintf("[SMP] CPU %u hazir | APIC %u\n", index, id);
             ++index;
+            if (progress != nullptr)
+                progress(index, topology.count, context);
         }
         return online_count();
     }

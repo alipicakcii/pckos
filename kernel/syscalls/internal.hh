@@ -12,6 +12,7 @@ namespace device { class FrameBuffer; }
 namespace kernel::syscalls
 {
     constexpr uint32_t MAX_SYSCALL_TRANSFER = 4096;
+    constexpr uint32_t MAX_PCKFS_REPLACE = 8192;
     constexpr uint32_t MAX_USER_PATH = 128;
 
     constexpr int32_t ERROR_NO_ENTRY = -2;
