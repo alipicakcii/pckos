@@ -23,7 +23,7 @@
 #include <mem/multiboot.hh>
 #include <mem/vmm.hh>
 #include <mem/new.hh>
-
+#include <device/serial_device.hh>
 
 
 extern "C" void _init();
@@ -125,6 +125,10 @@ _kprintf("Goruntu alani: %d x %d\n", framebuffer->get_width(), framebuffer->get_
     else
         _kprintf("CMOS RTC: okunamadi\n");
     kernel::boot::show_loading_screen(*framebuffer, "Kullanici alani hazirlaniyor...", 22);
+
+
+    device::serial_initialize();
+    _kprintf("Serial Cihazı Kuruldu\n");
 
     kernel::timer_initialize(100);
     _kprintf("PIT zamanlayici: 100 Hz\n");

@@ -90,12 +90,14 @@ syscalls/memory.o \
 syscalls/input.o \
 syscalls/graphics.o \
 syscalls/audio.o \
+syscalls/serial_dev.o \
 interrupts/descriptortables.o \
 interrupts/isr.o \
 device/input/keymap.o \
 device/input/ps2_keyboard.o \
 device/input/ps2_mouse.o \
 device/ata_pio.o \
+device/serial_device.o \
 device/rtc.o \
 device/video/frame_buffer.o \
 device/pc_speaker.o \

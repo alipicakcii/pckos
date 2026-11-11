@@ -107,6 +107,9 @@ namespace kernel
                 case abi::syscall_cpu_rnd:
                     syscalls::handle_cpu_rnd(registers);
                     return;
+                case abi::sysycall_serial_dev_write:
+                    syscalls::handle_serialdev_write(registers);
+                    return;
                 default:
                     registers->eax = static_cast<uint32_t>(syscalls::ERROR_NOT_IMPLEMENTED);
                     return;

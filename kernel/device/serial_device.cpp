@@ -27,7 +27,7 @@ namespace device
     void serial_write_char(char character)
     {
         while ((cpu::inb(LINE_STATUS) & TRANSMITTER_EMPTY) == 0)
-            ;
+            ;;
         cpu::outb(COM1, static_cast<uint8_t>(character));
     }
 

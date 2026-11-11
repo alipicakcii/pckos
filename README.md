@@ -61,6 +61,7 @@ PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çek
 
 - i386 üzerinde açılma, bellek sayfalama ve çekirdek/kullanıcı modu ayrımı.
 - Sistem çağrıları üzerinden çekirdek hizmetlerine erişen kullanıcı uygulamaları.
+- COM1 seri aygıtına sistem çağrısı üzerinden kullanıcı alanından metin yazma.
 - ACPI/xAPIC tabanlı SMP: en çok 32 mantıksal işlemcide Round Robin zamanlama; ayrı adres alanları olan process'ler. Tek işlemcili sistemler de desteklenir.
 - Başlat menüsünden ACPI S5 ile sistemi kapatma; kapanıştan önce ek işlemciler duraklatılır.
 - Framebuffer tabanlı masaüstü; klavye, fare, pencereler ve görev çubuğu.
@@ -139,6 +140,8 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin zamanlama, PID/TID tabloları |
 | `kernel/arch/i386/firmware/` | ACPI tabloları ve S5 güç kapatma, işlemci keşfi, APIC, ek işlemci başlatma, çekirdek kilidi ve TLB IPI'leri |
 | `kernel/device/ata_pio.cpp` | IDE diskten sektör okuma/yazma |
+| `kernel/device/serial_device.cpp` | COM1 UART seri portu sürücüsü |
+| `kernel/syscalls/serial_dev.cpp` | Kullanıcı alanından seri porta yazma sistem çağrısı |
 | `kernel/device/rtc.cpp` | CMOS RTC'den gerçek tarih ve saati okuma |
 | `kernel/fs/pckfs.cpp` | PCKFS bağlama, yol çözme, dizin ve dosya okuma |
 | `kernel/task/user_mode.cpp` | Kullanıcı adres alanları, program yükleme, process ve kullanıcı thread'i oluşturma |
@@ -178,7 +181,7 @@ Gereken araçlar: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkre
 | `./vbox.sh` | Mevcut `pckfs.img` dosyasını `pckfs-vbox.vdi` biçimine çevirir. Önce güncel imajı `./run.sh` veya `./share.sh` ile üretin. |
 | `./clean.sh` | Derleme ve imaj çıktılarını temizler; `host-share/` korunur. |
 
-`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `run.sh` erişim varsa KVM, yoksa TCG kullanır. Seri port kapalıdır. Çekirdek çıktılarını ESC konsolunda veya `dmesg` ile görebilirsiniz.
+`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `run.sh` erişim varsa KVM, yoksa TCG kullanır. QEMU'nun COM1 seri çıkışı proje kökündeki `serial` dosyasına yönlendirilir. Çekirdek çıktılarını ESC konsolunda veya `dmesg` ile görebilirsiniz.
 
 `vbox.sh` mevcut `pckfs-vbox.vdi` çıktısını kaldırıp `convertfromraw` ile tekrar üretir. Dönüşümde sanal makineye kayıtlı sabit disk UUID'sini kullanır; böylece VirtualBox'ın disk kaydı bozulmaz. ISO'yu, çekirdeği veya VirtualBox makine ayarlarını değiştirmez. Yeniden üretim sırasında VirtualBox makinesi kapalı olsun.
 
@@ -238,6 +241,7 @@ Kullanıcı API'si `kernel/include/user/` altında konuya göre ayrılmıştır:
 | `user/task/process.hh` | Süreç başlatma, sonlandırma ve pencere odağı |
 | `user/fs/filesystem.hh` | Dosya okuma, yeni dosya oluşturma, mevcut dosyayı değiştirme ve dizin listeleme |
 | `user/io/stream.hh` | Standart akışlar ve terminal bağlantısı |
+| `user/io/serial_dev.hh` | COM1 seri porta metin yazma |
 | `user/input/events.hh` | Klavye ve fare olayları |
 | `user/gui/graphics.hh` | Alt düzey çizim ve pencere çağrıları |
 | `user/memory/heap.hh` | Kullanıcı belleği ayırma ve serbest bırakma |
@@ -245,6 +249,8 @@ Kullanıcı API'si `kernel/include/user/` altında konuya göre ayrılmıştır:
 | `user/device/audio.hh` | PC speaker |
 
 `user/syscall/call.hh` yalnızca `int 0x80` geçiş kodunu ve çağrı numaralarına erişimi sağlar. `ThreadInfo` gibi ortak veri yapıları `kernel/include/abi/` altında tek kez tanımlanır; ilgili çekirdek ve kullanıcı başlıkları bu tanımı kullanır.
+
+Seri porta yazma, standart çıktı akışlarından ayrıdır. Çekirdek COM1 UART'ı 38400 baud, 8 veri biti, eşlik yok ve 1 dur bitiyle başlatır. `user/io/serial_dev.hh` içindeki `user::io::serialdev::write()` boş sonlandırmalı metni 56 numaralı sistem çağrısıyla COM1'e gönderir. Bu çağrı `stdout`/`stderr` akışlarını veya çekirdek günlüğünü seri porta yönlendirmez.
 
 Grafik yardımcıları `kernel/include/user/gui/drawing.hh` ve `kernel/user/gui/graphics.cpp` içindedir. Ortak pencere ve widget API'si `kernel/include/user/gui/` altında, uygulamaları ise `kernel/user/gui/window.cpp` ve `widgets.cpp` içindedir. `Window` pencere kaydını, çerçeveyi, başlık çubuğu düğmelerini, sürüklemeyi, küçültmeyi ve kapatmayı yönetir. `Button`, `Label` ve `TextInputWidget` oluşturulduklarında ebeveyn pencereye eklenir. `Window::draw()` pencere içeriği alanındaki widget'ları çizer; `Window::handle_mouse()` tıklamaları widget'lara yollar. `Button` tıklamaları `ClickListener` callback'ini çağırır; `TextInputWidget` tıklanan konumda yazı imlecini ayarlar. Makefile bu kütüphane kaynaklarını kullanıcı uygulamalarına bağlar. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/memory/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
 
@@ -282,7 +288,7 @@ window.handle_mouse(mouse_x, mouse_y, mouse_buttons, pressed,
 
 ### Standart giriş, çıktı ve hata akışları
 
-Örneğin `/apps/newapp.bin` olarak bir PCKOS için uygulama yazdınız; `run /apps/newapp.bin` uygulamayı ayrı süreçte başlatır ve terminal bağlantısını aktarır. `stdin` (0) terminalden giriş alır; `stdout` (1) normal çıktı, `stderr` (2) hata çıktısıdır. İki çıktı akışı aynı terminalde çağrı sırasıyla gösterilir; uygulama çıktısı bu durumda çekirdek günlüğüne eklenmez. Alt süreçler de terminal bağlantısını devralır. Terminal bağlantısı olmayan uygulamalarda çıktı sistem konsol günlüğüne gider. Seri porta yazılmaz.
+Örneğin `/apps/newapp.bin` olarak bir PCKOS için uygulama yazdınız; `run /apps/newapp.bin` uygulamayı ayrı süreçte başlatır ve terminal bağlantısını aktarır. `stdin` (0) terminalden giriş alır; `stdout` (1) normal çıktı, `stderr` (2) hata çıktısıdır. İki çıktı akışı aynı terminalde çağrı sırasıyla gösterilir; uygulama çıktısı bu durumda çekirdek günlüğüne eklenmez. Alt süreçler de terminal bağlantısını devralır. Terminal bağlantısı olmayan uygulamalarda çıktı sistem konsol günlüğüne gider. Standart akışlar seri porta yönlendirilmez; uygulamalar seri porta ayrıca yazabilir.
 
 Terminal, `run` ile başlattığınız süreç bitene kadar yeni kabuk komutu çalıştırmaz; Enter ile gönderdiğiniz satırları uygulamanın `stdin` kuyruğuna koyar. Boş girişte Ctrl+D EOF gönderir; yazılmış metin varsa önce o metni gönderir. Program bitince `pckos:/>` geri gelir. Grafik uygulaması pencere kaydettiğinde odağı kendi penceresine alır. Simge durumundaki terminal de çıktıları toplamaya devam eder.
 

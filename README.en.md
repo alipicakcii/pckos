@@ -59,6 +59,7 @@ PCKOS is currently a minimal system under development. The kernel currently prov
 
 - i386 boot, paging, and separation between kernel and user mode.
 - User applications that access kernel services through system calls.
+- User-space text output to the COM1 serial device through a system call.
 - ACPI/xAPIC SMP with Round Robin scheduling on up to 32 logical processors, and processes with separate address spaces. Single-processor systems are also supported.
 - ACPI S5 power-off from the Start menu; additional processors are parked before shutdown.
 - A framebuffer desktop with keyboard, mouse, windows, and a taskbar.
@@ -136,7 +137,9 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | `kernel/interrupts/`, `kernel/task/thread.cpp` | IRQ/PIT, Round Robin scheduling, PID/TID tables |
 | `kernel/arch/i386/firmware/` | ACPI tables and S5 power-off, CPU discovery, APIC, AP startup, kernel lock, and TLB IPIs |
 | `kernel/device/ata_pio.cpp` | Sector access to the IDE disk |
+| `kernel/device/serial_device.cpp` | COM1 UART serial driver |
 | `kernel/device/rtc.cpp` | Date and time from the CMOS RTC |
+| `kernel/syscalls/serial_dev.cpp` | System call for writing to the serial port from user space |
 | `kernel/fs/pckfs.cpp` | PCKFS mount, path lookup, directory and file reads |
 | `kernel/task/user_mode.cpp` | User address spaces, program loading, process and user-thread creation |
 | `kernel/syscalls/syscall.cpp` | `int 0x80` entry checks and call routing |
@@ -175,7 +178,7 @@ Required tools: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkresc
 | `./vbox.sh` | Converts the current `pckfs.img` to `pckfs-vbox.vdi`. Build a fresh image first. |
 | `./clean.sh` | Removes build and image outputs; preserves `host-share/`. |
 
-`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. `.elf` is a linker output; the loader receives a flat `.bin` image produced by `objcopy`. `run.sh` uses KVM when available and TCG otherwise. The serial port is disabled. View kernel output in the ESC console or with `dmesg`.
+`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. `.elf` is a linker output; the loader receives a flat `.bin` image produced by `objcopy`. `run.sh` uses KVM when available and TCG otherwise. QEMU redirects COM1 serial output to the `serial` file in the project root. View kernel output in the ESC console or with `dmesg`.
 
 `vbox.sh` removes the previous `pckfs-vbox.vdi` and recreates it with `convertfromraw`. It uses a fixed disk UUID registered with the VM so VirtualBox's disk registration remains stable. It does not change the ISO, kernel, or VM settings. Shut down the VirtualBox VM before regenerating the disk.
 
@@ -235,6 +238,7 @@ The user API is grouped by subsystem under `kernel/include/user/`:
 | `user/task/process.hh` | Process launch, exit, and window focus |
 | `user/fs/filesystem.hh` | File reading, creating files, replacing file contents, and directory listing |
 | `user/io/stream.hh` | Standard streams and terminal connections |
+| `user/io/serial_dev.hh` | Writing text to the COM1 serial port |
 | `user/input/events.hh` | Keyboard and mouse events |
 | `user/gui/graphics.hh` | Low-level drawing and window calls |
 | `user/memory/heap.hh` | User memory allocation and release |
@@ -242,6 +246,8 @@ The user API is grouped by subsystem under `kernel/include/user/`:
 | `user/device/audio.hh` | PC speaker |
 
 `user/syscall/call.hh` provides only the `int 0x80` entry helper and access to syscall numbers. Shared data structures such as `ThreadInfo` are defined once under `kernel/include/abi/` and used by the corresponding kernel and user headers.
+
+Serial output is separate from the standard streams. The kernel initializes the COM1 UART at 38400 baud, with 8 data bits, no parity, and one stop bit. `user/io/serial_dev.hh` provides `user::io::serialdev::write()` to send a null-terminated string to COM1 through system call 56. This call does not redirect `stdout`/`stderr` or the kernel log to the serial port.
 
 Graphics helpers are in `kernel/include/user/gui/drawing.hh` and `kernel/user/gui/graphics.cpp`. The shared window and widget API is declared under `kernel/include/user/gui/` and implemented in `kernel/user/gui/window.cpp` and `widgets.cpp`. `Window` handles registration, its frame, title-bar controls, dragging, minimizing, and closing. `Button`, `Label`, and `TextInputWidget` attach to their parent window when constructed. `Window::draw()` draws attached widgets inside the client area, and `Window::handle_mouse()` routes clicks to them. `Button` calls its `ClickListener`; `TextInputWidget` places the text cursor at the clicked position. The Makefile links these library sources into user applications. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/memory/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
 
@@ -279,7 +285,7 @@ The coordinates in the `Button` constructor are relative to the window's client 
 
 ### Standard input, output, and error streams
 
-`run /apps/newapp.bin` starts a separate process and passes on the terminal connection. `stdin` (0) receives terminal input; `stdout` (1) carries normal output and `stderr` (2) carries errors. Both output streams appear in the same terminal in syscall order; attached application output is not added to the kernel log. Child processes inherit the terminal connection. Output from applications without a terminal connection goes to the system console log. Nothing is written to the serial port.
+`run /apps/newapp.bin` starts a separate process and passes on the terminal connection. `stdin` (0) receives terminal input; `stdout` (1) carries normal output and `stderr` (2) carries errors. Both output streams appear in the same terminal in syscall order; attached application output is not added to the kernel log. Child processes inherit the terminal connection. Output from applications without a terminal connection goes to the system console log. Standard streams are not routed to the serial port; applications can write to it separately.
 
 The terminal waits for the process started by `run` before accepting another shell command. Lines submitted with Enter go to the application's `stdin` queue. Ctrl+D on empty input sends EOF; if text has been entered, it sends that text first. The `pckos:/>` prompt returns when the process ends. A graphical application takes focus when it registers its window. Minimized terminals continue collecting output.
 

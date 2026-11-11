@@ -6,20 +6,15 @@
 #include <user/lib/rnd.hh>
 #include <user/system/info.hh>
 #include <user/task/process.hh>
+#include <user/io/serial_dev.hh>
 
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
 
-   
-   
-    const int32_t deneme_pid = user::process_spawn("/apps/calculator.bin", "Deneme");
+    user::io::serialdev::write("deneme deneme deneme deneme deneme deneme");
 
-    
-    print("Deneme PID=%d\n", deneme_pid);
-
-
-
+    print("finish\n");
     user::exit(0);
 }

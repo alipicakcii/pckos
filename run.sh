@@ -51,7 +51,7 @@ $CPU_ARGS \
 $DISPLAY_ARGS \
 -cdrom "$SCRIPT_DIR/pckos.iso" \
 -drive file="$SCRIPT_DIR/pckfs.img",format=raw,if=ide,index=0,media=disk \
--serial none \
+-serial file://home/pck/Masaüstü/projects/pckos/pckos/serial \
 -audiodev "$AUDIO_BACKEND",id=snd0 \
 -monitor stdio \
 -machine pc,pcspk-audiodev=snd0,smbios-entry-point-type=32 \

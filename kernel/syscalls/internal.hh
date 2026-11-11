@@ -26,6 +26,7 @@ namespace kernel::syscalls
     constexpr int32_t ERROR_TOO_MANY_FILES = -24;
     constexpr int32_t ERROR_IO = -5;
     constexpr int32_t ERROR_NOT_IMPLEMENTED = -38;
+    constexpr int32_t ERROR_SERIAL_DEV_WRITE = -40;
 
     extern mem::Vmm *active_virtual_memory;
 
@@ -47,6 +48,7 @@ namespace kernel::syscalls
     void handle_graphics(Registers *registers);
     void handle_audio(Registers *registers);
     void handle_cpu_rnd(Registers *registers);
+    void handle_serialdev_write(Registers *registers);
 }
 
 #endif

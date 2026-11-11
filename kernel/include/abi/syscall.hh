@@ -64,7 +64,8 @@ namespace abi
         syscall_power_off = 52,
         syscall_file_replace = 53,
         syscall_file_create = 54,
-        syscall_directory_create = 55
+        syscall_directory_create = 55,
+        sysycall_serial_dev_write = 56
     };
 }
 
