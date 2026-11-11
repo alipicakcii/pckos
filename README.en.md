@@ -182,7 +182,7 @@ Required tools: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkresc
 | `./vbox.sh` | Converts the current `pckfs.img` to `pckfs-vbox.vdi`. Build a fresh image first. |
 | `./clean.sh` | Removes build and image outputs; preserves `host-share/`. |
 
-`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. `.elf` is a linker output; the loader receives a flat `.bin` image produced by `objcopy`. `run.sh` uses KVM when available and TCG otherwise. QEMU redirects COM1 serial output to the `serial` file in the project root. View kernel output in the ESC console or with `dmesg`.
+`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. `.elf` is a linker output; the loader receives a flat `.bin` image produced by `objcopy`. `run.sh` uses KVM when available and TCG otherwise.
 
 `vbox.sh` removes the previous `pckfs-vbox.vdi` and recreates it with `convertfromraw`. It uses a fixed disk UUID registered with the VM so VirtualBox's disk registration remains stable. It does not change the ISO, kernel, or VM settings. Shut down the VirtualBox VM before regenerating the disk.
 

@@ -185,7 +185,7 @@ Gereken araçlar: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkre
 | `./vbox.sh` | Mevcut `pckfs.img` dosyasını `pckfs-vbox.vdi` biçimine çevirir. Önce güncel imajı `./run.sh` veya `./share.sh` ile üretin. |
 | `./clean.sh` | Derleme ve imaj çıktılarını temizler; `host-share/` korunur. |
 
-`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `run.sh` erişim varsa KVM, yoksa TCG kullanır. QEMU'nun COM1 seri çıkışı proje kökündeki `serial` dosyasına yönlendirilir. Çekirdek çıktılarını ESC konsolunda veya `dmesg` ile görebilirsiniz.
+`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `run.sh` erişim varsa KVM, yoksa TCG kullanır.
 
 `vbox.sh` mevcut `pckfs-vbox.vdi` çıktısını kaldırıp `convertfromraw` ile tekrar üretir. Dönüşümde sanal makineye kayıtlı sabit disk UUID'sini kullanır; böylece VirtualBox'ın disk kaydı bozulmaz. ISO'yu, çekirdeği veya VirtualBox makine ayarlarını değiştirmez. Yeniden üretim sırasında VirtualBox makinesi kapalı olsun.
 
