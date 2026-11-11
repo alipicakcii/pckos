@@ -100,6 +100,7 @@ device/rtc.o \
 device/video/frame_buffer.o \
 device/pc_speaker.o \
 fs/pckfs.o \
+boot/screen.o \
 core/panic.o \
 mem/vmm.o \
 mem/addr.o \
