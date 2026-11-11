@@ -214,7 +214,7 @@ namespace user::apps
             print_line("");
             print_line("UYGULAMA VE KABUK");
             print_line("  run <yol>    Uygulama baslat");
-            print_line("  ps           Surecleri listele");
+            print_line("  ps           Progressleri listele");
             print_line("  echo <metin> Metni yazdir");
             print_line("  history      Komut gecmisi");
             print_line("  clear        Ekrani temizle");
