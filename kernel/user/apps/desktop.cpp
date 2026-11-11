@@ -905,7 +905,7 @@ namespace
                 "Thread sistemi: SMP Round Robin | PIT / yerel APIC, 100 Hz",
                 user::gui::COLOR_TEXT);
             user::gui::text(x + 20, y + 240,
-                "Dosya sistemi: PCKFS v1, IDE ATA PIO, salt okunur",
+                "Dosya sistemi: PCKFS v1, IDE ATA PIO",
                 user::gui::COLOR_TEXT);
 
             char display[80] = "Grafik: ";
