@@ -50,7 +50,13 @@ When building the images from source, run these commands in the project director
 
 These commands create the ISO and PCKFS disk image; `vbox.sh` converts `pckfs.img` to the `pckfs-vbox.vdi` format used by VirtualBox.
 
-Whichever method you use, create a new **Linux / Other Linux (32-bit)** virtual machine. Choose a memory size that suits your setup. Select **VBoxVGA** as the graphics controller, and turn off 3D acceleration. Do not create a blank hard disk. In Storage, attach `pckos.iso` to the optical drive and `pckfs-vbox.vdi` as the IDE **Primary Master**. Set the boot order to start from the optical drive. The ISO boots the system; the VDI provides its root filesystem.
+Whichever method you use, create a new **Linux / Other Linux (32-bit)** virtual machine. Choose a memory size that suits your setup. Select **VBoxVGA** as the graphics controller, and turn off 3D acceleration. To use 1600×900, power off the VM and run this command on the host:
+
+```sh
+VBoxManage setextradata "pckos" "CustomVideoMode1" "1600x900x32"
+```
+
+Replace `pckos` with the exact name of your VirtualBox VM. Do not create a blank hard disk. In Storage, attach `pckos.iso` to the optical drive and `pckfs-vbox.vdi` as the IDE **Primary Master**. Set the boot order to start from the optical drive. The ISO boots the system; the VDI provides its root filesystem. GRUB tries 1600×900 first, then falls back to 1024×768 or 800×600 if a mode is unavailable.
 
 
 ## Current PCKOS features
@@ -117,7 +123,7 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
           → separate application processes from PCKFS
 ```
 
-1. `./run.sh` attaches `pckos.iso` as a CD-ROM and `pckfs.img` as an IDE disk. `iso.sh` writes `isodir/boot/grub/grub.cfg`, which tells GRUB to load `pckos.bin` in 1600×900×32 graphics mode.
+1. `./run.sh` attaches `pckos.iso` as a CD-ROM and `pckfs.img` as an IDE disk. `iso.sh` writes `isodir/boot/grub/grub.cfg`, which tells GRUB to load `pckos.bin` and try 1600×900×32, 1024×768×32, then 800×600×32 graphics modes.
 2. GRUB reads the Multiboot header in `kernel/arch/i386/boot.asm`. `_start` sets up the first 16 KiB kernel stack and passes the Multiboot info address to `kernel_main()`. `kernel/arch/i386/linker.ld` links the kernel at 1 MiB.
 3. `kernel/kernel.cpp` disables interrupts, initializes the processor tables, and starts paging. After the kernel heap is ready, `_init()` runs global C++ constructors.
 4. The keyboard, mouse, framebuffer, ATA PIO disk, and PCKFS are initialized. `_kprintf` writes boot messages to the kernel console log. The PIT is set to 100 Hz. Once the framebuffer is ready, the boot log is displayed on screen: CPU vendor/model, Multiboot information, GDT/IDT/TSS, CR3, physical page counts, display dimensions, disk/PCKFS status, and RTC date/time. Syscall, user heap/stack, and scheduler information is shown before entering the desktop. Press ESC on the desktop to see the system console with boot messages and subsequent kernel output. `dmesg` also reads the log.

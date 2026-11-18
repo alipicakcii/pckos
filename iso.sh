@@ -13,8 +13,8 @@ cat > isodir/boot/grub/grub.cfg << EOF
 set default=0
 set timeout=0
 menuentry "pckos" {
-	set gfxpayload=1600x900x32
 	multiboot /boot/pckos.bin
+	set gfxpayload=1600x900x32,1024x768x32,800x600x32
     boot
 }
 EOF

@@ -52,7 +52,13 @@ Bu komutlarda ISO'yu ve PCKFS disk imajını üretir; `vbox.sh`, `pckfs.img` dos
 
 İki yöntemden hangisiyle hazırlanırsa hazırlansın aşağıdakı adımları izleyelerek VirtualBox'ta PCKOS'u çalıştırabilirsiniz:
 
-VirtualBox'ta yeni bir **Linux / Other Linux (32-bit)** sanal makinesi oluşturun. Belleği ihtiyacınıza göre ayarlayın. PCKOS birden fazla çekirdeği desteklediği için istediğiniz kadar çekirdek verebilirsiniz. Grafik denetleyicisini **VBoxVGA** seçin ve 3D hızlandırmayı kapalı tutun. Boş bir sabit disk oluşturmayın. Depolama ayarlarında `pckos.iso` dosyasını optik sürücüye, `pckfs-vbox.vdi` dosyasını IDE **Primary Master** olarak ekleyin. Açılış sırasını optik sürücüden başlatacak şekilde ayarlayın. ISO sistemi başlatır; VDI kök dosya sistemini sağlar.
+VirtualBox'ta yeni bir **Linux / Other Linux (32-bit)** sanal makinesi oluşturun. Belleği ihtiyacınıza göre ayarlayın. PCKOS birden fazla çekirdeği desteklediği için istediğiniz kadar çekirdek verebilirsiniz. Grafik denetleyicisini **VBoxVGA** seçin ve 3D hızlandırmayı kapalı tutun. 1600×900 çözünürlüğünü kullanmak için sanal makine kapalıyken ana makinede şu komutu çalıştırın:
+
+```sh
+VBoxManage setextradata "pckos" "CustomVideoMode1" "1600x900x32"
+```
+
+Komuttaki `pckos` adını kendi VirtualBox sanal makinenizin adıyla eşleştirin. Boş bir sabit disk oluşturmayın. Depolama ayarlarında `pckos.iso` dosyasını optik sürücüye, `pckfs-vbox.vdi` dosyasını IDE **Primary Master** olarak ekleyin. Açılış sırasını optik sürücüden başlatacak şekilde ayarlayın. ISO sistemi başlatır; VDI kök dosya sistemini sağlar. GRUB önce 1600×900'ü, desteklenmiyorsa 1024×768'i ve son olarak 800×600'ü dener.
 
 
 ## PCKOS'un şu anki özellikleri
@@ -120,7 +126,7 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
           → PCKFS'ten ayrı uygulama süreçleri
 ```
 
-1. `./run.sh`, `pckos.iso` dosyasını CD-ROM, `pckfs.img` dosyasını IDE disk olarak QEMU'ya bağlar. `iso.sh` tarafından yazılan `isodir/boot/grub/grub.cfg`, GRUB'a `pckos.bin` çekirdeğini ve 1600×900×32 grafik modunu söyler.
+1. `./run.sh`, `pckos.iso` dosyasını CD-ROM, `pckfs.img` dosyasını IDE disk olarak QEMU'ya bağlar. `iso.sh` tarafından yazılan `isodir/boot/grub/grub.cfg`, GRUB'a `pckos.bin` çekirdeğini yüklemesini ve sırasıyla 1600×900×32, 1024×768×32 veya 800×600×32 grafik modlarını denemesini söyler.
 2. `kernel/arch/i386/boot.asm` içindeki Multiboot başlığı GRUB tarafından okunur. `_start` ilk 16 KiB çekirdek yığınını kurar, Multiboot bilgi adresini `kernel_main()` fonksiyonuna verir. `kernel/arch/i386/linker.ld` çekirdeği 1 MiB adresine bağlar.
 3. `kernel/kernel.cpp` kesmeleri kapatır; işlemci tablolarını kurar, sayfalamayı başlatır. `_init()`, çekirdek heap'i hazır olduktan sonra global C++ kurucularını çalıştırır.
 4. Klavye, fare, framebuffer, ATA PIO disk ve PCKFS başlatılır. `_kprintf` ile açılış bilgileri çekirdek konsol günlüğüne yazılır. PIT 100 Hz ayarlanır. Framebuffer hazır olduğunda açılış günlüğü ekranda gösterilir; CPU üreticisi/modeli, Multiboot bilgileri, GDT/IDT/TSS, CR3, fiziksel sayfa sayıları, görüntü boyutları, disk/PCKFS durumu ve RTC tarihi yazılır. Masaüstüne geçmeden önce syscall, kullanıcı heap/yığın ve zamanlayıcı bilgileri gösterilir. Masaüstünde ESC tuşuna bastığınızda açılış mesajları ve sonraki çekirdek çıktıları sistem konsolunda görünür. Günlüğü `dmesg` ile de okuyabilirsiniz.
