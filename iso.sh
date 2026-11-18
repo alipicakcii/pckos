@@ -14,7 +14,7 @@ set default=0
 set timeout=0
 menuentry "pckos" {
 	multiboot /boot/pckos.bin
-	set gfxpayload=1600x900x32,1024x768x32,800x600x32
+	set gfxpayload=1440x900x32,1024x768x32,800x600x32
     boot
 }
 EOF
