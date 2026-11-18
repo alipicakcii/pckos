@@ -13,7 +13,7 @@
 void work(void*)
 {
     print("work_tid=%d\n", user::thread_id());
-        user::thread_sleep(8000);
+    user::thread_sleep(100);
 }
 
 
@@ -27,6 +27,7 @@ __attribute__((section(".text._start"))) void _start()
     {
         auto tid = user::thread_create(work, nullptr, "Deneme");
         print("p_tid=%d tid=%d next=%d\n", user::thread_id(), tid, i);
+        user::thread_sleep(50);
     }
 
     user::exit(0);
