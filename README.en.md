@@ -50,13 +50,7 @@ When building the images from source, run these commands in the project director
 
 These commands create the ISO and PCKFS disk image; `vbox.sh` converts `pckfs.img` to the `pckfs-vbox.vdi` format used by VirtualBox.
 
-Whichever method you use, create a new **Linux / Other Linux (32-bit)** virtual machine. Choose a memory size that suits your setup. Select **VBoxVGA** as the graphics controller, and turn off 3D acceleration. To let PCKOS use the 1600×900 resolution in VirtualBox, power off the VM and run this command on the host. Replace `pckos` with the exact name you gave the PCKOS virtual machine in VirtualBox:
-
-```sh
-VBoxManage setextradata "pckos" "CustomVideoMode1" "1600x900x32"
-```
-
-Do not create a blank hard disk. In Storage, attach `pckos.iso` to the optical drive and `pckfs-vbox.vdi` as the IDE **Primary Master**. Set the boot order to start from the optical drive. The ISO boots the system; the VDI provides its root filesystem. GRUB tries 1600×900 first, then falls back to 1024×768 or 800×600 if a mode is unavailable.
+Whichever method you use, create a new **Linux / Other Linux (32-bit)** virtual machine. Choose a memory size that suits your setup. Select **VBoxVGA** as the graphics controller, and turn off 3D acceleration. Do not create a blank hard disk. In Storage, attach `pckos.iso` to the optical drive and `pckfs-vbox.vdi` as the IDE **Primary Master**. Set the boot order to start from the optical drive. The ISO boots the system; the VDI provides its root filesystem. GRUB first tries 1600×900, then falls back to 1024×768 or 800×600 if needed.
 
 
 ## Current PCKOS features
