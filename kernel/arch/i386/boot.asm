@@ -26,8 +26,8 @@ align 4
     
     ; Grafik İstek Alani(Linear Framebuffer)
     dd  0          ; mode_type (0 = grafik modu)
-    dd  1024       ; width
-    dd  768        ; height
+    dd  1600       ; width
+    dd  900        ; height
     dd  32         ; depth (bpp)
 
 section .bss

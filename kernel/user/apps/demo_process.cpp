@@ -8,22 +8,25 @@
 #include <user/task/process.hh>
 #include <user/io/serial_dev.hh>
 
-void work(void *)
+
+
+void work(void*)
 {
-    print("tid=%d\n", user::thread_id());
-     user::thread_sleep(100);
+    print("work_tid=%d\n", user::thread_id());
+        user::thread_sleep(8000);
 }
+
+
+
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
 
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 500; i++)
     {
-        const int32_t a = user::thread_create(work, nullptr, "Sayac1");
-        const int32_t b = user::thread_create(work, nullptr, "Sayac2");
-       user::thread_sleep(50);
-        print("id=%d siradaki=%d\n", user::thread_id(),i);
+        auto tid = user::thread_create(work, nullptr, "Deneme");
+        print("p_tid=%d tid=%d next=%d\n", user::thread_id(), tid, i);
     }
 
     user::exit(0);

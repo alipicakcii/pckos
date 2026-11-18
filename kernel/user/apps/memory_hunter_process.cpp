@@ -522,13 +522,11 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     user::thread_set_name("Bellek Avcisi");
 
     const uint32_t usable_height = screen.height - 48;
-    uint32_t width = screen.width * 58 / 100;
+    uint32_t width = screen.width * 84 / 100;
     if (width < 600) width = 600;
-    if (width > 840) width = 840;
     if (width > screen.width - 20) width = screen.width - 20;
-    uint32_t height = usable_height * 69 / 100;
+    uint32_t height = usable_height * 92 / 100;
     if (height < 500) height = 500;
-    if (height > 680) height = 680;
     if (height > usable_height - 10) height = usable_height - 10;
     uint32_t x = (screen.width - width) / 2 + 20;
     uint32_t y = (usable_height - height) / 2;
@@ -536,12 +534,12 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
         x = screen.width - width;
     if (y + height > usable_height)
         y = usable_height - height;
-    uint32_t cell_size = (width - 40) / BOARD_WIDTH;
-    const uint32_t height_cell = (height - 120) / BOARD_HEIGHT;
+    uint32_t cell_size = (width - 48) / BOARD_WIDTH;
+    const uint32_t height_cell = (height - 150) / BOARD_HEIGHT;
     if (height_cell < cell_size)
         cell_size = height_cell;
-    if (cell_size > 25)
-        cell_size = 25;
+    if (cell_size > 64)
+        cell_size = 64;
     if (cell_size < 6)
         cell_size = 6;
 
