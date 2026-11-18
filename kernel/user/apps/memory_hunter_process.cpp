@@ -522,10 +522,10 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     user::thread_set_name("Bellek Avcisi");
 
     const uint32_t usable_height = screen.height - 48;
-    uint32_t width = screen.width * 84 / 100;
+    uint32_t width = screen.width * 72 / 100;
     if (width < 600) width = 600;
     if (width > screen.width - 20) width = screen.width - 20;
-    uint32_t height = usable_height * 92 / 100;
+    uint32_t height = usable_height * 82 / 100;
     if (height < 500) height = 500;
     if (height > usable_height - 10) height = usable_height - 10;
     uint32_t x = (screen.width - width) / 2 + 20;
@@ -538,8 +538,8 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
     const uint32_t height_cell = (height - 150) / BOARD_HEIGHT;
     if (height_cell < cell_size)
         cell_size = height_cell;
-    if (cell_size > 64)
-        cell_size = 64;
+    if (cell_size > 36)
+        cell_size = 36;
     if (cell_size < 6)
         cell_size = 6;
 

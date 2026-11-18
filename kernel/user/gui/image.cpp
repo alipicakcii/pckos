@@ -63,6 +63,7 @@ namespace user::image
     {
         constexpr uint32_t MAX_ENCODED_SIZE = 8 * 1024 * 1024;
         constexpr uint32_t MAX_SOURCE_PIXELS = 4 * 1024 * 1024;
+        constexpr uint32_t MAX_OUTPUT_PIXELS = 4 * 1024 * 1024;
 
         bool read_image_file(const char *path, uint8_t **data, uint32_t *size)
         {
@@ -170,7 +171,7 @@ namespace user::image
 
         const uint32_t source_width = static_cast<uint32_t>(decoded_width);
         const uint32_t source_height = static_cast<uint32_t>(decoded_height);
-        if (static_cast<uint64_t>(max_width) * max_height > 1024 * 1024)
+        if (static_cast<uint64_t>(max_width) * max_height > MAX_OUTPUT_PIXELS)
         {
             stbi_image_free(rgba);
             return false;

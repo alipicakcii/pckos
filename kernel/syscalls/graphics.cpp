@@ -11,7 +11,7 @@ namespace kernel::syscalls
     namespace
     {
         constexpr uint32_t MAX_GFX_TEXT = 512;
-        constexpr uint32_t MAX_GFX_RECT_PIXELS = 1024 * 1024;
+        constexpr uint32_t MAX_GFX_RECT_PIXELS = 4 * 1024 * 1024;
         constexpr uint32_t CURSOR_WIDTH = 12;
         constexpr uint32_t CURSOR_HEIGHT = 16;
         device::FrameBuffer *active_framebuffer = nullptr;
