@@ -47,15 +47,15 @@ namespace
     };
 
     constexpr ApplicationInfo APPLICATIONS[] = {
-        {WINDOW_FILE, "/apps/file_manager.bin", "Dosya Yoneticisi", "Dosyalar", "Dosyalar", "/system/icons/files.png"},
-        {WINDOW_TERMINAL, "/apps/terminal.bin", "Terminal", "Terminal", "Terminal", "/system/icons/terminal.png"},
-        {WINDOW_TASK_MANAGER, "/apps/task_manager.bin", "Gorev Yoneticisi", "Gorevler", "Gorevler", "/system/icons/tasks.png"},
-        {WINDOW_CALCULATOR, "/apps/calculator.bin", "Hesap Makinesi", "Hesap Makinesi", "Hesap", "/system/icons/calculator.png"},
-        {WINDOW_NOTEPAD, "/apps/notepad.bin", "Not Defteri", "Not Defteri", "Not Defteri", "/system/icons/notepad.png"},
-        {WINDOW_SYSTEM_INFO, "/apps/system_info.bin", "Sistem Bilgisi", "Sistem", "Sistem", "/system/icons/system.png"},
-        {WINDOW_CLOCK, "/apps/clock.bin", "Saat ve Takvim", "Saat", "Saat", "/system/icons/clock.png"},
-        {WINDOW_UNIT_CONVERTER, "/apps/unit_converter.bin", "Birim Donusturucu", "Donusturucu", "Donustur", "/system/icons/converter.png"},
-        {WINDOW_MEMORY_HUNTER, "/apps/memory_hunter.bin", "Bellek Avcisi", "Bellek Avcisi", "Bellek Avcisi", "/system/icons/memory_hunter.png"}
+        {WINDOW_FILE, "/apps/file_manager.elf", "Dosya Yoneticisi", "Dosyalar", "Dosyalar", "/system/icons/files.png"},
+        {WINDOW_TERMINAL, "/apps/terminal.elf", "Terminal", "Terminal", "Terminal", "/system/icons/terminal.png"},
+        {WINDOW_TASK_MANAGER, "/apps/task_manager.elf", "Gorev Yoneticisi", "Gorevler", "Gorevler", "/system/icons/tasks.png"},
+        {WINDOW_CALCULATOR, "/apps/calculator.elf", "Hesap Makinesi", "Hesap Makinesi", "Hesap", "/system/icons/calculator.png"},
+        {WINDOW_NOTEPAD, "/apps/notepad.elf", "Not Defteri", "Not Defteri", "Not Defteri", "/system/icons/notepad.png"},
+        {WINDOW_SYSTEM_INFO, "/apps/system_info.elf", "Sistem Bilgisi", "Sistem", "Sistem", "/system/icons/system.png"},
+        {WINDOW_CLOCK, "/apps/clock.elf", "Saat ve Takvim", "Saat", "Saat", "/system/icons/clock.png"},
+        {WINDOW_UNIT_CONVERTER, "/apps/unit_converter.elf", "Birim Donusturucu", "Donusturucu", "Donustur", "/system/icons/converter.png"},
+        {WINDOW_MEMORY_HUNTER, "/apps/memory_hunter.elf", "Bellek Avcisi", "Bellek Avcisi", "Bellek Avcisi", "/system/icons/memory_hunter.png"}
     };
 
     const ApplicationInfo *application_info(uint32_t id)

@@ -125,11 +125,11 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 3. `kernel/kernel.cpp` kesmeleri kapatır; işlemci tablolarını kurar, sayfalamayı başlatır. `_init()`, çekirdek heap'i hazır olduktan sonra global C++ kurucularını çalıştırır.
 4. Klavye, fare, framebuffer, ATA PIO disk ve PCKFS başlatılır. `_kprintf` ile açılış bilgileri çekirdek konsol günlüğüne yazılır. PIT 100 Hz ayarlanır. Framebuffer hazır olduğunda açılış günlüğü ekranda gösterilir; CPU üreticisi/modeli, Multiboot bilgileri, GDT/IDT/TSS, CR3, fiziksel sayfa sayıları, görüntü boyutları, disk/PCKFS durumu ve RTC tarihi yazılır. Masaüstüne geçmeden önce syscall, kullanıcı heap/yığın ve zamanlayıcı bilgileri gösterilir. Masaüstünde ESC tuşuna bastığınızda açılış mesajları ve sonraki çekirdek çıktıları sistem konsolunda görünür. Günlüğü `dmesg` ile de okuyabilirsiniz.
 5. `kernel/task/user_mode.cpp` kullanıcı sayfalarını, kullanıcı yığınını ve sistem çağrılarını hazırlar; `kernel/task/thread.cpp` zamanlayıcıyı kurar. SMP'li sistemde ek işlemciler INIT/SIPI ile başlatılır; işlemci başına GDT/TSS ve zamanlayıcı durumu hazırlanır. `user_mode_run_desktop()` masaüstü imajını `0x40000000` adresine yükler. `kernel/arch/i386/user_mode.asm` içindeki `iret` Ring 3'e geçer.
-6. Masaüstü `kernel/user/apps/desktop.cpp` içindeki `_start` ile çalışır. Dosyalar, Terminal, Görevler, Hesap Makinesi veya Not Defteri açıldığında `process_spawn()` çağrılır; çekirdek `/apps/*.bin` imajını PCKFS'ten yükler, yeni PID, adres alanı ve ana thread oluşturur.
+6. Masaüstü `kernel/user/apps/desktop.cpp` içindeki `_start` ile çalışır. Dosyalar, Terminal, Görevler, Hesap Makinesi veya Not Defteri açıldığında `process_spawn()` çağrılır; çekirdek `/apps/*.elf` uygulamasını PCKFS'ten yükler, yeni PID, adres alanı ve ana thread oluşturur.
 
 ### Masaüstü ve uygulamaların yüklenmesi
 
-Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yönergesiyle çekirdek imajına eklenir ve açılışta belleğe alınır. Diğer uygulamalar çekirdeğe eklenmez; başlatıldıklarında PCKFS diskindeki `/apps/*.bin` dosyalarından yüklenir. Her ikisi de Ring 3'te çalışır; sürücüler ve sistem çağrısı işleyicileri Ring 0'da çalışır.
+Masaüstü ELF32 `ET_EXEC` dosyası `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yönergesiyle çekirdek imajına eklenir. Diğer uygulamalar PCKFS içindeki `/apps/*.elf` dosyalarından başlatılır. `kernel/loader/elf.cpp` ELF başlığını ve yüklenebilir bölümleri doğrular; `kernel/loader/dynamic_linker.cpp` uygulamanın istediği `ET_DYN` kütüphanelerini PCKFS'teki `/lib/` dizininden yükleyip i386 `REL` taşımalarını uygular. Ortak SDK ve kullanıcı alanı syscall geçiş kodu `/lib/libpckos.so` içindedir. Uygulamalar sistem çağrısını bu kütüphanedeki `int 0x80` yordamıyla yapar; çağrıyı çekirdekte `kernel/syscalls/` karşılar. Masaüstü ve uygulamalar Ring 3'te, sürücüler ve syscall işleyicileri Ring 0'da çalışır. Bu, i386 için sınırlı bir ELF dinamik bağlayıcısıdır; sistemin genel amaçlı bir Linux ELF yükleyicisi olduğu anlamına gelmez.
 
 ## 2. Nerede ne var?
 
@@ -148,10 +148,14 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | `kernel/syscalls/serial_dev.cpp` | Kullanıcı alanından seri porta yazma sistem çağrısı |
 | `kernel/device/rtc.cpp` | CMOS RTC'den gerçek tarih ve saati okuma |
 | `kernel/fs/pckfs.cpp` | PCKFS bağlama, yol çözme, dizin ve dosya okuma |
-| `kernel/task/user_mode.cpp` | Kullanıcı adres alanları, program yükleme, process ve kullanıcı thread'i oluşturma |
+| `kernel/task/user_mode.cpp`, `kernel/include/kernel/task/user_mode.hh` | Kullanıcı adres alanları, process ve kullanıcı thread'i oluşturma |
+| `kernel/loader/elf.cpp`, `kernel/include/kernel/loader/elf.hh` | ELF32 başlıklarını ve yüklenebilir bölümleri doğrulama |
+| `kernel/loader/dynamic_linker.cpp` | `DT_NEEDED` kütüphanelerini yükleme, sembolleri çözme ve i386 `REL` taşımalarını uygulama |
 | `kernel/syscalls/syscall.cpp` | `int 0x80` giriş kontrolü ve çağrı yönlendirmesi |
 | `kernel/syscalls/` | Konuya göre ayrılmış syscall işleyicileri ve kullanıcı belleği doğrulaması |
-| `kernel/include/user/syscall/call.hh` | Kullanıcı alanındaki `int 0x80` geçiş kodu |
+| `kernel/include/user/syscall/call.hh`, `kernel/user/syscall/call.cpp` | Kullanıcı API'si ve `libpckos.so` içindeki `int 0x80` geçiş kodu |
+| `kernel/user/syscall/` | Paylaşılan kullanıcı kütüphanesindeki syscall sarmalayıcıları |
+| `kernel/user/lib/libpckos.so` | Derleme sırasında üretilen ortak SDK ve kullanıcı çalışma zamanı kütüphanesi |
 | `kernel/include/user/system/power.hh` | Kullanıcı uygulamalarının sistemi kapatma API'si |
 | `kernel/include/abi/` | Sabit syscall numaraları ve çekirdek/kullanıcı alanının ortak veri yapıları |
 | `kernel/include/user/fs/` | Dosya ve dizin API'si |
@@ -160,7 +164,7 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 | `kernel/include/user/memory/`, `kernel/include/user/io/` | Heap ve standart akış API'leri |
 | `kernel/include/user/input/`, `kernel/include/user/device/`, `kernel/include/user/system/` | Giriş olayları, ses ve sistem bilgileri |
 | `kernel/include/user/lib/` | Genel bellek/metin işlevleri, rastgele sayı ve şablon yardımcıları |
-| `kernel/include/user/gui/drawing.hh`, `kernel/user/gui/graphics.cpp` | Ring 3 ortak çizim API'si |
+| `kernel/include/user/gui/drawing.hh`, `kernel/user/gui/graphics.cpp` | Paylaşılan kullanıcı kütüphanesindeki Ring 3 çizim API'si |
 | `kernel/include/user/gui/window.hh`, `kernel/user/gui/window.cpp` | Uygulama penceresi, başlık çubuğu, sürükleme, küçültme ve kapatma |
 | `kernel/include/user/gui/widgets.hh`, `kernel/user/gui/widgets.cpp` | Yeniden kullanılabilir widget, buton ve `ClickListener` |
 | `kernel/device/video/frame_buffer.cpp` | Ekran belleği ve pencerelerin katmanlarla birleştirilmesi |
@@ -174,7 +178,7 @@ Masaüstü programı `kernel/arch/i386/user_desktop.asm` içindeki `incbin` yön
 
 ## 3. Derleme ve çalışma
 
-Gereken araçlar: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkrescue`, `python3`, `qemu-system-i386`. Ortak ayarlar `config.sh` ve `kernel/Makefile` içindedir.
+Gereken araçlar: `i686-elf-g++`, `nasm`, `make`, `grub-mkrescue`, `python3`, `qemu-system-i386`. Ortak ayarlar `config.sh` ve `kernel/Makefile` içindedir.
 
 | Komut | Etkisi |
 | --- | --- |
@@ -185,7 +189,7 @@ Gereken araçlar: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkre
 | `./vbox.sh` | Mevcut `pckfs.img` dosyasını `pckfs-vbox.vdi` biçimine çevirir. Önce güncel imajı `./run.sh` veya `./share.sh` ile üretin. |
 | `./clean.sh` | Derleme ve imaj çıktılarını temizler; `host-share/` korunur. |
 
-`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. `.elf` bağlantı çıktısıdır; çalışan yükleyicinin aldığı imaj `objcopy` ile üretilmiş **düz `.bin`** dosyasıdır. `run.sh` erişim varsa KVM, yoksa TCG kullanır.
+`sysroot/` ve `isodir/` sadece hazırlık alanlarıdır. Çalışan sistemin kökü `pckfs.img` içindeki `/` dizinidir. `initrd` kullanılmaz. Uygulamalar i386 ELF32 `ET_EXEC` biçimindedir ve ortak kullanıcı SDK'sını `/lib/libpckos.so` adlı `ET_DYN` kütüphanesinden alır. Çekirdek, PCKFS'ten bu kütüphaneyi yükler, SysV ELF sembol tablosundan işlevleri çözer ve desteklenen i386 `REL` taşımalarını uygular. Dinamik bağlayıcı şu an TLS, `RELA`, sembol sürümleri veya `PT_INTERP` desteklemez. `run.sh` erişim varsa KVM, yoksa TCG kullanır.
 
 `vbox.sh` mevcut `pckfs-vbox.vdi` çıktısını kaldırıp `convertfromraw` ile tekrar üretir. Dönüşümde sanal makineye kayıtlı sabit disk UUID'sini kullanır; böylece VirtualBox'ın disk kaydı bozulmaz. ISO'yu, çekirdeği veya VirtualBox makine ayarlarını değiştirmez. Yeniden üretim sırasında VirtualBox makinesi kapalı olsun.
 
@@ -256,7 +260,7 @@ Kullanıcı API'si `kernel/include/user/` altında konuya göre ayrılmıştır:
 
 Seri porta yazma, standart çıktı akışlarından ayrıdır. Çekirdek COM1 UART'ı 38400 baud, 8 veri biti, eşlik yok ve 1 dur bitiyle başlatır. `user/io/serial_dev.hh` içindeki `user::io::serialdev::write()` boş sonlandırmalı metni 56 numaralı sistem çağrısıyla COM1'e gönderir. Bu çağrı `stdout`/`stderr` akışlarını veya çekirdek günlüğünü seri porta yönlendirmez.
 
-Grafik yardımcıları `kernel/include/user/gui/drawing.hh` ve `kernel/user/gui/graphics.cpp` içindedir. Ortak pencere ve widget API'si `kernel/include/user/gui/` altında, uygulamaları ise `kernel/user/gui/window.cpp` ve `widgets.cpp` içindedir. `Window` pencere kaydını, çerçeveyi, başlık çubuğu düğmelerini, sürüklemeyi, küçültmeyi ve kapatmayı yönetir. `Button`, `Label` ve `TextInputWidget` oluşturulduklarında ebeveyn pencereye eklenir. `Window::draw()` pencere içeriği alanındaki widget'ları çizer; `Window::handle_mouse()` tıklamaları widget'lara yollar. `Button` tıklamaları `ClickListener` callback'ini çağırır; `TextInputWidget` tıklanan konumda yazı imlecini ayarlar. Makefile bu kütüphane kaynaklarını kullanıcı uygulamalarına bağlar. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/memory/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
+Grafik yardımcıları `kernel/include/user/gui/drawing.hh` ve `kernel/user/gui/graphics.cpp` içindedir. Ortak pencere ve widget API'si `kernel/include/user/gui/` altında, uygulamaları ise `kernel/user/gui/window.cpp` ve `widgets.cpp` içindedir. `Window` pencere kaydını, çerçeveyi, başlık çubuğu düğmelerini, sürüklemeyi, küçültmeyi ve kapatmayı yönetir. `Button`, `Label` ve `TextInputWidget` oluşturulduklarında ebeveyn pencereye eklenir. `Window::draw()` pencere içeriği alanındaki widget'ları çizer; `Window::handle_mouse()` tıklamaları widget'lara yollar. `Button` tıklamaları `ClickListener` callback'ini çağırır; `TextInputWidget` tıklanan konumda yazı imlecini ayarlar. Makefile bu ortak kaynakları `libpckos.so` içine derler; uygulamalar kütüphaneyi dinamik olarak ister. `kernel/include/user/lib/memory.hh` temel bellek/metin işlevlerini, `kernel/include/user/memory/new.hh` ise kullanıcı heap'i üzerinden `new`/`delete` işleçlerini sağlar. Bu, başlangıç düzeyinde küçük bir çalışma kütüphanesidir; tam C/C++ standart kütüphanesi veya STL değildir.
 
 ### Pencere ve buton widget'ı
 
@@ -292,11 +296,11 @@ window.handle_mouse(mouse_x, mouse_y, mouse_buttons, pressed,
 
 ### Standart giriş, çıktı ve hata akışları
 
-Örneğin `/apps/newapp.bin` olarak bir PCKOS için uygulama yazdınız; `run /apps/newapp.bin` uygulamayı ayrı süreçte başlatır ve terminal bağlantısını aktarır. `stdin` (0) terminalden giriş alır; `stdout` (1) normal çıktı, `stderr` (2) hata çıktısıdır. İki çıktı akışı aynı terminalde çağrı sırasıyla gösterilir; uygulama çıktısı bu durumda çekirdek günlüğüne eklenmez. Alt süreçler de terminal bağlantısını devralır. Terminal bağlantısı olmayan uygulamalarda çıktı sistem konsol günlüğüne gider. Standart akışlar seri porta yönlendirilmez; uygulamalar seri porta ayrıca yazabilir.
+Örneğin `/apps/newapp.elf` olarak bir PCKOS uygulaması eklediğinizde `run /apps/newapp.elf` uygulamayı ayrı süreçte başlatır ve terminal bağlantısını aktarır. `stdin` (0) terminalden giriş alır; `stdout` (1) normal çıktı, `stderr` (2) hata çıktısıdır. İki çıktı akışı aynı terminalde çağrı sırasıyla gösterilir; uygulama çıktısı bu durumda çekirdek günlüğüne eklenmez. Alt süreçler de terminal bağlantısını devralır. Terminal bağlantısı olmayan uygulamalarda çıktı sistem konsol günlüğüne gider. Standart akışlar seri porta yönlendirilmez; uygulamalar seri porta ayrıca yazabilir.
 
 Terminal, `run` ile başlattığınız süreç bitene kadar yeni kabuk komutu çalıştırmaz; Enter ile gönderdiğiniz satırları uygulamanın `stdin` kuyruğuna koyar. Boş girişte Ctrl+D EOF gönderir; yazılmış metin varsa önce o metni gönderir. Program bitince `pckos:/>` geri gelir. Grafik uygulaması pencere kaydettiğinde odağı kendi penceresine alır. Simge durumundaki terminal de çıktıları toplamaya devam eder.
 
-Terminalde `cd /apps`, `cd ..` ve `cd -` ile dizin değiştirebilir, `pwd` ile bulunduğunuz dizini görebilirsiniz. `ls`, `cat` ve `run` göreli yolları da kabul eder; örneğin `/apps` içindeyken `run demo.bin` kullanabilirsiniz. Çalışma dizini terminale aittir. `ps`, `date`, `uptime` ve `history` komutları da kullanılabilir; `help` komutları gruplar halinde gösterir. Ctrl+L ekranı temizler, yukarı/aşağı okları komut geçmişini, PgUp/PgDn ve kaydırma çubuğu önceki çıktıları gösterir.
+Terminalde `cd /apps`, `cd ..` ve `cd -` ile dizin değiştirebilir, `pwd` ile bulunduğunuz dizini görebilirsiniz. `ls`, `cat` ve `run` göreli yolları da kabul eder; örneğin `/apps` içindeyken `run demo.elf` kullanabilirsiniz. Çalışma dizini terminale aittir. `ps`, `date`, `uptime` ve `history` komutları da kullanılabilir; `help` komutları gruplar halinde gösterir. Ctrl+L ekranı temizler, yukarı/aşağı okları komut geçmişini, PgUp/PgDn ve kaydırma çubuğu önceki çıktıları gösterir.
 
 Ctrl+C, `run` ile başlatılan uygulamayı ve aynı terminale bağlı alt süreçlerini sonlandırır; süreçlerin belleği, thread'leri, pencereleri ve açık dosyaları temizlenir. Bu işlem POSIX sinyali değildir ve kullanıcı nesnelerinin yıkıcılarını çağırmaz. Uygulama çalışmıyorsa yazılmakta olan komutu iptal eder. `terminal_interrupt(pid)` (50) yalnızca terminal sahibinin kendi terminaline bağlı uygulamaları sonlandırmasına izin verir.
 
@@ -319,7 +323,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-`<user/io/io.hh>` başlığını ekleyip doğrudan `print("Deger: %d\n", value)` kullanın. `print` stdout'a, `eprint` stderr'e yazar; `fprint(fd, format, ...)` ile bu iki tanıtıcıdan birini seçebilirsiniz. İşlevlere `user::io` içinden de erişebilirsiniz. Dönüş değeri yazılan bayt sayısı veya negatif hata kodudur. Uygulama `kernel/user/io/io.cpp` içindedir; elle derlediğiniz uygulamanın bağlantısına `kernel/user/io/io.user.o` ekleyin. Projenin Makefile'ı bunu otomatik bağlar.
+`<user/io/io.hh>` başlığını ekleyip doğrudan `print("Deger: %d\n", value)` kullanın. `print` stdout'a, `eprint` stderr'e yazar; `fprint(fd, format, ...)` ile bu iki tanıtıcıdan birini seçebilirsiniz. İşlevlere `user::io` içinden de erişebilirsiniz. Dönüş değeri yazılan bayt sayısı veya negatif hata kodudur. Uygulama `kernel/user/io/io.cpp` içindedir ve `libpckos.so` içine derlenir. Elle derlediğiniz uygulamayı `-lpckos` ile bu kütüphaneye bağlayın.
 
 Desteklenen biçimler: `%s`, `%c`, `%d`, `%i`, `%u`, `%x`, `%X`, `%o`, `%p`, `%%`; alan genişliği, `-`, `0`, `+`, boşluk ve `#` bayrakları; `%.3s` veya `%08x` gibi hassasiyet/genişlik; `*` ile genişlik/hassasiyet ve tam sayılar için `h`, `hh`, `l`, `z` değiştiricileri. Genişlik ve hassasiyet en çok 4096 olabilir. Ondalıklı sayı biçimleri, `ll` ve `%n` henüz desteklenmez; desteklenmeyen biçim `-22` döndürür. İçinde yüzde işareti bulunan hazır metni `print("%s", text)` ile yazın.
 
@@ -354,13 +358,13 @@ if (user::wait_event(&event, 10) > 0 &&
     user::exit(0); // ESC
 ```
 
-Yeni syscall eklerken: numarayı `kernel/include/abi/syscall.hh` içine, kullanıcı sarmalayıcısını ilgili `kernel/include/user/` başlığına ekleyin. İşleyiciyi ilgili `kernel/syscalls/` kaynak dosyasına, yönlendirmeyi `kernel/syscalls/syscall.cpp` içine ekleyin. Kullanıcıdan gelen adresleri `is_user_range` ile denetleyin. Gerekiyorsa asıl çekirdek işlevini `kernel/` altında ilgili modülde uygulayın. Dönüş kodu ve sınırları burada belgeleyin.
+Yeni syscall eklerken numarayı `kernel/include/abi/syscall.hh` içine, kullanıcı sarmalayıcısını ilgili `kernel/include/user/` başlığına ekleyin. Sarmalayıcının gövdesini `kernel/user/syscall/` altındaki ilgili `.cpp` dosyasına ekleyip kaynağı `USER_LIBRARY_OBJECTS` listesine yazın. Çekirdek işleyicisini ilgili `kernel/syscalls/` kaynak dosyasında uygulayıp `kernel/syscalls/syscall.cpp` içine yönlendirin. Kullanıcıdan gelen adresleri `is_user_range` ile denetleyin; dönüş kodu ve sınırlarını burada belgeleyin.
 
 **Kullanıcı uygulamalarında bellek ve temel yardımcılar**
 
-`kernel/include/user/lib/memory.hh` başlığı `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy` ve `strncpy` işlevlerini sunar. Bunlara `user::memory::copy`, `move`, `fill`, `compare`, `length` ve `equal` yardımcılarıyla da erişebilirsiniz. Uygulamanın bağlantısına `kernel/user/lib/memory.user.o` ekleyin.
+`kernel/include/user/lib/memory.hh` başlığı `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy` ve `strncpy` işlevlerini sunar. Bunlara `user::memory::copy`, `move`, `fill`, `compare`, `length` ve `equal` yardımcılarıyla da erişebilirsiniz. İşlevler `libpckos.so` içindedir; uygulamayı `-lpckos` ile bağlayın.
 
-`kernel/include/user/memory/new.hh` başlığı ve `kernel/user/memory/new.cpp` kullanıcı alanına `new`, `new[]`, `delete`, `delete[]`, placement new ve C++17 hizalı tahsis desteği sağlar. Uygulamanın bağlantısına `kernel/user/memory/new.user.o` ekleyin. Mevcut Makefile üç kullanıcı runtime nesnesini de yerleşik uygulamalar için otomatik bağlar. Çekirdeğin `kernel/mem/new.cpp` uygulaması çekirdek heap'ini kullanmaya devam eder.
+`kernel/include/user/memory/new.hh` başlığı ve `kernel/user/memory/new.cpp` kullanıcı alanına `new`, `new[]`, `delete`, `delete[]`, placement new ve C++17 hizalı tahsis desteği sağlar. Bu işleçler `libpckos.so` içindedir ve kullanıcı heap'ini kullanır. Çekirdeğin `kernel/mem/new.cpp` uygulaması çekirdek heap'ini kullanmaya devam eder.
 
 Örnek:
 
@@ -398,14 +402,14 @@ Her süreçte `0x41000000–0x43000000` adres aralığında 32 MiB'a kadar heap 
 **Process**, ayrı PID ve sayfa tablosu/adres alanı olan programdır. Açılışta çekirdek masaüstü process'ini başlatır; diğerleri yalnızca açılınca oluşturulur. Kullanıcı programından:
 
 ```cpp
-const int32_t pid = user::process_spawn("/apps/terminal.bin", "Terminal");
+const int32_t pid = user::process_spawn("/apps/terminal.elf", "Terminal");
 if (pid < 0) {
     const char message[] = "Baslatma hatasi\n";
     user::write(user::stderr_descriptor, message, sizeof(message) - 1);
 }
 ```
 
-`process_spawn` sonucu başarılıysa yeni PID'dir. Çağrı uygulamanın bitmesini beklemez. Çekirdekte akış: `kernel/syscalls/process.cpp` kullanıcı yolunu/adını kopyalar → `user_mode_spawn_process()` PCKFS'te dosyayı bulup düz ikiliyi okur → boş adres alanı ayırır ve kod/yığın sayfalarını eşler → `process_create()` PID verir → `thread_create_user()` ana TID'yi oluşturur → giriş odağı yeni process'e geçer. Bunlar sırasıyla `kernel/task/user_mode.cpp` ve `kernel/task/thread.cpp` içindedir. Programın `_start` fonksiyonu başlar; `user::exit(status)` veya ana thread'in bitmesi process'i sonlandırır. Kapanınca kaynakları ve pencere katmanı serbest bırakılır.
+`process_spawn` sonucu başarılıysa yeni PID'dir. Çağrı uygulamanın bitmesini beklemez. Çekirdekte akış: `kernel/syscalls/process.cpp` kullanıcı yolunu/adını kopyalar → `user_mode_spawn_process()` PCKFS'te ELF dosyasını bulur → `kernel/loader/elf.cpp` ELF32 başlığını ve yüklenebilir bölümleri doğrulayıp yeni adres alanına yerleştirir → `user_mode_spawn_process()` kullanıcı yığınını hazırlar → `process_create()` PID verir → `thread_create_user()` ELF giriş adresinde ana TID'yi oluşturur → giriş odağı yeni process'e geçer. Programın `_start` fonksiyonu başlar; `user::exit(status)` veya ana thread'in bitmesi process'i sonlandırır. Kapanınca kaynakları ve pencere katmanı serbest bırakılır.
 
 Süreçleri listeleme:
 
@@ -454,7 +458,7 @@ Pratik süreç ve thread sınırlarını kullanılabilir bellek, sayfa dizini al
 
 ## 8. Yeni uygulama yazma, derleme ve başlatma
 
-Örnek dosya: `kernel/user/apps/newapp_process.cpp`. PCKOS'un yüklediği düz ikilinin giriş noktası `_start` olmalıdır:
+Örnek dosya: `kernel/user/apps/newapp_process.cpp`. PCKOS ELF uygulamasının giriş noktası `_start` olmalıdır:
 
 ```cpp
 #include <user/gui/graphics.hh>
@@ -539,19 +543,19 @@ Yukarıdaki örneği `kernel/user/apps/newapp_process.cpp` olarak kaydedin. Aşa
 
 Bu örnekte uygulamayı elle derliyoruz. Mevcut Makefile yalnızca içinde tanımlı uygulamaları derler; yeni bir `.cpp` dosyası oluşturduğunuzda onu kendiliğinden derlemeye eklemez. Bu nedenle aşağıdaki adımları sırayla uygulayın.
 
-**1. Grafik ve bellek yardımcılarını hazırlayın.**
+**1. Çekirdeği, uygulamaları ve ortak kütüphaneyi derleyin.**
 
 ```sh
 ./build.sh
 ```
 
-Bu komut mevcut çekirdeği ve projeye kayıtlı uygulamaları derler. Aynı zamanda örneğimizin kullanacağı `kernel/user/gui/graphics.user.o`, `kernel/user/gui/window.user.o`, `kernel/user/gui/widgets.user.o`, `kernel/user/memory/new.user.o`, `kernel/user/lib/memory.user.o` ve `kernel/user/io/io.user.o` dosyalarını üretir. Henüz yeni `newapp_process.cpp` dosyamızı derlemez; onu sonraki adımda derleyeceğiz.
+Bu komut çekirdeği, kayıtlı uygulamaları ve `kernel/user/lib/libpckos.so` ortak kütüphanesini derler. Yeni `newapp_process.cpp` dosyasını Makefile'a eklemediğimiz için onu aşağıdaki adımlarda elle derleyeceğiz.
 
 **2. Uygulamanın C++ kodunu derleyin.**
 
 ```sh
 i686-elf-g++ -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
-  -fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
+  -fno-use-cxa-atexit -fno-threadsafe-statics -fPIC -fno-stack-protector -fno-builtin \
   -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
   -msoft-float -Ikernel/include \
   -c kernel/user/apps/newapp_process.cpp -o kernel/user/apps/newapp_process.user.o
@@ -559,27 +563,27 @@ i686-elf-g++ -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
 
 Girdi, yazdığınız `newapp_process.cpp` dosyasıdır. `-c` seçeneği yalnızca derleme yapar ve sonuç olarak `newapp_process.user.o` nesne dosyasını oluşturur. Bu dosya henüz tek başına çalıştırılabilir değildir; kullandığı grafik fonksiyonlarıyla bağlanması gerekir. `-Ikernel/include` SDK başlık dosyalarının yerini belirtir. Diğer bayraklar PCKOS kullanıcı uygulamalarının mevcut derleme ayarlarıdır.
 
-**3. Nesne dosyasını grafik kitaplığıyla bağlayın.**
+**3. Uygulamayı ortak kütüphaneye dinamik bağlayın.**
 
 ```sh
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
+  -Wl,--no-dynamic-linker -Wl,--hash-style=sysv \
+  -Wl,-z,max-page-size=0x1000 -Wl,--no-as-needed \
+  -Lkernel/user/lib \
   -o kernel/user/apps/newapp_process.elf \
-  kernel/user/memory/new.user.o kernel/user/lib/memory.user.o kernel/user/io/io.user.o \
-  kernel/user/gui/window.user.o kernel/user/gui/widgets.user.o \
-  kernel/user/gui/graphics.user.o kernel/user/apps/newapp_process.user.o
+  kernel/user/apps/newapp_process.user.o -lpckos
 ```
 
-Bu adım uygulama nesnesini grafik, bellek ve `new`/`delete` runtime nesneleriyle birleştirir. `linker.ld`, uygulamanın bellek yerleşimini ve `_start` girişini tanımlar. Sonuç `newapp_process.elf` dosyasıdır. Bu ELF, bağlantı ara çıktısıdır; mevcut PCKOS yükleyicisi düz ikili dosya bekler.
+Bu adım uygulamayı `libpckos.so` içindeki grafik, bellek, G/Ç ve syscall API'lerine bağlar. `linker.ld`, uygulamanın bellek yerleşimini ve `_start` girişini tanımlar. Sonuç, PCKOS'un yükleyebildiği ELF32 `ET_EXEC` dosyasıdır; çalışma sırasında gereken `libpckos.so` PCKFS'teki `/lib/` dizininden yüklenir.
 
-**4. ELF dosyasını PCKOS'un yükleyebileceği biçime çevirin.**
+**4. ELF dosyasını host-share dizinine koyun.**
 
 ```sh
-i686-elf-objcopy -O binary kernel/user/apps/newapp_process.elf \
-  host-share/apps/newapp.bin
+cp kernel/user/apps/newapp_process.elf host-share/apps/newapp.elf
 ```
 
-`objcopy -O binary`, ELF içindeki yüklenebilir içeriği düz ikili dosyaya dönüştürür. Sonuç `host-share/apps/newapp.bin` olur. `host-share`, host makinenizdeki dosyaların PCKFS'e aktarılması için kullanılan dizindir. `host-share/apps` proje içinde zaten bulunur.
+`host-share`, host makinenizdeki dosyaların PCKFS'e aktarılması için kullanılan dizindir. `host-share/apps` proje içinde zaten bulunur. ELF32 uygulama dosyasını bu dizine kopyalayın; çekirdek ELF dosyasını doğrudan yükler.
 
 **5. Uygulamayı PCKFS disk imajına aktarın.**
 
@@ -587,20 +591,20 @@ i686-elf-objcopy -O binary kernel/user/apps/newapp_process.elf \
 ./share.sh
 ```
 
-`share.sh`, önce `build.sh` komutunu çağırır, ardından `host-share` içeriğini ve yerleşik uygulamaları paketleyerek `pckfs.img` dosyasını yeniden üretir. Elle derlediğiniz `newapp.bin` dosyasını olduğu gibi alır; uygulamanın kaynak kodunu yeniden derlemez. Host üzerindeki `host-share/apps/newapp.bin`, PCKOS içinde `/apps/newapp.bin` olarak görünür.
+`share.sh`, önce `build.sh` komutunu çağırır, ardından `host-share` içeriğini, yerleşik uygulamaları ve `libpckos.so` dosyasını paketleyerek `pckfs.img` dosyasını yeniden üretir. Elle derlediğiniz `newapp.elf` dosyasını olduğu gibi alır; uygulamanın kaynak kodunu yeniden derlemez. Host üzerindeki `host-share/apps/newapp.elf`, PCKOS içinde `/apps/newapp.elf` olarak görünür; ortak kütüphane `/lib/libpckos.so` yolunda yer alır.
 
 Bu noktada uygulama derlenmiş ve disk imajına eklenmiştir. **Uygulamayı çekirdeğe linklemek gerekmez.**
 
 **6. İlk deneme için uygulamayı başlatın.**
 
-Proje kökünde `./run.sh` çalıştırın. Betik temiz derleme yapar, ISO ve PCKFS imajlarını yeniden üretir ve QEMU'yu açar. `host-share/apps/newapp.bin` temizleme sırasında korunup yeni disk imajına eklenir.
+Proje kökünde `./run.sh` çalıştırın. Betik temiz derleme yapar, ISO ve PCKFS imajlarını yeniden üretir ve QEMU'yu açar. `host-share/apps/newapp.elf` temizleme sırasında korunup yeni disk imajına eklenir.
 
 Masaüstündeki Terminal'i açıp **PCKOS terminaline** şu komutu yazın:
 
 ```text
-run /apps/newapp.bin
+run /apps/newapp.elf
 ```
 
-Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `desktop.cpp` dosyasını değiştirmeniz gerekmez.  Başka bir uygulamanın kodundan başlatmak için `user::process_spawn("/apps/newapp.bin", "NewApp")` kullanın.
+Terminal bu dosyadan yeni bir process başlatır. Uygulamayı başlatmak için `desktop.cpp` dosyasını değiştirmeniz gerekmez.  Başka bir uygulamanın kodundan başlatmak için `user::process_spawn("/apps/newapp.elf", "NewApp")` kullanın.
 
-**Uygulamanın kodunu değiştirdiğinizde:** 2, 3 ve 4. adımları tekrar çalıştırarak `host-share/apps/newapp.bin` dosyasını güncelleyin. Ardından `./run.sh` ile deneyin; bu betik 5. adımdaki paketlemeyi de kendisi yapar. Yalnızca disk imajını yenilemek isterseniz `./share.sh` çalıştırın. Temizleme sonrasında `graphics.user.o` bulunmuyorsa veya grafik kitaplığını değiştirdiyseniz önce 1. adımı da uygulayın.
+**Uygulamanın kodunu değiştirdiğinizde:** 2 ve 3. adımları tekrar çalıştırıp ELF'i `host-share/apps/newapp.elf` konumuna kopyalayın. Ardından `./run.sh` ile deneyin; betik disk imajını da yeniler. SDK veya ortak kütüphane kaynaklarını değiştirdiğinizde önce `./build.sh`, ardından `./share.sh` çalıştırarak yeni `libpckos.so` dosyasını PCKFS'e ekleyin.

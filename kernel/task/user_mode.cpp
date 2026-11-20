@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) PCK
 #include <kernel/task/user_mode.hh>
+#include <kernel/loader/elf.hh>
 #include <kernel/syscalls/syscall.hh>
 #include <kernel/task/thread.hh>
 #include <firmware/smp.hh>
@@ -36,6 +37,9 @@ namespace kernel
         constexpr uint32_t USER_CODE_MAX_PAGES = 64;
         constexpr uint32_t USER_STACK_PAGES = 32;
         constexpr uint32_t USER_CODE_MAX_SIZE = USER_CODE_MAX_PAGES * PAGESIZE_4K;
+        constexpr uint32_t USER_IMAGE_MAX_SIZE = USER_CODE_MAX_SIZE + 256 * 1024;
+        constexpr uint32_t USER_LIBRARY_AREA_SIZE = 16 * 1024 * 1024;
+        constexpr uint32_t USER_LIBRARY_IMAGE_MAX_SIZE = 4 * 1024 * 1024;
         constexpr uint32_t USER_STACK_ADDRESS = USER_CODE_ADDRESS +
             (USER_CODE_MAX_PAGES + 1) * PAGESIZE_4K;
         constexpr uint32_t USER_STACK_TOP = USER_STACK_ADDRESS +
@@ -63,7 +67,6 @@ namespace kernel
         constexpr int32_t ERROR_BAD_ADDRESS = -14;
         constexpr int32_t ERROR_IS_DIRECTORY = -21;
         constexpr int32_t ERROR_INVALID_ARGUMENT = -22;
-
         struct UserProcessSpace
         {
             struct HeapAllocation
@@ -83,7 +86,9 @@ namespace kernel
             uint32_t directory_slot;
             uint32_t process_id;
             uint32_t page_directory_address;
+            bool page_directory_ready;
             uint32_t code_pages;
+            uint32_t library_pages;
             bool thread_stacks[USER_THREAD_STACK_COUNT];
             uint32_t heap_count;
             HeapAllocation heap_allocations[USER_HEAP_ALLOCATION_COUNT];
@@ -98,7 +103,7 @@ namespace kernel
         int32_t user_task_exit_status = 0;
         UserProcessSpace *process_spaces = nullptr;
         bool page_directory_slots[PROCESS_DIRECTORY_SLOTS]{};
-        uint8_t spawn_image[USER_CODE_MAX_SIZE];
+        uint8_t spawn_image[USER_IMAGE_MAX_SIZE];
 
         UserProcessSpace *reserve_process_space()
         {
@@ -138,6 +143,7 @@ namespace kernel
             for (uint32_t index = 0; index < 1023; ++index)
                 directory[index] = kernel_directory[index] & ~(PG_OWNED | PG_USER);
             directory[1023] = space.page_directory_address | PG_PRESENT | PG_WRITE;
+            space.page_directory_ready = true;
         }
 
         bool map_user_page(UserProcessSpace &space, uint32_t virtual_address,
@@ -164,6 +170,14 @@ namespace kernel
                 if (old_cr3 != space.page_directory_address)
                     mem::change_pd(old_cr3);
                 return false;
+            }
+            if (virtual_address >= USER_MMAP_START &&
+                virtual_address < USER_MMAP_START + USER_LIBRARY_AREA_SIZE)
+            {
+                const uint32_t page =
+                    (virtual_address - USER_MMAP_START) / PAGESIZE_4K + 1;
+                if (page > space.library_pages)
+                    space.library_pages = page;
             }
             memset(reinterpret_cast<void *>(virtual_address), 0, PAGESIZE_4K);
             if (physical_frame != nullptr)
@@ -204,12 +218,28 @@ namespace kernel
         {
             if (!space.reserved)
                 return;
+            if (!space.page_directory_ready)
+            {
+                const uint32_t directory_slot = space.directory_slot;
+                UserProcessSpace **link = &process_spaces;
+                while (*link != nullptr && *link != &space)
+                    link = &(*link)->next;
+                if (*link == &space)
+                    *link = space.next;
+                page_directory_slots[directory_slot] = false;
+                memset(&space, 0, sizeof(space));
+                mem::MemAlloc{}.kfree(&space);
+                return;
+            }
             smp::CpuRendezvous rendezvous;
             const uint32_t old_cr3 = cpu::read_cr3();
             if (old_cr3 != space.page_directory_address)
                 mem::change_pd(space.page_directory_address);
 
             release_process_thread_stacks(space);
+            for (uint32_t page = 0; page < space.library_pages; ++page)
+                unmap_user_page(space, USER_MMAP_START + page * PAGESIZE_4K);
+            space.library_pages = 0;
             for (uint32_t page = 0; page < USER_HEAP_PAGES; ++page)
                 if (space.heap_page_users[page] != 0)
                     unmap_user_page(space, USER_HEAP_ADDRESS + page * PAGESIZE_4K);
@@ -246,44 +276,170 @@ namespace kernel
             mem::MemAlloc{}.kfree(&space);
         }
 
-        bool load_flat_image(UserProcessSpace &space, const uint8_t *image,
-                             uint32_t image_size)
+        struct ElfUserLoadContext
         {
-            if (image == nullptr || image_size == 0 ||
-                image_size > USER_CODE_MAX_SIZE)
-                return false;
-            prepare_user_page_directory(space);
-            space.code_pages = (image_size + PAGESIZE_4K - 1) / PAGESIZE_4K;
-            for (uint32_t page = 0; page < space.code_pages; ++page)
-            {
-                if (!map_user_page(space, USER_CODE_ADDRESS + page * PAGESIZE_4K,
-                                   PG_USER | PG_WRITE, nullptr))
-                    return false;
-            }
-            for (uint32_t page = 0; page < USER_STACK_PAGES; ++page)
-            {
-                if (!map_user_page(space, USER_STACK_ADDRESS + page * PAGESIZE_4K,
-                                   PG_USER | PG_WRITE, nullptr))
-                    return false;
-            }
+            UserProcessSpace *space;
+            uint32_t previous_page_directory;
+        };
 
-            const uint32_t old_cr3 = cpu::read_cr3();
-            if (old_cr3 != space.page_directory_address)
-                mem::change_pd(space.page_directory_address);
-            memcpy(reinterpret_cast<void *>(USER_CODE_ADDRESS), image, image_size);
-            bool valid = active_virtual_memory->is_user_range(
-                USER_CODE_ADDRESS, image_size, true) &&
-                active_virtual_memory->is_user_range(USER_STACK_ADDRESS,
-                    USER_STACK_PAGES * PAGESIZE_4K, true);
-            for (uint32_t page = 0; valid && page < space.code_pages; ++page)
+        bool elf_prepare_user_space(void *context, uint32_t image_pages)
+        {
+            auto &space = *static_cast<ElfUserLoadContext *>(context)->space;
+            if (image_pages == 0 || image_pages > USER_CODE_MAX_PAGES)
+                return false;
+            space.code_pages = image_pages;
+            prepare_user_page_directory(space);
+            for (uint32_t page = 0; page < USER_STACK_PAGES; ++page)
+                if (!map_user_page(space, USER_STACK_ADDRESS + page * PAGESIZE_4K,
+                                  PG_USER | PG_WRITE, nullptr))
+                    return false;
+            return true;
+        }
+
+        bool elf_map_user_page(void *context, uint32_t address)
+        {
+            auto &space = *static_cast<ElfUserLoadContext *>(context)->space;
+            return map_user_page(space, address, PG_USER | PG_WRITE, nullptr);
+        }
+
+        bool elf_begin_user_access(void *context)
+        {
+            auto &load_context = *static_cast<ElfUserLoadContext *>(context);
+            load_context.previous_page_directory = cpu::read_cr3();
+            if (load_context.previous_page_directory !=
+                load_context.space->page_directory_address)
+                mem::change_pd(load_context.space->page_directory_address);
+            return true;
+        }
+
+        bool elf_copy_to_user(void *, uint32_t address,
+                              const uint8_t *source, uint32_t size)
+        {
+            if (!active_virtual_memory->is_user_range(address, size, true))
+                return false;
+            memcpy(reinterpret_cast<void *>(address), source, size);
+            return true;
+        }
+
+        bool elf_read_user_word(void *, uint32_t address, uint32_t *value)
+        {
+            if (value == nullptr ||
+                !active_virtual_memory->is_user_range(address, sizeof(*value), false))
+                return false;
+            *value = *reinterpret_cast<const uint32_t *>(address);
+            return true;
+        }
+
+        bool elf_write_user_word(void *, uint32_t address, uint32_t value)
+        {
+            if (!active_virtual_memory->is_user_range(address, sizeof(value), true))
+                return false;
+            *reinterpret_cast<uint32_t *>(address) = value;
+            return true;
+        }
+
+        bool elf_set_user_page_writable(void *, uint32_t address, bool writable)
+        {
+            mem::VirtualAddress page(address);
+            return active_virtual_memory->set_page_permissions(page, true, writable);
+        }
+
+        bool elf_validate_user_stack(void *context)
+        {
+            (void)context;
+            return active_virtual_memory->is_user_range(
+                USER_STACK_ADDRESS, USER_STACK_PAGES * PAGESIZE_4K, true);
+        }
+
+        void elf_end_user_access(void *context)
+        {
+            auto &load_context = *static_cast<ElfUserLoadContext *>(context);
+            if (load_context.previous_page_directory !=
+                load_context.space->page_directory_address)
+                mem::change_pd(load_context.previous_page_directory);
+        }
+
+        bool elf_load_library(void *, const char *soname,
+                              const uint8_t **image, uint32_t *image_size)
+        {
+            if (soname == nullptr || image == nullptr || image_size == nullptr)
+                return false;
+            char path[96] = "/lib/";
+            uint32_t length = 0;
+            while (soname[length] != 0)
             {
-                mem::VirtualAddress code_address(USER_CODE_ADDRESS + page * PAGESIZE_4K);
-                valid = active_virtual_memory->set_page_permissions(code_address,
-                                                                     true, false);
+                const char character = soname[length];
+                const bool valid =
+                    (character >= 'a' && character <= 'z') ||
+                    (character >= 'A' && character <= 'Z') ||
+                    (character >= '0' && character <= '9') ||
+                    character == '.' || character == '_' || character == '-';
+                if (!valid || length >= sizeof(path) - 6)
+                    return false;
+                path[5 + length] = character;
+                ++length;
             }
-            if (old_cr3 != space.page_directory_address)
-                mem::change_pd(old_cr3);
-            return valid;
+            if (length == 0)
+                return false;
+            path[5 + length] = 0;
+
+            fs::PckfsEntry entry{};
+            if (!fs::pckfs_find(path, &entry) ||
+                entry.type == fs::PckfsNodeType::directory ||
+                entry.size == 0 || entry.size > USER_LIBRARY_IMAGE_MAX_SIZE)
+                return false;
+            auto *buffer = static_cast<uint8_t *>(
+                mem::MemAlloc{}.try_kmalloc(entry.size));
+            if (buffer == nullptr)
+                return false;
+            uint32_t bytes_read = 0;
+            if (!fs::pckfs_read_file(entry.inode, buffer, entry.size,
+                                     &bytes_read) || bytes_read != entry.size)
+            {
+                mem::MemAlloc{}.kfree(buffer);
+                return false;
+            }
+            *image = buffer;
+            *image_size = bytes_read;
+            return true;
+        }
+
+        void elf_release_library(void *, const uint8_t *image)
+        {
+            if (image != nullptr)
+                mem::MemAlloc{}.kfree(const_cast<uint8_t *>(image));
+        }
+
+        bool load_process_elf(UserProcessSpace &space, const uint8_t *image,
+                              uint32_t image_size, uint32_t *entry_address)
+        {
+            if (image_size > USER_IMAGE_MAX_SIZE)
+                return false;
+            ElfUserLoadContext context{&space, 0};
+            const loader::Elf32LoadOperations operations{
+                &context,
+                elf_prepare_user_space,
+                elf_map_user_page,
+                elf_begin_user_access,
+                elf_copy_to_user,
+                elf_read_user_word,
+                elf_write_user_word,
+                elf_set_user_page_writable,
+                elf_validate_user_stack,
+                elf_load_library,
+                elf_release_library,
+                elf_end_user_access};
+            const loader::Elf32LoadRequest request{
+                image,
+                image_size,
+                USER_CODE_ADDRESS,
+                USER_CODE_MAX_SIZE,
+                USER_MMAP_START,
+                USER_LIBRARY_AREA_SIZE,
+                PAGESIZE_4K,
+                &operations,
+                entry_address};
+            return loader::DynamicLinker(request).load();
         }
 
         void exit_current_process(int32_t status)
@@ -313,14 +469,15 @@ namespace kernel
     int32_t user_mode_run_program(const uint8_t *image, uint32_t image_size)
     {
         if (active_virtual_memory == nullptr || image == nullptr || image_size == 0 ||
-            image_size > USER_CODE_MAX_SIZE || user_task_active)
+            user_task_active)
             return ERROR_INVALID_ARGUMENT;
 
         const uint32_t kernel_cr3 = cpu::read_cr3();
         UserProcessSpace *space = reserve_process_space();
         if (space == nullptr)
             return ERROR_NO_MEMORY;
-        if (!load_flat_image(*space, image, image_size))
+        uint32_t entry_address = USER_CODE_ADDRESS;
+        if (!load_process_elf(*space, image, image_size, &entry_address))
         {
             cleanup_process_space(*space, false);
             return ERROR_NO_MEMORY;
@@ -339,7 +496,7 @@ namespace kernel
         thread_set_current_user(process_id, "Masaustu", USER_STACK_ADDRESS,
                                 USER_STACK_PAGES);
         smp::release_processors();
-        user_mode_enter(USER_CODE_ADDRESS, USER_STACK_TOP,
+        user_mode_enter(entry_address, USER_STACK_TOP,
                         space->page_directory_address);
         user_task_active = false;
         process_finish(process_id);
@@ -372,7 +529,8 @@ namespace kernel
         UserProcessSpace *space = reserve_process_space();
         if (space == nullptr)
             return ERROR_NO_MEMORY;
-        if (!load_flat_image(*space, spawn_image, bytes_read))
+        uint32_t entry_address = USER_CODE_ADDRESS;
+        if (!load_process_elf(*space, spawn_image, bytes_read, &entry_address))
         {
             cleanup_process_space(*space, false);
             return ERROR_NO_MEMORY;
@@ -388,7 +546,7 @@ namespace kernel
         space->process_id = process_id;
         const UserProcessSpace *parent = find_process_space(parent_id);
         space->terminal_id = parent == nullptr ? 0 : parent->terminal_id;
-        const int32_t thread_id = thread_create_user(USER_CODE_ADDRESS,
+        const int32_t thread_id = thread_create_user(entry_address,
             USER_STACK_TOP, USER_STACK_ADDRESS, USER_STACK_PAGES,
             space->page_directory_address, process_id, name);
         if (thread_id < 0)

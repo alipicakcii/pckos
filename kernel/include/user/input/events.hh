@@ -10,10 +10,7 @@ namespace user
 {
     using abi::InputEvent;
 
-    inline int32_t wait_event(InputEvent *event, uint32_t timeout_ticks = 0)
-    {
-        return call(syscall_wait_event, reinterpret_cast<uint32_t>(event), timeout_ticks);
-    }
+    int32_t wait_event(InputEvent *event, uint32_t timeout_ticks = 0);
 }
 
 #endif

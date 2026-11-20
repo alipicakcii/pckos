@@ -7,12 +7,7 @@
 
 namespace user
 {
-    inline int32_t pc_speaker_play(uint32_t frequency, uint32_t duration_ms)
-    {
-        return call(syscall_pc_speaker, frequency, duration_ms);
-    }
-
-    
+    int32_t pc_speaker_play(uint32_t frequency, uint32_t duration_ms);
 }
 
 #endif

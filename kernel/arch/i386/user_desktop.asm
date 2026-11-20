@@ -10,5 +10,5 @@ global pckos_user_desktop_end
 
 pckos_user_desktop_start:
     ; NASM'ın derleme sırasında  baytlarını mevcuta eklemesins
-    incbin "user/apps/desktop.bin"
+    incbin "user/apps/desktop.elf"
 pckos_user_desktop_end:

@@ -213,3 +213,29 @@ namespace user::io
         return result;
     }
 }
+namespace user::io
+{
+int32_t write_all(int descriptor, const void *buffer, uint32_t length) {
+        const char *bytes = static_cast<const char *>(buffer);
+        uint32_t sent = 0;
+        while (sent < length)
+        {
+            const uint32_t chunk = length - sent > 4096 ? 4096 : length - sent;
+            const int32_t result = user::write(descriptor, bytes + sent, chunk);
+            if (result == -11) { user::thread_sleep(1); continue; }
+            if (result <= 0) return sent != 0 ? static_cast<int32_t>(sent) : result;
+            sent += static_cast<uint32_t>(result);
+        }
+        return static_cast<int32_t>(sent);
+    }
+
+int32_t read(void *buffer, uint32_t capacity) {
+        for (;;)
+        {
+            const int32_t result = user::read(user::stdin_descriptor, buffer, capacity);
+            if (result != -11) return result;
+            user::thread_sleep(1);
+        }
+    }
+
+}

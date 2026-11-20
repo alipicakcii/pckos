@@ -7,10 +7,7 @@
 
 namespace user
 {
-    inline int32_t shutdown()
-    {
-        return call(syscall_power_off);
-    }
+int32_t shutdown();
 }
 
 #endif

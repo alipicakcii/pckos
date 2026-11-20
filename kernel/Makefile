@@ -25,41 +25,52 @@ LDFLAGS:=$(LDFLAGS)
 LIBS:=$(LIBS) -nostdlib  -lgcc
 
 ARCHDIR=arch/$(HOSTARCH)
-OBJCOPY?=i686-elf-objcopy
 USER_APP_CFLAGS=-MMD -MP -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
-	-fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
+	-fno-use-cxa-atexit -fno-threadsafe-statics -fPIC -fno-stack-protector -fno-builtin \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
 	-msoft-float -Iinclude
-USER_RUNTIME_OBJECTS=user/memory/new.user.o user/lib/memory.user.o user/io/io.user.o \
-	user/gui/window.user.o user/gui/widgets.user.o user/lib/rnd.user.o
-USER_APP_OBJECTS=\
-$(USER_RUNTIME_OBJECTS) \
-user/gui/image.user.o \
-user/gui/graphics.user.o \
-user/apps/file_manager.user.o \
-user/apps/terminal.user.o user/apps/terminal_commands.user.o \
-user/apps/task_manager.user.o \
+USER_EXEC_LDFLAGS=-m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld \
+	-Wl,--build-id=none -Wl,--no-dynamic-linker -Wl,--hash-style=sysv \
+	-Wl,-z,max-page-size=0x1000 -Wl,--no-as-needed -Luser/lib
+USER_LIBRARY_OBJECTS=\
+user/syscall/call.user.o user/syscall/process.user.o \
+user/syscall/thread.user.o user/syscall/system.user.o \
+user/syscall/graphics.user.o user/syscall/memory.user.o \
+user/syscall/io.user.o user/syscall/filesystem.user.o \
+user/syscall/input.user.o user/syscall/audio.user.o \
+user/syscall/serial_dev.user.o user/memory/new.user.o \
+user/lib/memory.user.o user/io/io.user.o user/gui/graphics.user.o \
+user/gui/window.user.o user/gui/widgets.user.o user/lib/rnd.user.o \
+user/gui/image.user.o
+USER_DESKTOP_OBJECTS=\
+user/apps/file_manager.user.o user/apps/terminal.user.o \
+user/apps/terminal_commands.user.o user/apps/task_manager.user.o \
 user/apps/desktop.user.o
 USER_PROCESS_OBJECTS=\
 user/apps/terminal_process.user.o \
 user/apps/file_manager_process.user.o \
-user/apps/task_manager_process.user.o
-USER_PROCESS_OBJECTS+=user/apps/calculator_process.user.o user/apps/notepad_process.user.o
-USER_PROCESS_OBJECTS+=user/apps/demo_process.user.o
-USER_PROCESS_OBJECTS+=user/apps/hello_word.user.o
-USER_PROCESS_OBJECTS+=user/apps/system_info_process.user.o
-USER_PROCESS_OBJECTS+=user/apps/clock_process.user.o user/apps/unit_converter_process.user.o
-USER_PROCESS_OBJECTS+=user/apps/memory_hunter_process.user.o
+user/apps/task_manager_process.user.o \
+user/apps/calculator_process.user.o \
+user/apps/notepad_process.user.o \
+user/apps/demo_process.user.o \
+user/apps/hello_word.user.o \
+user/apps/system_info_process.user.o \
+user/apps/clock_process.user.o \
+user/apps/unit_converter_process.user.o \
+user/apps/memory_hunter_process.user.o
+USER_APP_OBJECTS=$(USER_LIBRARY_OBJECTS) $(USER_DESKTOP_OBJECTS) $(USER_PROCESS_OBJECTS)
 USER_PROCESS_IMAGES=\
-user/apps/terminal_process.bin \
-user/apps/file_manager_process.bin \
-user/apps/task_manager_process.bin
-USER_PROCESS_IMAGES+=user/apps/calculator_process.bin user/apps/notepad_process.bin
-USER_PROCESS_IMAGES+=user/apps/demo_process.bin
-USER_PROCESS_IMAGES+=user/apps/hello_word.bin
-USER_PROCESS_IMAGES+=user/apps/system_info_process.bin
-USER_PROCESS_IMAGES+=user/apps/clock_process.bin user/apps/unit_converter_process.bin
-USER_PROCESS_IMAGES+=user/apps/memory_hunter_process.bin
+user/apps/terminal_process.elf \
+user/apps/file_manager_process.elf \
+user/apps/task_manager_process.elf \
+user/apps/calculator_process.elf \
+user/apps/notepad_process.elf \
+user/apps/demo_process.elf \
+user/apps/hello_word.elf \
+user/apps/system_info_process.elf \
+user/apps/clock_process.elf \
+user/apps/unit_converter_process.elf \
+user/apps/memory_hunter_process.elf
 
 include $(ARCHDIR)/make.config
 
@@ -78,6 +89,8 @@ library/kernel_log.o \
 library/pck_rtti.o \
 task/user_mode.o \
 task/thread.o \
+loader/elf.o \
+loader/dynamic_linker.o \
 syscalls/syscall.o \
 syscalls/common.o \
 syscalls/io.o \
@@ -154,155 +167,71 @@ syscalls/%.o: syscalls/%.cpp
 .asm.o:
 	nasm -felf32 $< -o $@
 
-user/memory/new.user.o: user/memory/new.cpp include/user/memory/new.hh include/user/syscall/call.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/lib/libpckos.so: $(USER_LIBRARY_OBJECTS)
+# Çapraz derleyici -shared seçeneğini ld'ye aktarmadığı için doğrudan iletiyoruz.
+	$(CC) -m32 -shared -nostdlib -Wl,--build-id=none \
+		-Wl,-shared -Wl,--hash-style=sysv -Wl,-soname,libpckos.so \
+		-Wl,-z,max-page-size=0x1000 -o $@ $(USER_LIBRARY_OBJECTS)
 
-user/gui/window.user.o: user/gui/window.cpp include/user/gui/window.hh include/user/gui/graphics.hh include/user/gui/drawing.hh include/user/task/process.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
-
-user/gui/widgets.user.o: user/gui/widgets.cpp include/user/gui/widgets.hh include/user/gui/window.hh include/user/gui/drawing.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
-
-user/lib/rnd.user.o: user/lib/rnd.cpp include/user/lib/rnd.hh include/user/task/lock.hh include/user/syscall/call.hh
+user/%.user.o: user/%.cpp
 	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
 
 user/lib/memory.user.o: user/lib/memory.cpp include/user/lib/memory.hh
 	$(CC) $(USER_APP_CFLAGS) -O2 -c $< -o $@
 
-user/gui/graphics.user.o: user/gui/graphics.cpp include/user/gui/drawing.hh include/user/syscall/call.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/gui/image.user.o: user/gui/image.cpp include/user/gui/image.hh include/user/memory/new.hh include/user/lib/memory.hh user/lib/stb_image.h
+	$(CC) $(USER_APP_CFLAGS) -O2 -c $< -o $@
 
-user/apps/file_manager.user.o: user/apps/file_manager.cpp include/user/apps/file_manager.hh include/user/apps/app_thread.hh include/user/gui/drawing.hh include/user/gui/image.hh include/user/syscall/call.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/desktop.elf: $(USER_DESKTOP_OBJECTS) user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ $(USER_DESKTOP_OBJECTS) -lpckos
 
-user/apps/terminal.user.o: user/apps/terminal.cpp include/user/apps/terminal.hh include/user/apps/app_thread.hh include/user/gui/drawing.hh include/user/syscall/call.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/terminal_process.elf: user/apps/terminal.user.o user/apps/terminal_commands.user.o user/apps/terminal_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/terminal.user.o user/apps/terminal_commands.user.o user/apps/terminal_process.user.o -lpckos
 
-user/apps/terminal_commands.user.o: user/apps/terminal_commands.cpp include/user/apps/terminal.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/file_manager_process.elf: user/apps/file_manager.user.o user/apps/file_manager_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/file_manager.user.o user/apps/file_manager_process.user.o -lpckos
 
-user/apps/task_manager.user.o: user/apps/task_manager.cpp include/user/apps/task_manager.hh include/user/apps/app_thread.hh include/user/gui/drawing.hh include/user/syscall/call.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/task_manager_process.elf: user/apps/task_manager.user.o user/apps/task_manager_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/task_manager.user.o user/apps/task_manager_process.user.o -lpckos
 
-user/apps/desktop.user.o: user/apps/desktop.cpp include/user/apps/file_manager.hh include/user/apps/terminal.hh include/user/apps/task_manager.hh include/user/gui/drawing.hh include/user/gui/image.hh include/user/gui/widgets.hh include/user/syscall/call.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/calculator_process.elf: user/apps/calculator_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/calculator_process.user.o -lpckos
 
-user/apps/desktop.elf: $(USER_APP_OBJECTS) user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_APP_OBJECTS)
+user/apps/notepad_process.elf: user/apps/notepad_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/notepad_process.user.o -lpckos
 
-user/apps/desktop.bin: user/apps/desktop.elf
-	$(OBJCOPY) -O binary $< $@
+user/apps/demo_process.elf: user/apps/demo_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/demo_process.user.o -lpckos
 
-user/apps/terminal_process.user.o: user/apps/terminal_process.cpp include/user/apps/terminal.hh include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/hello_word.elf: user/apps/hello_word.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/hello_word.user.o -lpckos
 
-user/apps/file_manager_process.user.o: user/apps/file_manager_process.cpp include/user/apps/file_manager.hh include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/system_info_process.elf: user/apps/system_info_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/system_info_process.user.o -lpckos
 
-user/apps/task_manager_process.user.o: user/apps/task_manager_process.cpp include/user/apps/task_manager.hh include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/clock_process.elf: user/apps/clock_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/clock_process.user.o -lpckos
 
-user/apps/calculator_process.user.o: user/apps/calculator_process.cpp include/user/gui/drawing.hh include/user/gui/widgets.hh include/user/gui/window.hh include/user/syscall/call.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/unit_converter_process.elf: user/apps/unit_converter_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/unit_converter_process.user.o -lpckos
 
-user/apps/notepad_process.user.o: user/apps/notepad_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
+user/apps/memory_hunter_process.elf: user/apps/memory_hunter_process.user.o user/lib/libpckos.so user/apps/linker.ld
+	$(CC) $(USER_EXEC_LDFLAGS) -o $@ user/apps/memory_hunter_process.user.o -lpckos
 
-user/apps/system_info_process.user.o: user/apps/system_info_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
-
-user/apps/clock_process.user.o: user/apps/clock_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
-
-user/apps/unit_converter_process.user.o: user/apps/unit_converter_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
-
-user/apps/memory_hunter_process.user.o: user/apps/memory_hunter_process.cpp include/user/gui/drawing.hh include/user/syscall/call.hh include/user/gui/window_drag.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
-
-user/apps/terminal_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_commands.user.o user/apps/terminal_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/terminal.user.o user/apps/terminal_commands.user.o user/apps/terminal_process.user.o
-
-user/apps/file_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/image.user.o user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/image.user.o user/gui/graphics.user.o user/apps/file_manager.user.o user/apps/file_manager_process.user.o
-
-user/apps/task_manager_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/task_manager.user.o user/apps/task_manager_process.user.o
-
-user/apps/calculator_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/calculator_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/calculator_process.user.o
-
-user/apps/notepad_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/notepad_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/notepad_process.user.o
-
-user/apps/terminal_process.bin: user/apps/terminal_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-user/apps/file_manager_process.bin: user/apps/file_manager_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-user/apps/task_manager_process.bin: user/apps/task_manager_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-user/apps/calculator_process.bin: user/apps/calculator_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-user/apps/notepad_process.bin: user/apps/notepad_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-user/apps/system_info_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/system_info_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/system_info_process.user.o
-
-user/apps/system_info_process.bin: user/apps/system_info_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-user/apps/clock_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/clock_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/clock_process.user.o
-
-user/apps/clock_process.bin: user/apps/clock_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-user/apps/unit_converter_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/unit_converter_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/unit_converter_process.user.o
-
-user/apps/unit_converter_process.bin: user/apps/unit_converter_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-user/apps/memory_hunter_process.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/memory_hunter_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/memory_hunter_process.user.o
-
-user/apps/memory_hunter_process.bin: user/apps/memory_hunter_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-arch/i386/user_desktop.o: arch/i386/user_desktop.asm user/apps/desktop.bin
+arch/i386/user_desktop.o: arch/i386/user_desktop.asm user/apps/desktop.elf
 	nasm -felf32 $< -o $@
 
-user/apps/demo_process.user.o: user/apps/demo_process.cpp include/user/gui/graphics.hh include/user/input/events.hh include/user/task/process.hh include/user/task/thread.hh include/user/gui/drawing.hh include/user/gui/window.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
-
-user/apps/demo_process.elf: $(USER_RUNTIME_OBJECTS) user/apps/demo_process.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/apps/demo_process.user.o user/gui/graphics.user.o
-
-user/apps/demo_process.bin: user/apps/demo_process.elf
-	$(OBJCOPY) -O binary $< $@
-
-user/apps/hello_word.user.o: user/apps/hello_word.cpp include/user/io/io.hh include/user/syscall/call.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
-
-user/apps/hello_word.elf: $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/hello_word.user.o user/apps/linker.ld
-	$(CC) -m32 -no-pie -nostdlib -Wl,-T,user/apps/linker.ld -Wl,--build-id=none -o $@ $(USER_RUNTIME_OBJECTS) user/gui/graphics.user.o user/apps/hello_word.user.o
-
-user/apps/hello_word.bin: user/apps/hello_word.elf
-	$(OBJCOPY) -O binary $< $@
+-include $(OBJS:.o=.d) $(USER_APP_OBJECTS:.o=.d)
 
 clean:
 	rm -f user/apps/demo_process.elf user/apps/hello_word.elf user/apps/system_info_process.elf \
 		user/apps/clock_process.elf user/apps/unit_converter_process.elf user/apps/memory_hunter_process.elf
 	rm -f pckos.bin
-	rm -f $(USER_APP_OBJECTS) $(USER_PROCESS_OBJECTS) user/apps/desktop.elf user/apps/desktop.bin \
+	rm -f $(USER_APP_OBJECTS) $(USER_PROCESS_OBJECTS) user/apps/desktop.elf \
 		user/apps/terminal_process.elf user/apps/file_manager_process.elf \
 		user/apps/task_manager_process.elf user/apps/calculator_process.elf \
 		user/apps/notepad_process.elf $(USER_PROCESS_IMAGES)
+	rm -f user/apps/*.bin user/lib/libpckos.so
 	find . -type f \( -name '*.o' -o -name '*.d' \) -delete
 
 install: install-headers install-kernel
@@ -315,10 +244,3 @@ install-kernel: pckos.bin
 	mkdir -p $(DESTDIR)$(BOOTDIR)
 	cp pckos.bin $(DESTDIR)$(BOOTDIR)
 
--include $(OBJS:.o=.d) $(USER_APP_OBJECTS:.o=.d) $(USER_PROCESS_OBJECTS:.o=.d)
-
-user/io/io.user.o: user/io/io.cpp include/user/io/io.hh include/user/syscall/call.hh
-	$(CC) $(USER_APP_CFLAGS) -c $< -o $@
-
-user/gui/image.user.o: user/gui/image.cpp include/user/gui/image.hh include/user/memory/new.hh include/user/lib/memory.hh include/user/syscall/call.hh user/lib/stb_image.h
-	$(CC) $(USER_APP_CFLAGS) -O2 -c $< -o $@

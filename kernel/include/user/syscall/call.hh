@@ -66,26 +66,11 @@ namespace user
     using abi::syscall_directory_create;
     using abi::sysycall_serial_dev_write;
 
-    // i386 int 0x80 ABI: çağrı numarası EAX’te,
-    // bağımsız değişkenler EBX/ECX/EDX/ESI/EDI yazmaçlarındadır.
-    // not: bu fonskiyon çekirdekde derlenmez kullanıcı alanından
-    //  bir kod caggirdi zaman inline oldugu icin o kodla birliktde aynı dosyada derlenir
-    inline int32_t call(uint32_t number, uint32_t arg0 = 0,
-                        uint32_t arg1 = 0, uint32_t arg2 = 0,
-                        uint32_t arg3 = 0, uint32_t arg4 = 0)
-    {
-        register uint32_t result __asm__("eax") = number;
-        register uint32_t first __asm__("ebx") = arg0;
-        register uint32_t second __asm__("ecx") = arg1;
-        register uint32_t third __asm__("edx") = arg2;
-        register uint32_t fourth __asm__("esi") = arg3;
-        register uint32_t fifth __asm__("edi") = arg4;
-        __asm__ volatile("int $0x80"
-            : "+a"(result)
-            : "b"(first), "c"(second), "d"(third), "S"(fourth), "D"(fifth)
-            : "memory", "cc");
-        return static_cast<int32_t>(result);
-    }
+    // i386 int 0x80 ABI'sinde çağrı numarası EAX'e, bağımsız değişkenler
+    // EBX/ECX/EDX/ESI/EDI yazmaçlarına verilir. Gövde libpckos.so içinde derlenir.
+    int32_t call(uint32_t number, uint32_t arg0 = 0,
+                 uint32_t arg1 = 0, uint32_t arg2 = 0,
+                 uint32_t arg3 = 0, uint32_t arg4 = 0);
 }
 
 #endif

@@ -7,28 +7,43 @@
 #include <user/system/info.hh>
 #include <user/task/process.hh>
 #include <user/io/serial_dev.hh>
+#include <user/device/audio.hh>
 
 
-
+// çekirdek ring1 yetkileri ile 
+// cr3 ookuma gibi kodlarda ring3 dofgru tepki veriyormu güvenlik olarak
+// test etmek icin
 void work(void*)
 {
-    print("work_tid=%d\n", user::thread_id());
-    user::thread_sleep(100);
+   uint64_t cr3;
+
+    // Ring 3'te #GP(0) hatası oluşturur.
+    asm volatile(
+        "mov %%cr3, %0"
+        : "=r"(cr3)
+        );
 }
 
 
+// dinamik baglayici test etmek icin
+/// pc_speaker_play sonucda dinamik kütüopghaneden geliyor
+void test()
+{
+        user::pc_speaker_play(1000, 30);
+}
 
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
+   
+    print("start\n");
 
-    for (int i = 0; i < 500; i++)
-    {
-        auto tid = user::thread_create(work, nullptr, "Deneme");
-        print("p_tid=%d tid=%d next=%d\n", user::thread_id(), tid, i);
-        user::thread_sleep(50);
-    }
+    print("test_addr=%p\n", test);
+
+    print("user::pc_speaker_play_addr=%p\n",  user::pc_speaker_play);
+
+    print("end\n");
 
     user::exit(0);
 }

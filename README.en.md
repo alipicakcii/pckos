@@ -122,11 +122,11 @@ QEMU/BIOS → GRUB → Multiboot _start → kernel_main
 3. `kernel/kernel.cpp` disables interrupts, initializes the processor tables, and starts paging. After the kernel heap is ready, `_init()` runs global C++ constructors.
 4. The keyboard, mouse, framebuffer, ATA PIO disk, and PCKFS are initialized. `_kprintf` writes boot messages to the kernel console log. The PIT is set to 100 Hz. Once the framebuffer is ready, the boot log is displayed on screen: CPU vendor/model, Multiboot information, GDT/IDT/TSS, CR3, physical page counts, display dimensions, disk/PCKFS status, and RTC date/time. Syscall, user heap/stack, and scheduler information is shown before entering the desktop. Press ESC on the desktop to see the system console with boot messages and subsequent kernel output. `dmesg` also reads the log.
 5. `kernel/task/user_mode.cpp` prepares user pages, the user stack, and system calls; `kernel/task/thread.cpp` initializes scheduling. On SMP systems, INIT/SIPI starts additional processors and prepares per-CPU GDT/TSS and scheduler state. `user_mode_run_desktop()` loads the desktop image at `0x40000000`. `iret` in `kernel/arch/i386/user_mode.asm` enters Ring 3.
-6. The desktop starts at `_start` in `kernel/user/apps/desktop.cpp`. Opening Files, Terminal, Tasks, Calculator, or Notepad calls `process_spawn()`. The kernel loads `/apps/*.bin` from PCKFS and creates a PID, address space, and main thread.
+6. The desktop starts at `_start` in `kernel/user/apps/desktop.cpp`. Opening Files, Terminal, Tasks, Calculator, or Notepad calls `process_spawn()`. The kernel loads `/apps/*.elf` applications from PCKFS and creates a PID, address space, and main thread.
 
 ### Loading the desktop and applications
 
-The desktop program is included in the kernel image by the `incbin` directive in `kernel/arch/i386/user_desktop.asm` and loaded into memory during startup. Other applications are not included in the kernel; when launched, they are loaded from `/apps/*.bin` on the PCKFS disk. Both run in Ring 3; drivers and system-call handlers run in Ring 0.
+The desktop is an ELF32 `ET_EXEC` file included in the kernel image by the `incbin` directive in `kernel/arch/i386/user_desktop.asm`. Other applications are launched from `/apps/*.elf` on PCKFS. `kernel/loader/elf.cpp` validates ELF headers and loadable segments; `kernel/loader/dynamic_linker.cpp` loads the application's required `ET_DYN` libraries from PCKFS `/lib/` and applies supported i386 `REL` relocations. The shared SDK and user-space syscall entry code are in `/lib/libpckos.so`. Applications use its `int 0x80` routine to enter the kernel; the kernel handles these calls under `kernel/syscalls/`. The desktop and applications run in Ring 3, while drivers and syscall handlers run in Ring 0. This is a limited i386 ELF dynamic linker, not a general-purpose Linux ELF loader.
 
 ## 2. Source map
 
@@ -145,10 +145,14 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | `kernel/device/rtc.cpp` | Date and time from the CMOS RTC |
 | `kernel/syscalls/serial_dev.cpp` | System call for writing to the serial port from user space |
 | `kernel/fs/pckfs.cpp` | PCKFS mount, path lookup, directory and file reads |
-| `kernel/task/user_mode.cpp` | User address spaces, program loading, process and user-thread creation |
+| `kernel/task/user_mode.cpp`, `kernel/include/kernel/task/user_mode.hh` | User address spaces, process and user-thread creation |
+| `kernel/loader/elf.cpp`, `kernel/include/kernel/loader/elf.hh` | Validate ELF32 headers and loadable segments |
+| `kernel/loader/dynamic_linker.cpp` | Load `DT_NEEDED` libraries, resolve symbols, and apply i386 `REL` relocations |
 | `kernel/syscalls/syscall.cpp` | `int 0x80` entry checks and call routing |
 | `kernel/syscalls/` | Handlers grouped by subsystem, including user-memory validation |
-| `kernel/include/user/syscall/call.hh` | User-side `int 0x80` entry helper |
+| `kernel/include/user/syscall/call.hh`, `kernel/user/syscall/call.cpp` | User API and the `int 0x80` entry routine compiled into `libpckos.so` |
+| `kernel/user/syscall/` | Syscall wrappers compiled into the shared user library |
+| `kernel/user/lib/libpckos.so` | Shared SDK and user runtime produced during the build |
 | `kernel/include/user/system/power.hh` | User API for requesting system power-off |
 | `kernel/include/abi/` | Fixed syscall numbers and data structures shared by kernel and user space |
 | `kernel/include/user/fs/` | File and directory API |
@@ -157,7 +161,7 @@ The desktop program is included in the kernel image by the `incbin` directive in
 | `kernel/include/user/memory/`, `kernel/include/user/io/` | Heap and standard stream APIs |
 | `kernel/include/user/input/`, `kernel/include/user/device/`, `kernel/include/user/system/` | Input events, audio, and system information |
 | `kernel/include/user/lib/` | General memory/string routines, random numbers, and template helpers |
-| `kernel/include/user/gui/drawing.hh`, `kernel/user/gui/graphics.cpp` | Shared Ring 3 drawing API |
+| `kernel/include/user/gui/drawing.hh`, `kernel/user/gui/graphics.cpp` | Shared user-library drawing API for Ring 3 |
 | `kernel/include/user/gui/window.hh`, `kernel/user/gui/window.cpp` | Application window, title bar, dragging, minimize, and close |
 | `kernel/include/user/gui/widgets.hh`, `kernel/user/gui/widgets.cpp` | Reusable widgets, buttons, and `ClickListener` |
 | `kernel/device/video/frame_buffer.cpp` | Framebuffer and window-layer composition |
@@ -171,7 +175,7 @@ When the kernel heap grows, new pages are first mapped in the master kernel page
 
 ## 3. Build and run
 
-Required tools: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkrescue`, `python3`, and `qemu-system-i386`. Shared configuration is in `config.sh` and `kernel/Makefile`.
+Required tools: `i686-elf-g++`, `nasm`, `make`, `grub-mkrescue`, `python3`, and `qemu-system-i386`. Shared configuration is in `config.sh` and `kernel/Makefile`.
 
 | Command | Result |
 | --- | --- |
@@ -182,7 +186,7 @@ Required tools: `i686-elf-g++`, `i686-elf-objcopy`, `nasm`, `make`, `grub-mkresc
 | `./vbox.sh` | Converts the current `pckfs.img` to `pckfs-vbox.vdi`. Build a fresh image first. |
 | `./clean.sh` | Removes build and image outputs; preserves `host-share/`. |
 
-`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. `.elf` is a linker output; the loader receives a flat `.bin` image produced by `objcopy`. `run.sh` uses KVM when available and TCG otherwise.
+`sysroot/` and `isodir/` are staging directories only. The running system's root is `/` inside `pckfs.img`; there is no initrd. Applications are i386 ELF32 `ET_EXEC` files and use the shared SDK in `/lib/libpckos.so` (`ET_DYN`). The kernel loads this library from PCKFS, resolves symbols using the SysV ELF hash table, and applies supported i386 `REL` relocations. The current dynamic linker does not support TLS, `RELA`, symbol versioning, or `PT_INTERP`. `run.sh` uses KVM when available and TCG otherwise.
 
 `vbox.sh` removes the previous `pckfs-vbox.vdi` and recreates it with `convertfromraw`. It uses a fixed disk UUID registered with the VM so VirtualBox's disk registration remains stable. It does not change the ISO, kernel, or VM settings. Shut down the VirtualBox VM before regenerating the disk.
 
@@ -253,7 +257,7 @@ The user API is grouped by subsystem under `kernel/include/user/`:
 
 Serial output is separate from the standard streams. The kernel initializes the COM1 UART at 38400 baud, with 8 data bits, no parity, and one stop bit. `user/io/serial_dev.hh` provides `user::io::serialdev::write()` to send a null-terminated string to COM1 through system call 56. This call does not redirect `stdout`/`stderr` or the kernel log to the serial port.
 
-Graphics helpers are in `kernel/include/user/gui/drawing.hh` and `kernel/user/gui/graphics.cpp`. The shared window and widget API is declared under `kernel/include/user/gui/` and implemented in `kernel/user/gui/window.cpp` and `widgets.cpp`. `Window` handles registration, its frame, title-bar controls, dragging, minimizing, and closing. `Button`, `Label`, and `TextInputWidget` attach to their parent window when constructed. `Window::draw()` draws attached widgets inside the client area, and `Window::handle_mouse()` routes clicks to them. `Button` calls its `ClickListener`; `TextInputWidget` places the text cursor at the clicked position. The Makefile links these library sources into user applications. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/memory/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
+Graphics helpers are in `kernel/include/user/gui/drawing.hh` and `kernel/user/gui/graphics.cpp`. The shared window and widget API is declared under `kernel/include/user/gui/` and implemented in `kernel/user/gui/window.cpp` and `widgets.cpp`. `Window` handles registration, its frame, title-bar controls, dragging, minimizing, and closing. `Button`, `Label`, and `TextInputWidget` attach to their parent window when constructed. `Window::draw()` draws attached widgets inside the client area, and `Window::handle_mouse()` routes clicks to them. `Button` calls its `ClickListener`; `TextInputWidget` places the text cursor at the clicked position. The Makefile compiles these shared sources into `libpckos.so`, which applications request dynamically. `kernel/include/user/lib/memory.hh` provides basic memory/string routines, and `kernel/include/user/memory/new.hh` provides `new`/`delete` backed by the user heap. This is a small starter runtime, not a full C/C++ standard library or STL.
 
 ### Window and button widgets
 
@@ -289,11 +293,11 @@ The coordinates in the `Button` constructor are relative to the window's client 
 
 ### Standard input, output, and error streams
 
-`run /apps/newapp.bin` starts a separate process and passes on the terminal connection. `stdin` (0) receives terminal input; `stdout` (1) carries normal output and `stderr` (2) carries errors. Both output streams appear in the same terminal in syscall order; attached application output is not added to the kernel log. Child processes inherit the terminal connection. Output from applications without a terminal connection goes to the system console log. Standard streams are not routed to the serial port; applications can write to it separately.
+`run /apps/newapp.elf` starts a separate process and passes on the terminal connection. `stdin` (0) receives terminal input; `stdout` (1) carries normal output and `stderr` (2) carries errors. Both output streams appear in the same terminal in syscall order; attached application output is not added to the kernel log. Child processes inherit the terminal connection. Output from applications without a terminal connection goes to the system console log. Standard streams are not routed to the serial port; applications can write to it separately.
 
 The terminal waits for the process started by `run` before accepting another shell command. Lines submitted with Enter go to the application's `stdin` queue. Ctrl+D on empty input sends EOF; if text has been entered, it sends that text first. The `pckos:/>` prompt returns when the process ends. A graphical application takes focus when it registers its window. Minimized terminals continue collecting output.
 
-Use `cd /apps`, `cd ..`, and `cd -` to change directories, and `pwd` to display the current directory. `ls`, `cat`, and `run` also accept relative paths; for example, use `run demo.bin` from `/apps`. The working directory belongs to the terminal. Additional commands include `ps`, `date`, `uptime`, and `history`; `help` groups commands by purpose. Ctrl+L clears the screen, Up/Down recall commands, and PgUp/PgDn or the scrollbar show earlier output.
+Use `cd /apps`, `cd ..`, and `cd -` to change directories, and `pwd` to display the current directory. `ls`, `cat`, and `run` also accept relative paths; for example, use `run demo.elf` from `/apps`. The working directory belongs to the terminal. Additional commands include `ps`, `date`, `uptime`, and `history`; `help` groups commands by purpose. Ctrl+L clears the screen, Up/Down recall commands, and PgUp/PgDn or the scrollbar show earlier output.
 
 Ctrl+C terminates the application launched with `run` and its descendants attached to the same terminal, reclaiming their memory, threads, windows, and open files. This is not a POSIX signal and does not invoke user object destructors. With no application running, it cancels the current command line. `terminal_interrupt(pid)` (50) permits only a terminal owner to terminate applications attached to its own terminal.
 
@@ -316,7 +320,7 @@ extern "C" [[noreturn]] __attribute__((section(".text._start"))) void _start()
 }
 ```
 
-Include `<user/io/io.hh>` to use `print("Value: %d\n", value)` directly. `print` writes to stdout, `eprint` to stderr, and `fprint(fd, format, ...)` chooses either descriptor. These functions are also available in `user::io`. They return the number of bytes written or a negative error. The implementation is `kernel/user/io/io.cpp`; link `kernel/user/io/io.user.o` when building an application manually. The project Makefile links it automatically.
+Include `<user/io/io.hh>` to use `print("Value: %d\n", value)` directly. `print` writes to stdout, `eprint` to stderr, and `fprint(fd, format, ...)` chooses either descriptor. These functions are also available in `user::io`. They return the number of bytes written or a negative error. The implementation is in `kernel/user/io/io.cpp` and is compiled into `libpckos.so`. Link a manually built application to this library with `-lpckos`.
 
 Supported formats: `%s`, `%c`, `%d`, `%i`, `%u`, `%x`, `%X`, `%o`, `%p`, and `%%`; field width, `-`, `0`, `+`, space and `#` flags; precision such as `%.3s` or `%08x`; `*` width/precision; and `h`, `hh`, `l`, `z` integer modifiers. Width and precision are limited to 4096. Floating-point formats, `ll`, and `%n` are not supported; unsupported formats return `-22`. Use `print("%s", text)` for text containing literal percent signs.
 
@@ -351,13 +355,13 @@ if (user::wait_event(&event, 10) > 0 &&
     user::exit(0); // ESC
 ```
 
-To add a syscall, add its number to `kernel/include/abi/syscall.hh` and its user wrapper to the appropriate header under `kernel/include/user/`. Add the handler in the relevant `kernel/syscalls/` source file and route the call in `kernel/syscalls/syscall.cpp`. Validate user-provided addresses with `is_user_range`. Implement kernel functionality in the relevant module under `kernel/`. Document return values and limits here.
+To add a syscall, add its number to `kernel/include/abi/syscall.hh` and its user wrapper declaration to the appropriate header under `kernel/include/user/`. Implement the wrapper in a `.cpp` file under `kernel/user/syscall/` and add that source to `USER_LIBRARY_OBJECTS`. Implement the kernel handler in the relevant `kernel/syscalls/` source file and route it in `kernel/syscalls/syscall.cpp`. Validate user-provided addresses with `is_user_range`; document return values and limits here.
 
 **Memory and basic helpers in user applications**
 
-The `kernel/include/user/lib/memory.hh` header provides `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, and `strncpy`. You can also call these through `user::memory::copy`, `move`, `fill`, `compare`, `length`, and `equal`. Link `kernel/user/lib/memory.user.o` into the application.
+The `kernel/include/user/lib/memory.hh` header provides `memcpy`, `memmove`, `memset`, `memcmp`, `strlen`, `strcmp`, `strncmp`, `strcpy`, and `strncpy`. You can also call these through `user::memory::copy`, `move`, `fill`, `compare`, `length`, and `equal`. These functions are in `libpckos.so`; link the application with `-lpckos`.
 
-The `kernel/include/user/memory/new.hh` header and `kernel/user/memory/new.cpp` provide user-space `new`, `new[]`, `delete`, `delete[]`, placement new, and C++17 aligned allocation. Link `kernel/user/memory/new.user.o` into the application. The existing Makefile links all three runtime objects automatically for built-in apps. The kernel's `kernel/mem/new.cpp` continues to use its own heap.
+The `kernel/include/user/memory/new.hh` header and `kernel/user/memory/new.cpp` provide user-space `new`, `new[]`, `delete`, `delete[]`, placement new, and C++17 aligned allocation. These operators are in `libpckos.so` and use the user heap. The kernel's `kernel/mem/new.cpp` continues to use its own heap.
 
 Example:
 
@@ -393,14 +397,14 @@ Each process has a heap of up to 32 MiB at `0x41000000–0x43000000`; physical p
 A **process** is a program with its own PID and page table/address space. The kernel starts the desktop process at boot; other processes are created only when launched. From a user program:
 
 ```cpp
-const int32_t pid = user::process_spawn("/apps/terminal.bin", "Terminal");
+const int32_t pid = user::process_spawn("/apps/terminal.elf", "Terminal");
 if (pid < 0) {
     const char message[] = "Launch failed\n";
     user::write(user::stderr_descriptor, message, sizeof(message) - 1);
 }
 ```
 
-On success, `process_spawn` returns the new PID and does not wait for the application. The kernel copies the user path/name in `kernel/syscalls/process.cpp`; `user_mode_spawn_process()` reads the flat binary from PCKFS, allocates an address space and code/stack pages, `process_create()` assigns a PID, and `thread_create_user()` creates the main TID. The app starts at `_start`; `user::exit(status)` or exit of its main thread terminates the process. Its resources and window layer are then released.
+On success, `process_spawn` returns the new PID and does not wait for the application. The kernel copies the user path/name in `kernel/syscalls/process.cpp`; `user_mode_spawn_process()` finds the ELF file in PCKFS; `kernel/loader/elf.cpp` validates its ELF32 header and loadable segments and maps them into the new address space; `user_mode_spawn_process()` prepares a user stack; `process_create()` assigns a PID, and `thread_create_user()` creates the main TID at the ELF entry point. The app starts at `_start`; `user::exit(status)` or exit of its main thread terminates the process. Its resources and window layer are then released.
 
 List processes with `process_count()` and `process_get_info()`. `process_focus(pid)` raises one; `process_minimize()` minimizes the caller. The desktop tracks one PID per application type, so clicking an already-open app raises its existing window.
 
@@ -438,7 +442,7 @@ Practical process and thread limits depend on available memory, page-directory s
 
 ## 8. Writing, building, and launching an application
 
-Example file: `kernel/user/apps/newapp_process.cpp`. The entry point for a flat binary loaded by PCKOS must be `_start`:
+Example file: `kernel/user/apps/newapp_process.cpp`. The entry point for a PCKOS ELF application must be `_start`:
 
 ```cpp
 #include <user/gui/graphics.hh>
@@ -523,19 +527,19 @@ Save the example above as `kernel/user/apps/newapp_process.cpp`. The following s
 
 This example builds the app manually. The existing Makefile builds only the applications registered in it; creating a new `.cpp` file does not automatically add it to the build. Follow the steps below in order.
 
-**1. Prepare the graphics and memory helpers.**
+**1. Build the kernel, applications, and shared library.**
 
 ```sh
 ./build.sh
 ```
 
-This builds the existing kernel and registered applications. It also produces `kernel/user/gui/graphics.user.o`, `kernel/user/gui/window.user.o`, `kernel/user/gui/widgets.user.o`, `kernel/user/memory/new.user.o`, `kernel/user/lib/memory.user.o`, and `kernel/user/io/io.user.o`, which our example links. It does not yet compile our new `newapp_process.cpp`; we will do that in the next step.
+This builds the kernel, registered applications, and the shared library `kernel/user/lib/libpckos.so`. Since `newapp_process.cpp` is not registered in the Makefile, compile it manually in the next steps.
 
 **2. Compile the application's C++ source.**
 
 ```sh
 i686-elf-g++ -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
-  -fno-use-cxa-atexit -fno-pic -fno-pie -fno-stack-protector -fno-builtin \
+  -fno-use-cxa-atexit -fno-threadsafe-statics -fPIC -fno-stack-protector -fno-builtin \
   -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-sse -mno-mmx \
   -msoft-float -Ikernel/include \
   -c kernel/user/apps/newapp_process.cpp -o kernel/user/apps/newapp_process.user.o
@@ -543,27 +547,27 @@ i686-elf-g++ -m32 -ffreestanding -Wall -Wextra -fno-exceptions -fno-rtti \
 
 The input is your `newapp_process.cpp` file. The `-c` option compiles it into the `newapp_process.user.o` object file without linking. This file cannot run on its own yet; it needs to be linked with the graphics functions it uses. `-Ikernel/include` specifies the location of the SDK headers. The other flags are the current build settings for PCKOS user applications.
 
-**3. Link the object file with the graphics library.**
+**3. Dynamically link the application to the shared library.**
 
 ```sh
 i686-elf-g++ -m32 -no-pie -nostdlib \
   -Wl,-T,kernel/user/apps/linker.ld -Wl,--build-id=none \
+  -Wl,--no-dynamic-linker -Wl,--hash-style=sysv \
+  -Wl,-z,max-page-size=0x1000 -Wl,--no-as-needed \
+  -Lkernel/user/lib \
   -o kernel/user/apps/newapp_process.elf \
-  kernel/user/memory/new.user.o kernel/user/lib/memory.user.o kernel/user/io/io.user.o \
-  kernel/user/gui/window.user.o kernel/user/gui/widgets.user.o \
-  kernel/user/gui/graphics.user.o kernel/user/apps/newapp_process.user.o
+  kernel/user/apps/newapp_process.user.o -lpckos
 ```
 
-This links your app with the graphics, memory, and `new`/`delete` runtime objects. `linker.ld` defines the application's memory layout and `_start` entry point. The result is `newapp_process.elf`. This ELF file is a linker intermediate; the current PCKOS loader expects a flat binary.
+This links the app to the graphics, memory, I/O, and syscall APIs in `libpckos.so`. `linker.ld` defines the application's memory layout and `_start` entry point. The result is an ELF32 `ET_EXEC` file PCKOS can load; at runtime, it loads the required `libpckos.so` from `/lib/` on PCKFS.
 
-**4. Convert the ELF file into the format PCKOS loads.**
+**4. Put the ELF file in host-share.**
 
 ```sh
-i686-elf-objcopy -O binary kernel/user/apps/newapp_process.elf \
-  host-share/apps/newapp.bin
+cp kernel/user/apps/newapp_process.elf host-share/apps/newapp.elf
 ```
 
-`objcopy -O binary` converts the loadable contents of the ELF into a flat binary. The result is `host-share/apps/newapp.bin`. `host-share` is the host directory used to transfer files into PCKFS. The `host-share/apps` directory is already included in the project.
+`host-share` is the host directory used to transfer files into PCKFS. The `host-share/apps` directory is already included in the project. Copy the ELF32 application file into this directory; the kernel loads ELF files directly.
 
 **5. Package the app in the PCKFS disk image.**
 
@@ -571,20 +575,20 @@ i686-elf-objcopy -O binary kernel/user/apps/newapp_process.elf \
 ./share.sh
 ```
 
-`share.sh` first calls `build.sh`, then rebuilds `pckfs.img` using the contents of `host-share` and the built-in applications. It takes your manually compiled `newapp.bin` as it is; it does not recompile its source. The host file `host-share/apps/newapp.bin` appears inside PCKOS at `/apps/newapp.bin`.
+`share.sh` first calls `build.sh`, then rebuilds `pckfs.img` using `host-share`, the built-in applications, and `libpckos.so`. It takes your manually compiled `newapp.elf` as it is; it does not recompile its source. The host file `host-share/apps/newapp.elf` appears inside PCKOS at `/apps/newapp.elf`; the shared library is installed at `/lib/libpckos.so`.
 
 The application is now compiled and included in the disk image. **It does not need to be linked into the kernel.**
 
 **6. Launch the app for an initial trial.**
 
-Run `./run.sh` from the project root. It performs a clean build, regenerates the ISO and PCKFS images, and starts QEMU. Cleanup preserves `host-share/apps/newapp.bin`, which is included in the new disk image.
+Run `./run.sh` from the project root. It performs a clean build, regenerates the ISO and PCKFS images, and starts QEMU. Cleanup preserves `host-share/apps/newapp.elf`, which is included in the new disk image.
 
 Open Terminal on the desktop and enter this in the **PCKOS terminal**:
 
 ```text
-run /apps/newapp.bin
+run /apps/newapp.elf
 ```
 
-The terminal starts a new process from this file. You do not need to edit `desktop.cpp` to launch the app. To launch it from another application, use `user::process_spawn("/apps/newapp.bin", "NewApp")`.
+The terminal starts a new process from this file. You do not need to edit `desktop.cpp` to launch the app. To launch it from another application, use `user::process_spawn("/apps/newapp.elf", "NewApp")`.
 
-**After changing the application's source:** Repeat steps 2, 3, and 4 to update `host-share/apps/newapp.bin`. Then try it with `./run.sh`, which also performs the packaging in step 5. To refresh only the disk image, run `./share.sh`. If cleanup has removed `graphics.user.o`, or if you changed the graphics library, repeat step 1 first.
+**After changing the application's source:** Repeat steps 2 and 3, then copy the ELF to `host-share/apps/newapp.elf`. Then try it with `./run.sh`, which also refreshes the disk image. If you change shared SDK or library sources, run `./build.sh` and then `./share.sh` to rebuild and package the updated `libpckos.so`.

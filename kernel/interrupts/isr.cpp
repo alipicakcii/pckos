@@ -50,6 +50,8 @@ namespace kernel
 
 
 		const uint8_t int_no = regs->interruptNumber & 0xFF;
+
+
         if (int_no == smp::TLB_VECTOR)
         {
             if (smp::kernel_owned()) smp::kernel_enter();

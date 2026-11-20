@@ -10,52 +10,22 @@ namespace user
 {
     using abi::ProcessInfo;
 
-    inline uint32_t process_count()
-    {
-        return static_cast<uint32_t>(call(syscall_process_count));
-    }
+uint32_t process_count();
 
-    inline int32_t process_get_info(uint32_t index, ProcessInfo *info)
-    {
-        return call(syscall_process_info, index,
-                    reinterpret_cast<uint32_t>(info));
-    }
+int32_t process_get_info(uint32_t index, ProcessInfo *info);
 
-    inline int32_t process_spawn(const char *path, const char *name)
-    {
-        if (path == nullptr || name == nullptr)
-            return -22;
-        return call(syscall_process_spawn, reinterpret_cast<uint32_t>(path),
-                    reinterpret_cast<uint32_t>(name));
-    }
+int32_t process_spawn(const char *path, const char *name);
 
-    inline int32_t process_minimize()
-    {
-        return call(syscall_process_minimize);
-    }
+int32_t process_minimize();
 
     // Çağıran process’i sorgulamak için 0 gönderin.
-    inline bool process_is_minimized(uint32_t process_id = 0)
-    {
-        return call(syscall_process_is_minimized, process_id) != 0;
-    }
+bool process_is_minimized(uint32_t process_id = 0);
 
-    inline int32_t process_focus(uint32_t process_id)
-    {
-        return call(syscall_process_focus, process_id);
-    }
+int32_t process_focus(uint32_t process_id);
 
-    inline uint32_t process_focused_id()
-    {
-        return static_cast<uint32_t>(call(syscall_process_focused_id));
-    }
+uint32_t process_focused_id();
 
-    [[noreturn]] inline void exit(int32_t status)
-    {
-        (void)call(syscall_exit, static_cast<uint32_t>(status));
-        for (;;)
-            __asm__ volatile("pause");
-    }
+[[noreturn]] void exit(int32_t status);
 }
 
 #endif
