@@ -13,7 +13,7 @@ rm -rf isodir
 rm -f pckos.iso
 rm -f pckfs.img
 
-# Generated regression captures and Python bytecode.
+
 rm -rf tools/tests/gui-output
 rm -rf tools/tests/heap-output tools/tests/stdio-output
 find tools -type d -name __pycache__ -prune -exec rm -rf {} +
