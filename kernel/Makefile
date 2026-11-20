@@ -157,7 +157,7 @@ $(ARCHDIR)/crtbegin.o $(ARCHDIR)/crtend.o:
 .cpp.o:
 	$(CC) -MD -c $< -o $@  $(CFLAGS) $(CPPFLAGS)
 
-# Çapraz derleyici -shared seçeneğini ld'ye aktarmadığı için doğrudan iletiyoruz.
+
 device/video/frame_buffer.o: device/video/frame_buffer.cpp
 	$(CC) -MD -O2 -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
