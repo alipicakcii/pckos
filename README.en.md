@@ -59,6 +59,7 @@ PCKOS is currently a minimal system under development. The kernel currently prov
 
 - i386 boot, paging, and separation between kernel and user mode.
 - User applications that access kernel services through system calls.
+- Loading ELF32 `ET_EXEC` applications from PCKFS and loading/linking `ET_DYN` shared libraries from `/lib/` when an application starts.
 - User-space text output to the COM1 serial device through a system call.
 - ACPI/xAPIC SMP with Round Robin scheduling on up to 32 logical processors, and processes with separate address spaces. Single-processor systems are also supported.
 - ACPI S5 power-off from the Start menu; additional processors are parked before shutdown.

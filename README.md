@@ -61,6 +61,7 @@ PCKOS şu an minimal ve geliştirme aşamasında olan bir sistemdir. Mevcut çek
 
 - i386 üzerinde açılma, bellek sayfalama ve çekirdek/kullanıcı modu ayrımı.
 - Sistem çağrıları üzerinden çekirdek hizmetlerine erişen kullanıcı uygulamaları.
+- PCKFS'ten ELF32 `ET_EXEC` uygulamaları yükleme; uygulama başlarken `/lib/` altındaki `ET_DYN` dinamik kütüphaneleri yükleyip bağlama.
 - COM1 seri aygıtına sistem çağrısı üzerinden kullanıcı alanından metin yazma.
 - ACPI/xAPIC tabanlı SMP: en çok 32 mantıksal işlemcide Round Robin zamanlama; ayrı adres alanları olan process'ler. Tek işlemcili sistemler de desteklenir.
 - Başlat menüsünden ACPI S5 ile sistemi kapatma; kapanıştan önce ek işlemciler duraklatılır.
