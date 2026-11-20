@@ -25,24 +25,16 @@ void work(void*)
 }
 
 
-// dinamik baglayici test etmek icin
-/// pc_speaker_play sonucda dinamik kütüopghaneden geliyor
-void test()
-{
-        user::pc_speaker_play(1000, 30);
-}
 
 
 extern "C" [[noreturn]]
 __attribute__((section(".text._start"))) void _start()
 {
    
+
     print("start\n");
-
-    print("test_addr=%p\n", test);
-
-    print("user::pc_speaker_play_addr=%p\n",  user::pc_speaker_play);
-
+    user::io::serialdev::write("merhaba serial port");
+ 
     print("end\n");
 
     user::exit(0);

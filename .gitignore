@@ -11,6 +11,7 @@
 /sysroot/
 /isodir/
 /serial
+/kernel/user/lib/libpckos.so
 __pycache__/
 /host-code-test/
 

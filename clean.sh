@@ -12,7 +12,6 @@ rm -rf sysroot
 rm -rf isodir
 rm -f pckos.iso
 rm -f pckfs.img
-rm -f serial
 
 # Generated regression captures and Python bytecode.
 rm -rf tools/tests/gui-output
