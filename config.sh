@@ -19,12 +19,12 @@ export INCLUDEDIR=$PREFIX/include
 export CFLAGS=
 export CPPFLAGS=''
 
-# Configure the cross-compiler to use the desired system root.
+# kök dizini
 export SYSROOT="$(pwd)/sysroot"
 export CC="$CC --sysroot=$SYSROOT"
 
-# Work around that the -elf gcc targets doesn't have a system include directory
-# because it was configured with --without-headers rather than --with-sysroot.
+# -elf gcc hedeflerinin bir sistem başlık dosyası dizinine (system include directory) sahip olmaması durumuna yönelik geçici çözüm;
+# zira bu hedefler --with-sysroot yerine --without-headers ile yapılandırılmıştır.
 if echo "$HOST" | grep -Eq -- '-elf($|-)'; then
   export CC="$CC -isystem=$INCLUDEDIR"
 fi
